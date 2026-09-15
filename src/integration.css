@@ -1,0 +1,29 @@
+.resource small { color: #8dc8be; }
+.game-grid { height: calc(100vh - 112px); min-height: 0; }
+.panel { overflow-y: auto; }
+.card progress { width: 100%; height: 4px; accent-color: #79bcb2; }
+.settings button { padding: 0.45rem 0.7rem; border: 1px solid #5c7370; background: #17282a; color: inherit; }
+.region.corruption-1 rect { fill: #43636b; }
+.region.corruption-2 rect { fill: #594e77; }
+.region.corruption-3 rect { fill: #4e345e; }
+.region.corruption-4 rect { fill: #6b274f; }
+.region.event-hostile rect { filter: drop-shadow(0 0 5px #d84e55); }
+.region.event-opportunity rect { filter: drop-shadow(0 0 5px #63ddd2); }
+.ticker > div { flex: 1; }
+.action-log { position: relative; }
+.action-log summary { cursor: pointer; color: #8dc8be; }
+.action-log ol {
+  position: absolute;
+  right: 0;
+  bottom: 1.4rem;
+  width: min(520px, 75vw);
+  max-height: 320px;
+  overflow: auto;
+  margin: 0;
+  padding: 1rem 1rem 1rem 3rem;
+  background: #071416;
+  border: 1px solid #45605d;
+  box-shadow: 0 0 35px #000;
+}
+.action-log li { padding: 0.25rem; color: #d9d1bb; }
+.action-log time { color: #79bcb2; }
