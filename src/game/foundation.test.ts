@@ -1,26 +1,22 @@
 import { describe, expect, it } from "vitest";
-import { POPULATION_WEIGHT_TOTAL, REGIONS } from "../data/regions";
-import { clamp, globalInfluence } from "./derived";
+import { createGameState, placeStartingFoothold } from "./engine";
+import { calendar, clamp, livePopulation } from "./derived";
+import { REGIONS, POPULATION_WEIGHT_TOTAL } from "../data/regions";
+import { REGION_IDS } from "./types";
 import { nextRandom, seedToState } from "./random";
-import type { RegionId, RegionState } from "./types";
-
-const blankRegion = (): RegionState => ({ influence: 0, cultStrength: 0, resistanceModifier: 0, exposure: 0, instability: 0, activeEventId: null, milestoneFlags: [], timedResistance: [] });
-
 describe("shared foundation", () => {
-  it("keeps population weights and weighted influence exact", () => {
+  it("keeps the abstract world population and adjacency valid", () => {
+    const state = placeStartingFoothold(createGameState({ seed: "population", difficulty: "normal" }), "oceania").state;
     expect(POPULATION_WEIGHT_TOTAL).toBe(100);
-    const regions = Object.fromEntries(Object.keys(REGIONS).map((id) => [id, blankRegion()])) as Record<RegionId, RegionState>;
-    regions.south_asia.influence = 50;
-    expect(globalInfluence(regions)).toBe(9);
+    expect(REGION_IDS.reduce((sum, id) => sum + livePopulation(state.regions[id]), 0)).toBe(10000);
+    for (const id of REGION_IDS) for (const adjacent of REGIONS[id].adjacent) expect(REGIONS[adjacent].adjacent).toContain(id);
   });
-
-  it("clamps bounded values", () => {
-    expect(clamp(-3)).toBe(0);
-    expect(clamp(103)).toBe(100);
+  it("formats calendar rollovers and clamps finite values", () => {
+    expect(calendar(0)).toBe("Year 1 · Month 1");
+    expect(calendar(12)).toBe("Year 2 · Month 1");
+    expect(clamp(-10)).toBe(0); expect(clamp(110)).toBe(100);
   });
-
   it("repeats seeded random sequences", () => {
-    const seed = seedToState("rlyeh");
-    expect(nextRandom(seed)).toEqual(nextRandom(seed));
+    expect(nextRandom(seedToState("same"))).toEqual(nextRandom(seedToState("same")));
   });
 });

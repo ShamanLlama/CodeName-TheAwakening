@@ -1,151 +1,118 @@
-import { ABILITY_IDS, EVENT_IDS, REGION_IDS, UPGRADE_IDS, type ActiveEvent, type Difficulty, type GameState } from "./types";
-
-export const SAVE_KEY = "cthulhu-awakening-save";
-export const SAVE_VERSION = 1;
-
-export interface GameSettings {
-  muted: boolean;
-  volume: number;
-}
-
-export interface BestResult {
-  won: boolean;
-  elapsedSeconds: number;
-  finalInfluence: number;
-  finalSuppression: number;
-}
-
-export interface SaveEnvelope {
-  version: 1;
-  state: GameState | null;
-  settings: GameSettings;
-  tutorialComplete: boolean;
-  bestResults: Partial<Record<Difficulty, BestResult>>;
-}
-
-export const DEFAULT_SAVE: SaveEnvelope = {
-  version: SAVE_VERSION,
-  state: null,
-  settings: { muted: false, volume: 55 },
-  tutorialComplete: false,
-  bestResults: {},
-};
-
-const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === "object" && value !== null && !Array.isArray(value);
-const isNumber = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value);
-const inRange = (value: unknown, minimum: number, maximum: number) => isNumber(value) && value >= minimum && value <= maximum;
-const isId = (value: unknown, ids: readonly string[]) => typeof value === "string" && ids.some((id) => id === value);
-
-function isRegion(value: unknown): boolean {
-  if (!isRecord(value) || !inRange(value.influence, 0, 100) || !inRange(value.cultStrength, 0, 100)
-    || !inRange(value.exposure, 0, 100) || !inRange(value.instability, 0, 100) || !inRange(value.resistanceModifier, -100, 100)) return false;
-  if (value.activeEventId !== null && typeof value.activeEventId !== "string") return false;
-  if (!Array.isArray(value.milestoneFlags) || value.milestoneFlags.some((flag) => typeof flag !== "string")) return false;
-  return Array.isArray(value.timedResistance) && value.timedResistance.every((modifier) => isRecord(modifier)
-    && inRange(modifier.amount, -100, 100) && inRange(modifier.remainingSeconds, 0, 10_000)
-    && (modifier.sourceEventId === undefined || typeof modifier.sourceEventId === "string"));
-}
-
-function isActiveEvent(value: unknown): value is ActiveEvent {
-  return isRecord(value) && typeof value.instanceId === "string" && isId(value.eventId, EVENT_IDS)
-    && isId(value.regionId, REGION_IDS) && [1, 2, 3].includes(Number(value.severity))
-    && inRange(value.remainingSeconds, 0, 10_000) && typeof value.resolved === "boolean"
-    && inRange(value.spentDread, 0, 10_000) && typeof value.firstAbilityUsed === "boolean";
-}
-
-function isLogEntry(value: unknown): boolean {
-  return isRecord(value) && inRange(value.id, 0, Number.MAX_SAFE_INTEGER) && inRange(value.elapsedSeconds, 0, Number.MAX_SAFE_INTEGER)
-    && ["system", "ability", "event", "milestone", "result"].includes(String(value.kind)) && typeof value.message === "string";
-}
-
-function isSettings(value: unknown): value is GameSettings {
-  return isRecord(value) && typeof value.muted === "boolean" && isNumber(value.volume) && value.volume >= 0 && value.volume <= 100;
-}
-
-function isBestResult(value: unknown): value is BestResult {
-  return isRecord(value) && typeof value.won === "boolean" && inRange(value.elapsedSeconds, 0, Number.MAX_SAFE_INTEGER)
-    && inRange(value.finalInfluence, 0, 100) && inRange(value.finalSuppression, 0, 100);
-}
-
-function isGameState(value: unknown): value is GameState {
-  if (!isRecord(value) || value.version !== 1 || typeof value.seed !== "string") return false;
-  if (!["setup", "placing", "playing", "awakening", "won", "lost"].includes(String(value.status))) return false;
-  if (!["easy", "normal", "hard"].includes(String(value.difficulty))) return false;
-  if (![0, 1, 2].includes(Number(value.speed))) return false;
-  const numericKeys = ["rngState", "elapsedSeconds", "insight", "nextEventThreshold", "lastAbilityUsedAt", "lastEventSpawnAt", "contagiousDreamsElapsed"];
-  if (numericKeys.some((key) => !inRange(value[key], 0, Number.MAX_SAFE_INTEGER))) return false;
-  if (!inRange(value.dread, 0, 150) || !inRange(value.globalInfluence, 0, 100) || !inRange(value.suppression, 0, 100)) return false;
-  if (value.awakeningSecondsRemaining !== null && !inRange(value.awakeningSecondsRemaining, 0, 45)) return false;
-  if (value.pendingEventSeconds !== null && !inRange(value.pendingEventSeconds, 0, 10_000)) return false;
-  const regions = value.regions;
-  if (!isRecord(regions) || REGION_IDS.some((id) => !isRegion(regions[id]))) return false;
-  if (!Array.isArray(value.unlockedAbilities) || value.unlockedAbilities.some((valueId) => !isId(valueId, ABILITY_IDS))) return false;
-  if (!Array.isArray(value.unlockedUpgrades) || value.unlockedUpgrades.some((valueId) => !isId(valueId, UPGRADE_IDS))) return false;
-  const cooldowns = value.cooldowns;
-  if (!isRecord(cooldowns) || ABILITY_IDS.some((id) => !inRange(cooldowns[id], 0, 10_000))) return false;
-  if (!Array.isArray(value.activeEvents) || value.activeEvents.length > 3) return false;
-  const activeEvents: ActiveEvent[] = [];
-  for (const event of value.activeEvents) {
-    if (!isActiveEvent(event) || activeEvents.some((active) => active.instanceId === event.instanceId || active.regionId === event.regionId)) return false;
-    const eventRegion = regions[event.regionId];
-    if (!isRecord(eventRegion) || eventRegion.activeEventId !== event.instanceId) return false;
-    activeEvents.push(event);
+import { BALANCE as B } from "../data/balance";
+import { REGIONS } from "../data/regions";
+import { deadline, readySites, totalFollowers } from "./derived";
+import { ACTION_IDS, REGION_IDS, type GameState } from "./types";
+export const SAVE_KEY = "cthulhu-awakening-save-v2";
+export const LEGACY_SAVE_KEY = "cthulhu-awakening-save";
+export const RECOVERY_KEY = "cthulhu-awakening-save-v2-recovery";
+export const SAVE_VERSION = 2;
+export interface GameSettings { muted: boolean; volume: number }
+export interface RunResult { won: boolean; month: number; followers: number; sites: number; seed: string }
+export interface SaveEnvelope { version: 2; state: GameState | null; settings: GameSettings; tutorialComplete: boolean; lastResult: RunResult | null }
+export interface LoadResult { save: SaveEnvelope; notice: string; blocked: boolean }
+export const defaultSave = (): SaveEnvelope => ({ version: 2, state: null, settings: { muted: true, volume: 40 }, tutorialComplete: false, lastResult: null });
+const record = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
+const number = (v: unknown, max = Number.MAX_SAFE_INTEGER): v is number => typeof v === "number" && Number.isFinite(v) && v >= 0 && v <= max;
+const integer = (v: unknown, max = Number.MAX_SAFE_INTEGER): v is number => number(v, max) && Number.isInteger(v);
+const oneOf = (v: unknown, choices: readonly string[]) => typeof v === "string" && choices.includes(v);
+function settings(v: unknown): v is GameSettings { return record(v) && typeof v.muted === "boolean" && number(v.volume, 100); }
+export function isGameState(v: unknown): v is GameState {
+  if (!record(v) || v.version !== 2 || v.ruleset !== "alignment-1" || typeof v.seed !== "string"
+    || !integer(v.rngState, 4294967295) || !integer(v.elapsedMonths, deadline)
+    || !oneOf(v.status, ["placing", "playing", "alignment", "awakening", "won", "lost"])
+    || !oneOf(v.difficulty, ["easy", "normal", "hard"]) || ![0, 1, 2].includes(v.speed as number)
+    || !number(v.influence, B.influenceCap) || !number(v.dread, B.dreadCap) || !number(v.awareness, 100)
+    || (v.specialization !== null && !oneOf(v.specialization, ["recruitment", "infiltration", "terror"]))
+    || !integer(v.finalProgress, B.finalMonths) || !integer(v.nextLogId)
+    || (v.resultReason !== null && typeof v.resultReason !== "string") || !record(v.regions)) return false;
+  if (v.status === "placing" && v.elapsedMonths !== 0 || v.status === "playing" && v.elapsedMonths >= B.preparationMonths
+    || ["alignment", "awakening", "won"].includes(String(v.status)) && v.elapsedMonths < B.preparationMonths
+    || v.status === "won" && v.finalProgress !== B.finalMonths || v.status === "lost" && v.elapsedMonths !== deadline
+    || ["won", "lost"].includes(String(v.status)) && v.speed !== 0) return false;
+  for (const id of REGION_IDS) {
+    const r = v.regions[id];
+    if (!record(r) || !record(r.population) || typeof r.public !== "boolean" || !number(r.exposure, 100)
+      || !number(r.madness, 100) || !integer(r.backlashUntil) || !record(r.cooldowns) || !record(r.site)
+      || typeof r.site.invested !== "boolean" || !integer(r.site.progress, B.siteMonths)
+      || !r.site.invested && r.site.progress !== 0) return false;
+    const population = r.population;
+    const keys = ["unaware", "deniers", "believers", "followers", "losses"];
+    if (keys.some(k => !number(population[k]))) return false;
+    const sum = keys.reduce((s, k) => s + (population[k] as number), 0);
+    if (Math.abs(sum - REGIONS[id].populationWeight * B.populationScale) > 0.00001) return false;
+    if (Object.entries(r.cooldowns).some(([key, val]) => !ACTION_IDS.includes(key as typeof ACTION_IDS[number]) || !integer(val))) return false;
+    if (r.threat !== null && (!record(r.threat) || !oneOf(r.threat.kind, ["investigation", "raid", "occult"])
+      || !integer(r.threat.dueMonth) || r.threat.dueMonth <= v.elapsedMonths || !integer(r.threat.severity, 3) || r.threat.severity < 1)) return false;
+    if (r.opportunity !== null && (!record(r.opportunity) || !oneOf(r.opportunity.kind, ["nightmare", "eclipse", "celebrity", "politician"])
+      || !integer(r.opportunity.expiresMonth) || r.opportunity.expiresMonth <= v.elapsedMonths)) return false;
+    if (r.figure !== null && (!record(r.figure) || !oneOf(r.figure.kind, ["celebrity", "politician"]) || typeof r.figure.revealed !== "boolean")) return false;
   }
-  if (!Array.isArray(value.recentEventIds) || value.recentEventIds.length > 3 || value.recentEventIds.some((id) => !isId(id, EVENT_IDS))) return false;
-  if (!Array.isArray(value.log) || !value.log.every(isLogEntry)) return false;
-  if ((value.selectedRegionId !== null && !isId(value.selectedRegionId, REGION_IDS)) || (value.selectedAbilityId !== null && !isId(value.selectedAbilityId, ABILITY_IDS))) return false;
-  const telemetry = value.telemetry;
-  if (!isRecord(telemetry)) return false;
-  const casts = telemetry.casts;
-  if (!isRecord(casts) || ABILITY_IDS.some((id) => !inRange(casts[id], 0, Number.MAX_SAFE_INTEGER))
-    || !inRange(telemetry.eventsResolved, 0, Number.MAX_SAFE_INTEGER) || !inRange(telemetry.eventsExpired, 0, Number.MAX_SAFE_INTEGER)) return false;
-  if (REGION_IDS.some((id) => {
-    const region = regions[id];
-    const linked = isRecord(region) && region.activeEventId !== null
-      ? activeEvents.find((event) => event.instanceId === region.activeEventId) : undefined;
-    return linked !== undefined && linked.regionId !== id || isRecord(region) && region.activeEventId !== null && linked === undefined;
-  })) return false;
-  return typeof value.startingFootholdPlaced === "boolean";
-}
-
-function isSaveEnvelope(value: unknown): value is SaveEnvelope {
-  if (!isRecord(value) || value.version !== SAVE_VERSION || !isSettings(value.settings)) return false;
-  if (typeof value.tutorialComplete !== "boolean" || !isRecord(value.bestResults)
-    || Object.keys(value.bestResults).some((key) => !["easy", "normal", "hard"].includes(key))) return false;
-  if (value.state !== null && !isGameState(value.state)) return false;
-  for (const result of Object.values(value.bestResults)) if (!isBestResult(result)) return false;
+  if (!Array.isArray(v.log) || v.log.length > 100) return false;
+  let lastId = 0;
+  for (const entry of v.log) {
+    if (!record(entry) || !integer(entry.id) || entry.id <= lastId || entry.id >= v.nextLogId
+      || !integer(entry.month, v.elapsedMonths) || typeof entry.message !== "string") return false;
+    lastId = entry.id;
+  }
+  const t = v.telemetry;
+  if (!record(t) || !record(t.actions) || !record(t.revelations)
+    || ["sacrificed", "raidLosses", "influenceEarned", "influenceSpent", "dreadEarned", "dreadSpent", "threatsCountered"].some(k => !number(t[k]))) return false;
+  if (Object.entries(t.actions).some(([k, n]) => !ACTION_IDS.includes(k as typeof ACTION_IDS[number]) || !integer(n))) return false;
+  const elapsedMonths = v.elapsedMonths;
+  if (Object.entries(t.revelations).some(([k, n]) => !REGION_IDS.includes(k as typeof REGION_IDS[number]) || !integer(n, elapsedMonths))) return false;
   return true;
 }
-
 export function decodeSave(raw: string | null): SaveEnvelope | null {
-  if (raw === null) return DEFAULT_SAVE;
+  if (raw === null) return defaultSave();
   try {
-    const parsed: unknown = JSON.parse(raw);
-    return isSaveEnvelope(parsed) ? parsed : null;
-  } catch {
-    return null;
-  }
+    const v: unknown = JSON.parse(raw);
+    if (!record(v) || v.version !== 2 || !settings(v.settings) || typeof v.tutorialComplete !== "boolean"
+      || (v.state !== null && !isGameState(v.state))) return null;
+    const r = v.lastResult;
+    if (r !== null && (!record(r) || typeof r.won !== "boolean" || !integer(r.month, deadline)
+      || !number(r.followers, 10000) || !integer(r.sites, 8) || typeof r.seed !== "string")) return null;
+    return v as unknown as SaveEnvelope;
+  } catch { return null; }
 }
-
-export function encodeSave(save: SaveEnvelope): string {
-  return JSON.stringify(save);
+export function loadRun(storage: Storage): LoadResult {
+  try {
+    const raw = storage.getItem(SAVE_KEY);
+    if (raw !== null) {
+      const decoded = decodeSave(raw);
+      return decoded ? { save: decoded, notice: "", blocked: false }
+        : { save: defaultSave(), notice: "This save could not be read. Starting fresh will retain a recovery copy.", blocked: true };
+    }
+    const save = defaultSave(), legacy = storage.getItem(LEGACY_SAVE_KEY);
+    if (legacy) {
+      try {
+        const old: unknown = JSON.parse(legacy);
+        if (record(old) && old.version === 1 && settings(old.settings)) save.settings = old.settings;
+      } catch { /* Retain unreadable old data without importing it. */ }
+      return { save, notice: "Your earlier run is preserved. The revised rules start a new campaign.", blocked: false };
+    }
+    return { save, notice: "", blocked: false };
+  } catch { return { save: defaultSave(), notice: "Storage is unavailable. You can play, but this session will not save.", blocked: true }; }
 }
-
-export function saveRun(storage: Storage, save: SaveEnvelope): void {
-  storage.setItem(SAVE_KEY, encodeSave(save));
+export function retainRecovery(storage: Storage): boolean {
+  try {
+    const raw = storage.getItem(SAVE_KEY);
+    if (raw !== null && !decodeSave(raw)) storage.setItem(RECOVERY_KEY, raw);
+    return true;
+  } catch { return false; }
 }
-
-export function loadRun(storage: Storage): SaveEnvelope {
-  const decoded = decodeSave(storage.getItem(SAVE_KEY));
-  if (decoded) return decoded;
-  storage.removeItem(SAVE_KEY);
-  return DEFAULT_SAVE;
+export function saveRun(storage: Storage, save: SaveEnvelope): boolean {
+  try { storage.setItem(SAVE_KEY, JSON.stringify(save)); return true; } catch { return false; }
 }
-
-export function resultFor(state: GameState): BestResult {
-  return { won: state.status === "won", elapsedSeconds: state.elapsedSeconds, finalInfluence: state.globalInfluence, finalSuppression: state.suppression };
+export function resultFor(state: GameState): RunResult {
+  return { won: state.status === "won", month: state.elapsedMonths, followers: totalFollowers(state), sites: readySites(state), seed: state.seed };
 }
-
-export function exportTelemetry(state: GameState): string {
-  return JSON.stringify({ seed: state.seed, difficulty: state.difficulty, elapsedSeconds: state.elapsedSeconds, status: state.status, finalInfluence: state.globalInfluence, suppression: state.suppression, ...state.telemetry }, null, 2);
-}
+export const exportTelemetry = (state: GameState): string => JSON.stringify({
+  ruleset: state.ruleset, seed: state.seed, difficulty: state.difficulty, month: state.elapsedMonths,
+  status: state.status, specialization: state.specialization, resultReason: state.resultReason,
+  followers: totalFollowers(state), readySites: readySites(state), finalProgress: state.finalProgress,
+  resources: { influence: state.influence, dread: state.dread }, awareness: state.awareness,
+  ...state.telemetry,
+  logCoverage: { retained: state.log.length, total: state.nextLogId - 1, firstMonth: state.log[0]?.month ?? null, lastMonth: state.log.at(-1)?.month ?? null, truncated: state.nextLogId - 1 > state.log.length },
+  regions: Object.fromEntries(Object.entries(state.regions).map(([id, r]) => [id, { population: r.population, public: r.public, exposure: r.exposure, site: r.site, threat: r.threat }])),
+  log: state.log,
+}, null, 2);

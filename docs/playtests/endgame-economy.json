@@ -1,0 +1,59 @@
+{
+  "title": "Endgame economy playtest",
+  "date": "2026-09-06",
+  "ruleset": "alignment-1",
+  "command": "npx vitest run src/tests/endgame-economy.playtest.test.ts --reporter=verbose",
+  "harness": "src/tests/endgame-economy.playtest.test.ts",
+  "scope": {
+    "difficulty": "normal",
+    "seeds": ["endgame-0", "endgame-1", "endgame-2", "endgame-3", "endgame-4", "endgame-5", "endgame-6", "endgame-7", "endgame-8", "endgame-9", "endgame-10", "endgame-11"],
+    "samplesPerPolicy": 12,
+    "totalFullCampaigns": 72,
+    "legalCommandsOnly": true,
+    "trueReadiness": "First month with three supported, completed sites and at least 100 Dread before the final rite cost.",
+    "foregoneInfluence": "Pre-resolution cap-income estimate: sum of influencePerMonth at the start of each month that Influence was already 500. It is not exact overflow because threats resolve before income; use it only as a consistent estimate of cap pressure."
+  },
+  "policies": {
+    "public-recruitment": "Recruitment doctrine at month 60 when affordable; expand Africa -> Europe -> Latin America; reveal each target at month 24 or once it has 70 followers; maintain only these three public cells; counter threats within three months; exploit nightmares and funded-site eclipses; sacrifice only until site costs plus final reserve are covered.",
+    "hidden-infiltration": "Infiltration doctrine; same three-cell expansion/economy; never reveal; convert available figures but do not reveal them; counter within three months.",
+    "sacrifice-terror": "Terror doctrine; same three-cell expansion/economy; reveal only Africa at month 24; counter within three months.",
+    "late-public-recruitment": "Recruitment doctrine; same three-cell expansion/economy; delay all three reveals to month 420; counter within three months.",
+    "unmanaged-public": "Same as public-recruitment but deliberately never use Counter. This is an upper-bound test of how forgiving ignored threats are, not a recommended policy.",
+    "eight-region-public-recruitment": "Recruitment doctrine; expand and publicly reveal all eight regions as legal adjacency permits; fund ritual sites only in Africa, Europe, and Latin America; counter all threats within three months. This bounds the documented broad-public late-game economy."
+  },
+  "results": {
+    "public-recruitment": {"wins": "12/12", "meanThirdSiteMonth": 265.9, "latestThirdSiteMonth": 292, "meanTrueReadinessMonth": 265.9, "latestTrueReadinessMonth": 292, "meanMonthsReadyBeforeAlignment": 334.1, "meanFollowersAt600": 2295.7, "meanInfluenceCapMonths": 219.5, "meanForegoneInfluenceAtCap": 3794.1, "meanInfluenceSpent": 1514.7, "meanSacrificed": 453.3, "meanCounters": 29.8, "meanRaidLosses": 262.7, "meanFinalDread": 143.3},
+    "hidden-infiltration": {"wins": "12/12", "meanThirdSiteMonth": 243.9, "latestThirdSiteMonth": 267, "meanTrueReadinessMonth": 243.9, "latestTrueReadinessMonth": 267, "meanMonthsReadyBeforeAlignment": 356.1, "meanFollowersAt600": 1785.7, "meanInfluenceCapMonths": 219.2, "meanForegoneInfluenceAtCap": 2452.2, "meanInfluenceSpent": 1159.8, "meanSacrificed": 423.3, "meanCounters": 20.8, "meanRaidLosses": 86.7, "meanFinalDread": 164.6},
+    "sacrifice-terror": {"wins": "12/12", "meanThirdSiteMonth": 258.8, "latestThirdSiteMonth": 281, "meanTrueReadinessMonth": 258.8, "latestTrueReadinessMonth": 281, "meanMonthsReadyBeforeAlignment": 341.2, "meanFollowersAt600": 1870.5, "meanInfluenceCapMonths": 209.4, "meanForegoneInfluenceAtCap": 2566, "meanInfluenceSpent": 1315.3, "meanSacrificed": 446.7, "meanCounters": 24.2, "meanRaidLosses": 154.7, "meanFinalDread": 162.5},
+    "late-public-recruitment": {"wins": "12/12", "meanThirdSiteMonth": 243.1, "latestThirdSiteMonth": 267, "meanTrueReadinessMonth": 243.1, "latestTrueReadinessMonth": 267, "meanMonthsReadyBeforeAlignment": 356.9, "meanFollowersAt600": 2479, "meanInfluenceCapMonths": 208.8, "meanForegoneInfluenceAtCap": 3142.4, "meanInfluenceSpent": 1416.8, "meanSacrificed": 446.7, "meanCounters": 26.8, "meanRaidLosses": 82.7, "meanFinalDread": 151.7},
+    "unmanaged-public": {"wins": "12/12", "meanThirdSiteMonth": 263.4, "latestThirdSiteMonth": 293, "meanTrueReadinessMonth": 264.3, "latestTrueReadinessMonth": 293, "meanMonthsReadyBeforeAlignment": 335.7, "meanFollowersAt600": 1113, "meanInfluenceCapMonths": 278.5, "meanForegoneInfluenceAtCap": 2899.4, "meanInfluenceSpent": 641, "meanSacrificed": 446.7, "meanCounters": 0, "meanRaidLosses": 1517.3, "meanFinalDread": 154.2},
+    "eight-region-public-recruitment": {"wins": "12/12", "meanTrueReadinessMonth": 287.9, "latestTrueReadinessMonth": 316, "meanMonthsReadyBeforeAlignment": 312.1, "meanPublicRegionsAt600": 8, "meanFollowersAt600": 6329.7, "meanInfluenceCapMonths": 239.6, "meanForegoneInfluenceAtCap": 10160.4, "meanCounters": 68.8, "meanRaidLosses": 427.3, "meanInfluenceSpent": 3174.3, "meanSacrificed": 440}
+  },
+  "finishMonthSummary": {
+    "public-recruitment": {"min": 612, "mean": 612, "max": 612},
+    "hidden-infiltration": {"min": 612, "mean": 612, "max": 612},
+    "sacrifice-terror": {"min": 612, "mean": 612, "max": 612},
+    "late-public-recruitment": {"min": 612, "mean": 612, "max": 612},
+    "unmanaged-public": {"min": 612, "mean": 617.8, "max": 622},
+    "eight-region-public-recruitment": {"min": 612, "mean": 612, "max": 612}
+  },
+  "findings": [
+    "All 60 managed runs in this seed sample finished at month 612, the first possible completion after the month-600 alignment. The unmanaged public policy still won 12/12 but finished from month 612 to 622 (mean 617.8). The slowest true-readiness case was month 316 in the eight-region sample, leaving 284 months before alignment.",
+    "The 500 Influence cap creates extensive idle economy: 209-279 capped months in the three-region policies and 240 in the eight-region sample. The wide sample's pre-resolution cap-income estimate was 10,160.",
+    "Counter is economically available in mature campaigns: the eight-region policy paid a mean 68.8 counters (2,064 Influence at the normal price) while still capping for 240 months. Ignoring every threat cut counter spending but still won 12/12, despite 1,517 mean raid losses.",
+    "Late public revelation reached readiness 22.8 months earlier than early public in this policy bundle and had 2,479 vs 2,296 mean followers at month 600. It also has lower mean raid loss (82.7 vs 262.7). The bundle changes timing as well as doctrine-neutral threat exposure; this is evidence about reveal timing, not a pure doctrine effect.",
+    "Hidden-infiltration had the least raid loss and fewest counters among managed three-region policies, but its figure conversions and hidden play mean it is not a controlled comparison of the Infiltration doctrine alone. Terror and Recruitment were likewise tested only inside their named policy bundles."
+  ],
+  "suggestedBalanceExperiments": [
+    "Test a scalable Influence sink or changed cap behavior that makes excess income relevant; do not lower the cap in isolation. Repeat the same seed set and require materially fewer capped months without making Counters unaffordable.",
+    "Move the calendar pressure later by increasing site preparation time, raising site costs, or shortening the alignment date; target true readiness within roughly 24-72 months of alignment rather than 284-357 months early.",
+    "Make unmanaged threats threaten the victory state more directly: the no-Counter policy absorbed 1,517 losses and still won every sample. Compare larger site-progress losses, stronger support disruption, or more frequent threats against the managed baseline.",
+    "Run a factorial doctrine test with identical visibility, figure, expansion, and counter rules before changing doctrine values. The current results deliberately compare play styles, so they should not be used to assign a numeric doctrine nerf."
+  ],
+  "caveats": [
+    "These are deterministic engine simulations, not UI comprehension or real-time pacing tests.",
+    "Policies act every simulated month and use perfect information from the state, including threat warnings and opportunities. Human action economy may be weaker.",
+    "The 12 seeds are a repeatable sample, not a probability estimate for all possible seeds.",
+    "The broad eight-region policy is an intentional bounded comparison with only three ritual sites; it does not model every possible opportunity or figure decision a human might make."
+  ]
+}

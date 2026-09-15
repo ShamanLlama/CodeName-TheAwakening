@@ -1,16 +1,6 @@
 import type { Difficulty } from "../game/types";
-
-export interface DifficultyDefinition {
-  id: Difficulty;
-  name: string;
-  influenceTarget: number;
-  suppressionMultiplier: number;
-  eventPressureMultiplier: number;
-  pressureModifier: number;
-}
-
-export const DIFFICULTIES: Record<Difficulty, DifficultyDefinition> = {
-  easy: { id: "easy", name: "Easy", influenceTarget: 60, suppressionMultiplier: 0.8, eventPressureMultiplier: 0.85, pressureModifier: -5 },
-  normal: { id: "normal", name: "Normal", influenceTarget: 70, suppressionMultiplier: 1, eventPressureMultiplier: 1, pressureModifier: 0 },
-  hard: { id: "hard", name: "Hard", influenceTarget: 80, suppressionMultiplier: 1.2, eventPressureMultiplier: 1.2, pressureModifier: 10 },
+export const DIFFICULTIES: Record<Difficulty, { name: string; recruitment: number; pressure: number; warning: number }> = {
+  easy: { name: "Easy", recruitment: 1.2, pressure: 0.75, warning: 2 },
+  normal: { name: "Normal", recruitment: 1, pressure: 1, warning: 0 },
+  hard: { name: "Hard", recruitment: 0.85, pressure: 1.25, warning: -1 },
 };

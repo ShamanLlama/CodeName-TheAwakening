@@ -4,3 +4,7 @@ playwright-report/
 test-results/
 .vite/
 *.local
+
+# Generated artifacts
+output/
+.playwright-cli/

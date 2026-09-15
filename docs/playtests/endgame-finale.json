@@ -1,0 +1,32 @@
+{
+  "scope": "Finale response tolerance, site fragility, reserve thresholds, and readiness timing.",
+  "harness": "src/tests/endgame-finale.playtest.test.ts",
+  "run": "npm test -- --run src/tests/endgame-finale.playtest.test.ts --reporter=verbose",
+  "naturalRunMethod": "New normal-difficulty game; only legal engine actions; three-region recruitment doctrine policy; twelve fixed seeds: rlyeh, dagon, the-deep, finale-a, finale-b, late-01 through late-07.",
+  "responseSamples": [
+    { "response": "counter with 3 months warning", "wins": "12/12", "meanFinishMonth": 612, "meanRaidLosses": 228, "meanCounters": 28.92 },
+    { "response": "counter with 1 month warning", "wins": "12/12", "meanFinishMonth": 612, "meanRaidLosses": 242.67, "meanCounters": 28.17 },
+    { "response": "ignore all threats", "wins": "12/12", "meanFinishMonth": 617.83, "finishMonths": [622, 622, 612, 612, 622, 622, 612, 622, 612, 622, 612, 622], "meanRaidLosses": 1440.67, "meanCounters": 0 }
+  ],
+  "mechanicalFinding": "A due-month reaction is impossible: monthly threat resolution happens before the next player decision. One full month of warning was sufficient in this sample; ignoring threats increased mean losses 6.3x and delayed 7 of 12 wins by 10 months.",
+  "lateFundingMethod": "The same legal policy builds resources and counters threats normally, but refuses all three Prepare actions until the listed month. Eclipse opportunities are taken only when the normal action is legal. Each gate was run for the same twelve seeds.",
+  "lateFundingSamples": [
+    { "fundingGate": 576, "actualFunding": "all 36 site investments occurred at month 576", "allSitesReady": "month 600 in 12/12", "wins": "12/12", "finishMonth": 612, "legalEclipseAccelerations": 2 },
+    { "fundingGate": 588, "actualFunding": "all 36 site investments occurred at month 588", "allSitesReady": "month 612 in 12/12", "wins": "12/12", "finishMonth": 624, "legalEclipseAccelerations": 2 },
+    { "fundingGate": 589, "actualFunding": "all 36 site investments occurred at month 589", "allSitesReady": "month 613 in 12/12", "wins": "0/12", "lossMonth": 624, "finalProgress": 0, "legalEclipseAccelerations": 6 },
+    { "fundingGate": 600, "actualFunding": "all 36 site investments occurred at month 600", "allSitesReady": "month 624 in 12/12", "wins": "0/12", "lossMonth": 624, "finalProgress": 0, "legalEclipseAccelerations": 3 }
+  ],
+  "syntheticControls": {
+    "finalDread": "99 cannot start; 100 can start when all other requirements hold.",
+    "siteSupport": "Each ready site requires 60 followers exactly.",
+    "alignmentTolerance": "At a perfectly ready month-600 start, 12 unsupported months followed by 12 supported months wins at month 624; 13 unsupported months loses with final progress 11/12.",
+    "severityThreeOccultAtMinimumSupport": "At 60 followers, loses 48 followers (leaving 12.23 after that month’s automatic growth), removes 6 site-progress months (24 to 18), and drops readiness from 3 to 2."
+  },
+  "interpretation": "These controls isolate timing and threat effects and are not natural director-frequency samples. The natural sample uses an early, focused three-site policy, so its threat-neglect survival should not be generalized to late or eight-region campaigns.",
+  "recommendations": [
+    "Keep the current one-month actionable warning expectation explicit in threat UI/tutorial text; reacting at the displayed due month is already too late.",
+    "Expose a finale safety target of at least 108 followers per site when a severity-three occult threat is possible: 60 to remain supported after its 48-follower hit. This does not prevent the separate six-month preparation setback.",
+    "For this policy and these seeds, treat month 588 as the latest third-site funding point without acceleration: all 12 runs funded then, readied at 612, and won exactly at month 624. Delaying one month produced 0/12 wins despite six legal eclipse uses across the sample; figure reveals or more eclipse acceleration could change that boundary.",
+    "Do not increase baseline finale difficulty from this focused policy: even full threat neglect retained 12/12 wins. The late-funding gate is strict, however, so surface the month-588 cutoff clearly before players commit to their third site."
+  ]
+}

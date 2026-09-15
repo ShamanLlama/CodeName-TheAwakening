@@ -1,160 +1,214 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import {
-  createGameState, advanceSimulation, castAbility, debugPatchState, forceEvent,
-  dreadPerSecond, effectiveAbilityCost, placeStartingFoothold, setGameSpeed, startAwakening, unlockAbility, unlockUpgrade,
-} from "./game/engine";
-import { ABILITIES, UPGRADES } from "./data/abilities";
+/*
+THESIS: A world-map strategy table for choosing where the sleeping god reveals itself.
+OWN-WORLD: Preserve the existing deep-sea teal, aged gold, serif headings, and regional map.
+STORY: Build a cult, weigh sacrifice against growth, expose ritual sites, survive the alignment.
+FIRST VIEWPORT: Resource/calendar header; contextual actions left, world and ritual readiness center, selected region right.
+FORM: Extend the existing three-panel game surface; no replacement visual identity.
+*/
+import { useEffect, useRef, useState } from "react";
+import { EarthMap } from "./components/EarthMap";
+import { Chronicle } from "./components/Chronicle";
+import { describeThreat } from "./game/threats";
+import { ritualForecast } from "./game/forecast";
+import { ACTIONS, SPECIALIZATIONS } from "./data/abilities";
+import { BALANCE as B } from "./data/balance";
 import { DIFFICULTIES } from "./data/difficulties";
-import { EVENTS } from "./data/events";
+import { OPPORTUNITY_NAMES, THREAT_NAMES } from "./data/events";
 import { REGIONS } from "./data/regions";
-import { ABILITY_IDS, EVENT_IDS, REGION_IDS, type AbilityBranch, type AbilityId, type Difficulty, type EventId, type GameState, type RegionId } from "./game/types";
-import { effectiveResistance } from "./game/derived";
-import { exportTelemetry, loadRun, resultFor, saveRun, SAVE_VERSION, type GameSettings } from "./game/persistence";
+import { advanceSimulation, awakeningReason, chooseSpecialization, createGameState, performAction, placeStartingFoothold, previewAction, setGameSpeed, startAwakening } from "./game/engine";
+import { awarenessDrag, cultShare, calendar, deadline, influencePerMonth, livePopulation, readySites, recruitmentPerMonth, regionIncome, siteLabel, totalFollowers } from "./game/derived";
+import { defaultSave, exportTelemetry, loadRun, retainRecovery, resultFor, saveRun, type LoadResult } from "./game/persistence";
+import { REGION_IDS, type ActionId, type CommandResult, type Difficulty, type GameState, type RegionId, type Specialization } from "./game/types";
 
-const BRANCHES: readonly AbilityBranch[] = ["ritual", "madness", "omen"];
-const TUTORIAL = [
-  "Choose a vulnerable region and establish your first foothold.",
-  "Use Whispered Dreams to turn unease into influence.",
-  "Influence grows Dread. Dread powers your darker interventions.",
-  "Events change a region's conditions. Work with opportunities and contain hostile attention.",
-  "Spend Insight to unlock abilities and their branch upgrades.",
-];
-const MAP: Record<RegionId, { x: number; y: number; w: number; h: number }> = {
-  north_america: { x: 38, y: 66, w: 118, h: 74 }, latin_america: { x: 118, y: 160, w: 78, h: 120 },
-  europe: { x: 265, y: 70, w: 76, h: 52 }, africa: { x: 262, y: 136, w: 86, h: 122 },
-  middle_east: { x: 360, y: 122, w: 74, h: 58 }, south_asia: { x: 430, y: 166, w: 104, h: 82 },
-  east_asia: { x: 485, y: 74, w: 122, h: 102 }, oceania: { x: 564, y: 225, w: 90, h: 53 },
+const GROUPS: Record<string, ActionId[]> = {
+  Cult: ["recruit", "expand", "reveal", "hide", "conceal", "counter"],
+  Rituals: ["sacrifice", "manifest", "prepare"],
+  Opportunities: ["exploit", "convert", "reveal_figure"],
 };
-
-function isEventId(value: string): value is EventId { return EVENT_IDS.some((id) => id === value); }
-function isDifficulty(value: string): value is Difficulty { return value === "easy" || value === "normal" || value === "hard"; }
-function meter(value: number, label: string, max = 100) {
-  return <div className="meter" aria-label={`${label}: ${Math.round(value)} of ${max}`}><span>{label}</span><div><i style={{ width: `${Math.max(0, Math.min(100, (value / max) * 100))}%` }} /></div><b>{Math.round(value)}{max === 100 ? "%" : `/${max}`}</b></div>;
+const format = (n: number) => Math.floor(n).toLocaleString("en-US");
+function initial(): LoadResult {
+  try { return loadRun(window.localStorage); }
+  catch { return { save: defaultSave(), notice: "Storage is unavailable. This session will not save.", blocked: true }; }
 }
-function duration(seconds: number) { return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`; }
-
+function download(text: string, filename: string) {
+  const url = URL.createObjectURL(new Blob([text], { type: "application/json" }));
+  const a = document.createElement("a"); a.href = url; a.download = filename; a.click();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 export function App() {
-  const [initialSave] = useState(() => loadRun(localStorage));
-  const [game, setGame] = useState<GameState | null>(initialSave.state);
+  const [loaded] = useState(initial);
+  const [game, setGame] = useState<GameState | null>(loaded.save.state);
+  const [settings, setSettings] = useState(loaded.save.settings);
+  const [tutorialComplete, setTutorialComplete] = useState(loaded.save.tutorialComplete);
+  const [help, setHelp] = useState(false);
+  const [blocked, setBlocked] = useState(loaded.blocked);
+  const [storageNotice, setStorageNotice] = useState(loaded.notice);
+  const [notice, setNotice] = useState<{ message: string; logId: number } | null>(null);
   const [difficulty, setDifficulty] = useState<Difficulty>("normal");
   const [seed, setSeed] = useState("");
-  const [selectedRegion, setSelectedRegion] = useState<RegionId>("north_america");
-  const [selectedAbility, setSelectedAbility] = useState<AbilityId | null>(null);
-  const [showUpgrades, setShowUpgrades] = useState(false);
+  const [regionId, setRegionId] = useState<RegionId>("africa");
+  const [group, setGroup] = useState("Cult");
   const [showSettings, setShowSettings] = useState(false);
-  const [settings, setSettings] = useState<GameSettings>(initialSave.settings);
-  const [tutorialComplete, setTutorialComplete] = useState(initialSave.tutorialComplete);
-  const [tutorialStep, setTutorialStep] = useState<number | null>(null);
-  const [notice, setNotice] = useState("");
-  const [debugEvent, setDebugEvent] = useState<EventId>("investigators_arrive");
-  const bestResults = useRef(initialSave.bestResults);
-  const gameRef = useRef(game);
+  const ref = useRef(game);
   const elapsed = useRef(0);
-
-  useEffect(() => { gameRef.current = game; }, [game]);
+  useEffect(() => { ref.current = game; }, [game]);
   useEffect(() => {
-    if (game && (game.status === "won" || game.status === "lost")) {
-      const candidate = resultFor(game);
-      const previous = bestResults.current[game.difficulty];
-      const better = !previous || (candidate.won && !previous.won) || (candidate.won === previous.won && candidate.elapsedSeconds < previous.elapsedSeconds);
-      if (better) bestResults.current = { ...bestResults.current, [game.difficulty]: candidate };
+    if (blocked) return;
+    let saved = false;
+    try {
+      saved = saveRun(localStorage, { version: 2, state: game, settings, tutorialComplete,
+        lastResult: game && ["won", "lost"].includes(game.status) ? resultFor(game) : loaded.save.lastResult });
+    } catch { /* Access to storage itself may be blocked. */ }
+    if (!saved) {
+      const timer = window.setTimeout(() => { setStorageNotice("Saving is unavailable. This session continues in memory."); setBlocked(true); }, 0);
+      return () => window.clearTimeout(timer);
     }
-    saveRun(localStorage, { version: SAVE_VERSION, state: game, settings, tutorialComplete, bestResults: bestResults.current });
-  }, [game, settings, tutorialComplete]);
+  }, [game, settings, tutorialComplete, blocked, loaded.save.lastResult]);
   useEffect(() => {
+    let previous = performance.now();
     const timer = window.setInterval(() => {
-      const current = gameRef.current;
-      if (!current || current.status === "setup" || current.status === "won" || current.status === "lost" || tutorialStep !== null || current.speed === 0) return;
-      elapsed.current += current.speed * 0.25;
-      const seconds = Math.floor(elapsed.current);
-      if (seconds) {
-        elapsed.current -= seconds;
-        setGame((previous) => previous ? advanceSimulation(previous, seconds) : previous);
-      }
-    }, 250);
-    return () => window.clearInterval(timer);
-  }, [tutorialStep]);
-
-  const selected = game ? game.regions[selectedRegion] : null;
-  const selectedEvent = game?.activeEvents.find((event) => event.regionId === selectedRegion && !event.resolved);
-  const abilityPreview = game && selectedAbility ? castAbility(game, selectedAbility, selectedRegion) : null;
-  const previewText = !abilityPreview ? "" : !abilityPreview.ok ? abilityPreview.message : `Influence ${selected?.influence.toFixed(1)}→${abilityPreview.state.regions[selectedRegion].influence.toFixed(1)}, Cult ${selected?.cultStrength.toFixed(1)}→${abilityPreview.state.regions[selectedRegion].cultStrength.toFixed(1)}, Exposure ${selected?.exposure.toFixed(1)}→${abilityPreview.state.regions[selectedRegion].exposure.toFixed(1)}`;
-  const target = game ? DIFFICULTIES[game.difficulty].influenceTarget : 100;
-  const mostUsed = useMemo(() => {
-    if (!game) return null;
-    return ABILITY_IDS.reduce((best, id) => game.telemetry.casts[id] > game.telemetry.casts[best] ? id : best, ABILITY_IDS[0]);
-  }, [game]);
-
+      const now = performance.now(), delta = Math.min((now - previous) / 1000, 0.5); previous = now;
+      const current = ref.current;
+      if (!current || current.status === "placing" || ["won", "lost"].includes(current.status) || current.speed === 0 || help || document.hidden) return;
+      elapsed.current += delta * current.speed / B.secondsPerMonth;
+      const months = Math.floor(elapsed.current);
+      if (months > 0) { elapsed.current -= months; setGame(s => s ? advanceSimulation(s, months) : s); }
+    }, 100);
+    const hide = () => {
+      previous = performance.now();
+      if (document.hidden) setGame(s => s ? setGameSpeed(s, 0) : s);
+    };
+    document.addEventListener("visibilitychange", hide);
+    return () => { window.clearInterval(timer); document.removeEventListener("visibilitychange", hide); };
+  }, [help]);
   function begin() {
-    const next = createGameState({ difficulty, seed: seed.trim() || crypto.randomUUID().slice(0, 8) });
-    setGame(next); setSelectedAbility(null); setNotice(""); elapsed.current = 0;
-    if (!tutorialComplete) setTutorialStep(0);
+    let writable = false;
+    try { writable = retainRecovery(localStorage); } catch { /* Keep playing in memory. */ }
+    setBlocked(!writable); setStorageNotice(writable ? "" : "This session is not saving.");
+    elapsed.current = 0;
+    setGame(createGameState({ difficulty, seed: seed.trim() || crypto.randomUUID().slice(0, 8) }));
+    setHelp(!tutorialComplete); setNotice(null); setGroup("Cult");
   }
-  function apply(result: ReturnType<typeof castAbility>) {
-    setGame(result.state);
-    setNotice(result.ok ? result.state.log.at(-1)?.message ?? "The world shifts." : result.message);
-  }
-  function chooseRegion(regionId: RegionId) {
-    if (!game) return;
-    setSelectedRegion(regionId);
-    if (game.status === "placing") { apply(placeStartingFoothold(game, regionId)); return; }
-    if (selectedAbility) {
-      const result = castAbility(game, selectedAbility, regionId);
-      apply(result);
-      if (result.ok) { playTone(ABILITIES[selectedAbility].branch); setSelectedAbility(null); }
+  function apply(result: CommandResult) {
+    setGame(result.state); setNotice({ message: result.ok ? result.state.log.at(-1)?.message ?? "The world shifts." : result.message, logId: result.state.log.at(-1)?.id ?? 0 });
+    if (result.ok && !settings.muted && settings.volume > 0) {
+      try {
+        const context = new AudioContext(), oscillator = context.createOscillator(), gain = context.createGain();
+        oscillator.frequency.value = 150; gain.gain.value = settings.volume / 1000;
+        gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + 0.15);
+        oscillator.connect(gain).connect(context.destination); oscillator.start(); oscillator.stop(context.currentTime + 0.15);
+        oscillator.onended = () => { void context.close(); };
+      } catch { /* Audio is optional; actions and saving remain available. */ }
     }
   }
-  function selectAbility(id: AbilityId) {
-    if (!game) return;
-    if (!game.unlockedAbilities.includes(id)) { apply(unlockAbility(game, id)); return; }
-    setSelectedAbility((current) => current === id ? null : id);
-    setNotice(currentNotice(id, game, selectedRegion));
+  function select(id: RegionId) {
+    setRegionId(id);
+    if (game?.status === "placing" && !help) apply(placeStartingFoothold(game, id));
   }
-  function currentNotice(id: AbilityId, state: GameState, region: RegionId) {
-    const result = castAbility(state, id, region);
-    return result.ok ? `Target ${REGIONS[region].name}. Click it to cast.` : result.message;
-  }
-  function closeTutorial() { setTutorialStep(null); setTutorialComplete(true); }
-  function playTone(branch: AbilityBranch) {
-    if (settings.muted) return;
-    const context = new AudioContext();
-    const oscillator = context.createOscillator();
-    const gain = context.createGain();
-    oscillator.type = branch === "ritual" ? "sine" : branch === "madness" ? "sawtooth" : "triangle";
-    oscillator.frequency.value = branch === "ritual" ? 140 : branch === "madness" ? 210 : 310;
-    gain.gain.setValueAtTime(Math.max(0.01, settings.volume / 500), context.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, context.currentTime + 0.16);
-    oscillator.connect(gain).connect(context.destination);
-    oscillator.start(); oscillator.stop(context.currentTime + 0.16);
-    oscillator.addEventListener("ended", () => void context.close());
-  }
-  function exportRun() {
-    if (!game) return;
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(new Blob([exportTelemetry(game)], { type: "application/json" }));
-    link.download = "cthulhu-run.json"; link.click(); URL.revokeObjectURL(link.href);
-  }
-  function debugWin() {
-    if (!game) return;
-    const ready = debugPatchState(game, { dread: 150, allRegionInfluence: target });
-    const awakening = startAwakening(ready);
-    setGame(awakening.ok ? advanceSimulation(awakening.state, 45) : awakening.state);
-  }
-
-  if (!game) return <main className="app setup"><section className="modal" aria-labelledby="game-title"><p className="eyebrow">A world-map strategy game</p><h1 id="game-title">The Awakening<br />of Cthulhu</h1><p>Spread the dream. Evade the watchers. Open the way.</p><label>Difficulty<select data-testid="setup-difficulty" value={difficulty} onChange={(event) => { if (isDifficulty(event.target.value)) setDifficulty(event.target.value); }}>{Object.values(DIFFICULTIES).map((item) => <option key={item.id} value={item.id}>{item.name} — target {item.influenceTarget}%</option>)}</select></label><label>Seed <input data-testid="setup-seed" value={seed} onChange={(event) => setSeed(event.target.value)} placeholder="Leave blank for a new omen" maxLength={40} /></label><button className="primary" data-testid="start-run" onClick={begin}>Begin the rite</button></section></main>;
-
-  const end = game.status === "won" || game.status === "lost";
-  return <main className="app">
-    <header className="hud"><div className="brand">THE AWAKENING <small>of CTHULHU</small></div>{meter(game.globalInfluence, "Influence", target)}{meter(game.suppression, "Suppression")}<div className="resource"><span>Dread</span><b>{Math.floor(game.dread)}</b><small>+{dreadPerSecond(game).toFixed(2)}/s</small></div><div className="resource"><span>Insight</span><b>{game.insight}</b></div><div className="phase">{game.status === "placing" ? "Choose a foothold" : game.status}</div><div className="speed" aria-label="Simulation speed"><button data-testid="speed-pause" onClick={() => setGame(setGameSpeed(game, 0))} aria-pressed={game.speed === 0}>Ⅱ</button><button data-testid="speed-1x" onClick={() => setGame(setGameSpeed(game, 1))} aria-pressed={game.speed === 1}>1×</button><button data-testid="speed-2x" onClick={() => setGame(setGameSpeed(game, 2))} aria-pressed={game.speed === 2}>2×</button></div><button className="icon" onClick={() => setShowSettings((value) => !value)} aria-label="Open settings">⚙</button></header>
-    {showSettings && <aside className="settings"><label><input type="checkbox" checked={settings.muted} onChange={(event) => setSettings({ ...settings, muted: event.target.checked })} /> Mute audio</label><label>Volume <input type="range" min="0" max="100" value={settings.volume} onChange={(event) => setSettings({ ...settings, volume: Number(event.target.value) })} disabled={settings.muted} /></label><button onClick={() => setGame(null)}>Restart run</button></aside>}
-    <section className="game-grid">
-      <aside className="panel abilities"><div className="panel-title"><h2>Dark arts</h2><button data-testid="upgrade-panel" onClick={() => setShowUpgrades((value) => !value)} aria-expanded={showUpgrades}>Upgrades</button></div>{showUpgrades ? <div className="cards">{Object.values(UPGRADES).map((upgrade) => { const unlocked = game.unlockedUpgrades.includes(upgrade.id); const ready = game.unlockedAbilities.includes(upgrade.prerequisite) && game.insight >= upgrade.unlockCost; return <button data-testid={`upgrade-${upgrade.id}`} className="card" key={upgrade.id} disabled={unlocked || !ready} onClick={() => apply(unlockUpgrade(game, upgrade.id))}><span>{upgrade.branch} upgrade</span><strong>{upgrade.name}</strong><small>{upgrade.summary}</small><em>{unlocked ? "unlocked" : `${upgrade.unlockCost} insight`}</em></button>; })}</div> : BRANCHES.map((branch) => <div className="branch" key={branch}><h3>{branch}</h3>{ABILITY_IDS.filter((id) => ABILITIES[id].branch === branch).map((id) => { const ability = ABILITIES[id]; const unlocked = game.unlockedAbilities.includes(id); const cd = game.cooldowns[id]; const cost = effectiveAbilityCost(game, id, selectedRegion); const reason = !unlocked ? `${ability.unlockCost} insight to unlock` : cd > 0 ? `${Math.ceil(cd)}s cooldown` : game.dread < cost ? "not enough Dread" : ability.targetRule; return <button data-testid={`ability-${id}`} data-action={unlocked ? "cast" : "unlock"} key={id} className={`card ${selectedAbility === id ? "selected" : ""}`} onClick={() => selectAbility(id)} disabled={game.status !== "playing" && game.status !== "awakening" || (unlocked && cd > 0)}><span>{branch}</span><strong>{ability.name}</strong><small>{ability.summary}</small>{unlocked && cd > 0 && <progress aria-label={`${ability.name} cooldown`} max={ability.cooldownSeconds} value={ability.cooldownSeconds - cd} />}<em>{unlocked ? `${cost.toFixed(1)} dread · ${reason}` : reason}</em></button>; })}</div>)}</aside>
-      <section className="map-panel" aria-label="World map"><div className="map-heading"><h2>Where the dream takes hold</h2><span>{notice || "Select a region to inspect it."}</span></div><svg viewBox="0 0 700 330" role="img" aria-label="Eight selectable world regions" className="world-map"><path className="ocean-lines" d="M0 100 C150 50 260 150 350 80 S550 70 700 140 M0 220 C150 160 250 250 380 190 S560 210 700 160" />{REGION_IDS.map((id) => { const point = MAP[id]; const region = game.regions[id]; const active = selectedRegion === id; const valid = selectedAbility ? castAbility(game, selectedAbility, id).ok : false; const eventType = game.activeEvents.find((event) => event.regionId === id && !event.resolved); const corruption = Math.min(4, Math.floor(region.influence / 20)); return <g data-testid={`region-${id}`} data-corruption={corruption} key={id} role="button" tabIndex={0} aria-label={`${REGIONS[id].name}, influence ${Math.round(region.influence)} percent`} aria-pressed={active} className={`region corruption-${corruption} ${eventType ? `event-${EVENTS[eventType.eventId].type}` : ""} ${active ? "active" : ""} ${valid ? "valid" : ""}`} onClick={() => chooseRegion(id)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); chooseRegion(id); } }}><rect x={point.x} y={point.y} width={point.w} height={point.h} rx="16" style={{ opacity: 0.38 + region.influence / 165 }} /><text x={point.x + point.w / 2} y={point.y + point.h / 2 - 8}>{REGIONS[id].name}</text><text className="map-value" x={point.x + point.w / 2} y={point.y + point.h / 2 + 16}>{Math.round(region.influence)}% influence</text></g>; })}</svg><div className="legend"><span className="legend-active" /> selected <span className="legend-valid" /> valid target</div></section>
-      <aside className="panel detail"><h2>{REGIONS[selectedRegion].name}</h2><p className="traits">{REGIONS[selectedRegion].tags.join(" · ")}</p>{selected && <dl><div><dt>Influence</dt><dd>{Math.round(selected.influence)}%</dd></div><div><dt>Cult strength</dt><dd>{Math.round(selected.cultStrength)}</dd></div><div><dt>Resistance</dt><dd>{Math.round(effectiveResistance(game, selectedRegion))}</dd></div><div><dt>Exposure</dt><dd>{Math.round(selected.exposure)}%</dd></div><div><dt>Instability</dt><dd>{Math.round(selected.instability)}%</dd></div><div><dt>Population weight</dt><dd>{REGIONS[selectedRegion].populationWeight}</dd></div></dl>}{selectedEvent ? <section className={`event ${EVENTS[selectedEvent.eventId].type}`}><span>{EVENTS[selectedEvent.eventId].type} event</span><strong>{EVENTS[selectedEvent.eventId].name}</strong><p>{EVENTS[selectedEvent.eventId].headline}</p><b>{duration(selectedEvent.remainingSeconds)} remaining</b></section> : <p className="empty">No active event in this region.</p>}{selectedAbility && <section className="preview"><span>Predicted effect</span><strong>{ABILITIES[selectedAbility].name}</strong><p>{previewText}</p><small>{effectiveAbilityCost(game, selectedAbility, selectedRegion).toFixed(1)} Dread · {ABILITIES[selectedAbility].targetRule}</small></section>}<button data-testid="awakening-action" className="awakening" disabled={game.status !== "playing"} onClick={() => apply(startAwakening(game))}>Awaken Cthulhu <small>100 Dread + target Influence</small></button></aside>
+  function dismissHelp() { setHelp(false); setTutorialComplete(true); }
+  if (!game) return <main className="setup">
+    <section className="intro">
+      <p className="eyebrow">A world-map strategy game</p>
+      <h1>The Awakening<br /><span>of Cthulhu</span></h1>
+      <p className="lead">The stars are moving.<br />Make the world ready.</p>
+      <p>Build hidden cults. Trade followers for forbidden power. Decide where to reveal yourself before humanity closes the way.</p>
+      <div className="setup-facts"><span>50 years to prepare</span><span>3 ritual sites</span><span>One sleeping god</span></div>
     </section>
-    <footer className="ticker" aria-live="polite"><b>Chronicle</b><div>{game.log.slice(-1)[0]?.message ?? "The deep waits beneath unquiet waters."}</div><span>{duration(game.elapsedSeconds)}</span><details className="action-log"><summary>Action log</summary><ol>{game.log.slice(-30).reverse().map((entry) => <li key={entry.id}><time>{duration(entry.elapsedSeconds)}</time> {entry.message}</li>)}</ol></details></footer>
-    {import.meta.env.DEV && <details data-testid="debug-panel" className="debug"><summary>Development controls · seed <code>{game.seed}</code></summary><div><button data-testid="debug-dread" onClick={() => setGame(debugPatchState(game, { dread: game.dread + 25 }))}>+25 Dread</button><button data-testid="debug-insight" onClick={() => setGame(debugPatchState(game, { insight: game.insight + 1 }))}>+1 Insight</button><button data-testid="debug-influence" onClick={() => setGame(debugPatchState(game, { allRegionInfluence: 70 }))}>Set influence 70</button><button data-testid="debug-suppression" onClick={() => setGame(debugPatchState(game, { suppression: 50 }))}>Set suppression 50</button><button data-testid="debug-win" onClick={debugWin}>Script win</button><button data-testid="debug-loss" onClick={() => setGame(debugPatchState(game, { suppression: 100 }))}>Script loss</button><select data-testid="debug-event" value={debugEvent} onChange={(event) => { if (isEventId(event.target.value)) setDebugEvent(event.target.value); }} aria-label="Force event">{EVENT_IDS.map((id) => <option key={id} value={id}>{EVENTS[id].name}</option>)}</select><button data-testid="debug-force-event" onClick={() => apply(forceEvent(game, debugEvent, selectedRegion))}>Force event</button><button data-testid="debug-export" onClick={exportRun}>Export JSON</button></div></details>}
-    {tutorialStep !== null && <section className="overlay" role="dialog" aria-modal="true" aria-labelledby="tutorial-title"><div className="tutorial"><p>Initiation {tutorialStep + 1} / {TUTORIAL.length}</p><h2 id="tutorial-title">{TUTORIAL[tutorialStep]}</h2><div><button data-testid="tutorial-dismiss" onClick={closeTutorial}>Dismiss</button><button data-testid="tutorial-next" className="primary" onClick={() => tutorialStep === TUTORIAL.length - 1 ? closeTutorial() : setTutorialStep(tutorialStep + 1)}>{tutorialStep === TUTORIAL.length - 1 ? "Enter the world" : "Next"}</button></div></div></section>}
-    {end && <section className="overlay" role="dialog" aria-modal="true" aria-labelledby="end-title"><div className="tutorial end"><p>{game.status === "won" ? "The stars are right" : "The watchers prevailed"}</p><h2 id="end-title">{game.status === "won" ? "Cthulhu awakens" : "The rite is broken"}</h2><p>Run {duration(game.elapsedSeconds)} · Influence {Math.round(game.globalInfluence)}% · Suppression {Math.round(game.suppression)}%</p><p>Most used: {mostUsed ? ABILITIES[mostUsed].name : "None"}</p><button data-testid="new-run" className="primary" onClick={() => { setGame(null); setTutorialStep(null); }}>Begin again</button></div></section>}
+    <section className="setup-form" aria-labelledby="new-run-title">
+      <h2 id="new-run-title">Begin a new awakening</h2>
+      {storageNotice && <p role="status" className="notice">{storageNotice}</p>}
+      <label>Difficulty<select data-testid="setup-difficulty" value={difficulty} onChange={e => setDifficulty(e.target.value as Difficulty)}>
+        {Object.entries(DIFFICULTIES).map(([id, d]) => <option key={id} value={id}>{d.name}</option>)}
+      </select></label>
+      <label>World seed <span className="muted">(optional)</span><input data-testid="setup-seed" value={seed} onChange={e => setSeed(e.target.value)} maxLength={40} placeholder="A new omen each run" /></label>
+      <button className="primary" data-testid="start-run" onClick={begin}>Enter the dream</button>
+      <p className="muted">About 21 minutes at 1×, plus pauses. Every game month takes 2 seconds. Pause whenever you need to plan.</p>
+      <p className="build-label">Playtest build · Alignment 1</p>
+    </section>
+  </main>;
+  const r = game.regions[regionId], population = livePopulation(r), end = game.status === "won" || game.status === "lost";
+  const aligned = game.elapsedMonths >= B.preparationMonths;
+  const remaining = (aligned ? deadline : B.preparationMonths) - game.elapsedMonths;
+  const readiness = readySites(game);
+  const forecast = ritualForecast(game);
+  return <main className="app">
+    <header className="hud">
+      <div className="brand">THE AWAKENING<small>of Cthulhu</small></div>
+      <div className="resource"><span>Cult strength</span><b data-testid="followers">{format(totalFollowers(game))}</b><small>living followers</small></div>
+      <div className="resource"><span>Influence</span><b data-testid="influence">{format(game.influence)}</b><small>+{influencePerMonth(game).toFixed(2)} / month</small></div>
+      <div className="resource"><span>Dread</span><b data-testid="dread">{format(game.dread)}</b><small>power for the rites</small></div>
+      <div className="calendar"><b data-testid="calendar">{calendar(game.elapsedMonths)}</b><small data-testid="countdown">{remaining} months {aligned ? "until the window closes" : "until alignment"}</small></div>
+      <div className="speed" aria-label="Simulation speed">{([0, 1, 2] as const).map(speed => <button key={speed} data-testid={"speed-" + (speed === 0 ? "pause" : speed + "x")} disabled={end} aria-pressed={game.speed === speed} onClick={() => setGame(setGameSpeed(game, speed))}>{speed === 0 ? "Pause" : speed + "×"}</button>)}</div>
+      <button className="plain" onClick={() => setHelp(!help)} aria-expanded={help}>Guide</button>
+      <button className="plain" aria-label="Settings" aria-expanded={showSettings} onClick={() => setShowSettings(!showSettings)}>Settings</button>
+    </header>
+    {storageNotice && <p className="storage-notice" role="status">{storageNotice}</p>}
+    {showSettings && <section className="settings">
+      <label><input type="checkbox" checked={settings.muted} onChange={e => setSettings({ ...settings, muted: e.target.checked })} /> Mute audio</label>
+      <label>Volume <input aria-label="Volume" type="range" min="0" max="100" value={settings.volume} onChange={e => setSettings({ ...settings, volume: Number(e.target.value) })} /></label>
+      <button onClick={() => download(exportTelemetry(game), "cthulhu-playtest.json")}>Export playtest report</button>
+      <button onClick={() => { setGame(null); setHelp(false); }}>Abandon run and start over</button>
+    </section>}
+    {help && <section className="guide" aria-label="How to play">
+      <div><h2>Your path to awakening</h2><p>Choose a starting region. Cults recruit slowly and earn Influence. Expand through adjacent regions, then sacrifice followers for Dread.</p>
+      <p>Public worship doubles growth but attracts opposition. Keep 60 followers at each of 3 ritual sites. Prepare each for 24 months, reserve 100 Dread, then complete a 12-month final rite during the alignment.</p>
+      <p>Actions can be used while paused. Deniers need a manifestation before recruitment; believers may also resist you. The clock is paused while this guide is open.</p></div>
+      <button className="primary" data-testid="tutorial-dismiss" onClick={dismissHelp}>I understand</button>
+    </section>}
+    <div className="game-grid">
+      <aside className="panel actions-panel" aria-label="Cult actions">
+        <h2>Direct the cult</h2><p className="muted">Actions affect {REGIONS[regionId].name}.</p>
+        <div className="action-tabs" aria-label="Action groups">{Object.keys(GROUPS).map(g => <button key={g} onClick={() => setGroup(g)} aria-pressed={group === g}>{g}</button>)}</div>
+        <div className="actions">{GROUPS[group]?.map(id => {
+          const preview = previewAction(game, id, regionId);
+          return <section className="action" key={id}>
+            <button data-testid={"action-" + id} disabled={!preview.ok || help} onClick={() => apply(performAction(game, id, regionId))}>{ACTIONS[id].name}</button>
+            <p>{preview.effect}</p>
+            <small className="cost">{preview.influence > 0 ? preview.influence + " Influence  " : ""}{preview.dread > 0 ? preview.dread + " Dread  " : ""}{preview.followers > 0 ? preview.followers + " followers" : ""}</small>
+            {preview.risk && <p className="risk">{preview.risk}</p>}
+            {!preview.ok && <small className="unavailable">{preview.reason}</small>}
+          </section>;
+        })}</div>
+        <details className="doctrines"><summary>Choose your doctrine <span>{game.specialization ?? "40 Influence"}</span></summary>
+          {(Object.entries(SPECIALIZATIONS) as [Specialization, { name: string; description: string }][]).map(([id, d]) => <div className="action" key={id}>
+            <button data-testid={"doctrine-" + id} disabled={!!game.specialization || game.influence < 40 || !["playing", "alignment", "awakening"].includes(game.status) || help} onClick={() => apply(chooseSpecialization(game, id))}>{d.name}{game.specialization === id ? " · chosen" : ""}</button><p>{d.description}</p>
+          </div>)}<small>One doctrine per run. The choice is permanent.</small>
+        </details>
+      </aside>
+      <section className="map-panel" aria-label="World map">
+        <div className="map-heading"><div><p className="eyebrow">{game.status === "placing" ? "The first whisper" : aligned ? "The stars are right" : "The world stirs"}</p><h2>{game.status === "placing" ? "Choose your first congregation" : "Where the dream takes hold"}</h2></div><span className="phase" data-testid="phase">{game.status}</span></div>
+        <div className="world-status"><span>World awareness <b>{Math.round(game.awareness)}%</b></span><progress aria-label="World awareness" value={game.awareness} max="100" /><small>{Math.round(cultShare(game) * 100)}% of the world follows you, so awareness climbs {(cultShare(game) * B.awarenessPerCapita).toFixed(2)}/month. Income and recruitment are at {Math.round(awarenessDrag(game) * 100)}% of normal; at 100% awareness the world hunts every cell and the run ends.</small></div>
+        {!end && <p className={"ritual-forecast " + (forecast.urgent ? "urgent" : "")} role="status" data-testid="ritual-forecast">{forecast.message}</p>}
+        <div className="compact-regions"><label>Choose a region<select aria-label="Choose a region" value={regionId} onChange={e => select(e.target.value as RegionId)}>{REGION_IDS.map(id => <option key={id} value={id}>{REGIONS[id].name} · {format(game.regions[id].population.followers)} followers{game.regions[id].threat ? " · threat approaching" : ""}</option>)}</select></label>{game.status === "placing" && <button disabled={help} onClick={() => select(regionId)}>Establish foothold here</button>}</div>
+        <EarthMap game={game} selected={regionId} onSelect={select} />
+        <div className="legend"><span>Gold borders · selected region</span><span>Teal · public cult</span><span>Red marker · approaching threat</span></div>
+        <p className="map-credit">Made with <a href="https://www.naturalearthdata.com/about/terms-of-use/" target="_blank" rel="noreferrer">Natural Earth</a> · public-domain map data</p>
+        <section className={"awakening-panel " + (aligned ? "aligned" : "")}>
+          <div className="rite-heading"><h2>{end ? game.status === "won" ? "Cthulhu awakens" : "The alignment has passed" : "Prepare the awakening"}</h2><b data-testid="site-count">{readiness} / 3 sites</b></div>
+          <div className="site-list">{REGION_IDS.filter(id => game.regions[id].site.invested).map(id => <button key={id} onClick={() => setRegionId(id)}>{REGIONS[id].name}<small>{siteLabel(game.regions[id])}</small></button>)}
+          {!REGION_IDS.some(id => game.regions[id].site.invested) && <p>No sites yet. Gather Dread and maintain 60 followers in each ritual region.</p>}</div>
+          {game.status === "awakening" && <p role="status">Final rite: {game.finalProgress}/12 supported months. {readiness < 3 ? "Interrupted — restore support. Time is still passing." : "The way is opening."}</p>}
+          {end ? <div className="result"><p role="status">{game.resultReason}</p><p>{format(game.telemetry.sacrificed)} sacrificed · {format(game.telemetry.raidLosses)} lost to opposition · {game.telemetry.threatsCountered} threats countered</p>
+            <button className="primary" data-testid="new-run" onClick={() => setGame(null)}>Begin another awakening</button><button onClick={() => download(exportTelemetry(game), "cthulhu-playtest.json")}>Export this run</button></div>
+            : <><button className="primary" data-testid="awakening-action" disabled={!!awakeningReason(game) || help} onClick={() => apply(startAwakening(game))}>Begin the final rite · 100 Dread</button><small>{awakeningReason(game) || "Ready. Keep three sites supported for 12 months."}</small></>}
+        </section>
+        <p className="action-notice" role="status">{notice && notice.logId === (game.log.at(-1)?.id ?? 0) ? notice.message : game.log.at(-1)?.message || "Select a region on the map."}</p>
+      </section>
+      <aside className="panel detail" aria-label="Region details">
+        <p className="eyebrow">Selected region</p><h2>{REGIONS[regionId].name}</h2>
+        <p className="region-stance">{r.population.followers > 0 ? r.public ? "Public congregation" : "Hidden cell" : "No cult presence"}</p>
+        <dl><div><dt>Followers</dt><dd data-testid="regional-followers">{format(r.population.followers)}</dd></div><div><dt>Income / month</dt><dd>+{regionIncome(r).toFixed(2)} Influence</dd></div><div><dt>Recruitment / month</dt><dd>+{recruitmentPerMonth(game, r).toFixed(2)}</dd></div><div><dt>Exposure</dt><dd>{Math.round(r.exposure)}%</dd></div><div><dt>Madness</dt><dd>{Math.round(r.madness)}%</dd></div></dl>
+        {r.backlashUntil > game.elapsedMonths && <p className="risk">Recruitment backlash: {r.backlashUntil - game.elapsedMonths} months remaining.</p>}
+        <h3>Belief is not loyalty</h3>
+        <div className="population">{(["unaware", "deniers", "believers", "followers"] as const).map(key => <div key={key}><label>{key}<span>{format(r.population[key])}</span></label><progress aria-label={key} max={Math.max(1, population)} value={r.population[key]} /></div>)}</div>
+        <small>{format(r.population.losses)} permanently lost · abstract population units</small>
+        <section className="regional-event"><h3>Opposition</h3>{r.threat && !end ? <><strong>{THREAT_NAMES[r.threat.kind]}</strong><p>Arrives in {r.threat.dueMonth - game.elapsedMonths} months · severity {r.threat.severity}</p><p className="risk">If ignored, at current strength: {describeThreat(r)}</p><button disabled={!previewAction(game, "counter", regionId).ok || help} onClick={() => apply(performAction(game, "counter", regionId))}>Counter · {previewAction(game, "counter", regionId).influence} Influence</button></> : <p>{end ? "The campaign has ended." : "No approaching threat. Hidden activity can still be discovered."}</p>}</section>
+        <section className="regional-event opportunity"><h3>Opportunity</h3>{r.opportunity ? <><strong>{OPPORTUNITY_NAMES[r.opportunity.kind]}</strong><p>{r.opportunity.expiresMonth - game.elapsedMonths} months remaining</p><button onClick={() => setGroup("Opportunities")}>Inspect opportunity actions</button></> : <p>No active opportunity.</p>}
+          {r.figure && <p>{r.figure.revealed ? "Public" : "Secret"} {r.figure.kind} · {r.figure.revealed ? "awakening contribution used" : r.figure.kind === "celebrity" ? "+0.6 Influence/month" : "+6 months to newly scheduled threats"}</p>}
+        </section>
+      </aside>
+    </div>
+    <Chronicle game={game} onSelect={setRegionId} onCounter={id => apply(performAction(game, "counter", id))} disabled={help} />
+    {import.meta.env.DEV && <details className="debug" data-testid="debug-panel"><summary>Playtest controls</summary><div><button data-testid="debug-month" disabled={end || help} onClick={() => setGame(advanceSimulation(game, 1))}>Advance 1 month</button><button data-testid="debug-year" disabled={end || help} onClick={() => setGame(advanceSimulation(game, 12))}>Advance 1 year</button><button data-testid="debug-decade" disabled={end || help} onClick={() => setGame(advanceSimulation(game, 120))}>Advance 10 years</button><button onClick={() => download(exportTelemetry(game), "cthulhu-playtest.json")}>Export report</button></div><small>Time controls advance all costs, threats, and recruitment. They grant no resources.</small></details>}
   </main>;
 }

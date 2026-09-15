@@ -1,16 +1,21 @@
-import type { AbilityDefinition, AbilityId, UpgradeDefinition, UpgradeId } from "../game/types";
-
-export const ABILITIES: Record<AbilityId, AbilityDefinition> = {
-  secret_gathering: { id: "secret_gathering", name: "Secret Gathering", branch: "ritual", cost: 12, cooldownSeconds: 20, unlockCost: 0, prerequisites: [], targetRule: "Influence above 0", summary: "+15 Cult, +4 Influence, +4 Exposure" },
-  sacrament_of_the_deep: { id: "sacrament_of_the_deep", name: "Sacrament of the Deep", branch: "ritual", cost: 28, cooldownSeconds: 45, unlockCost: 2, prerequisites: [], targetRule: "Cult Strength at least 25", summary: "+14 Influence, +8 Cult, +10 Instability, +12 Exposure" },
-  whispered_dreams: { id: "whispered_dreams", name: "Whispered Dreams", branch: "madness", cost: 10, cooldownSeconds: 15, unlockCost: 0, prerequisites: [], targetRule: "Any region", summary: "+6 Influence, +5 Instability, +3 Exposure" },
-  mass_delusion: { id: "mass_delusion", name: "Mass Delusion", branch: "madness", cost: 30, cooldownSeconds: 50, unlockCost: 2, prerequisites: [], targetRule: "Influence at least 20", summary: "+16 Influence, +18 Instability, +15 Exposure; adjacent +3" },
-  impossible_omen: { id: "impossible_omen", name: "Impossible Omen", branch: "omen", cost: 18, cooldownSeconds: 35, unlockCost: 1, prerequisites: [], targetRule: "Any region", summary: "Resistance -10 for 45s, +5 Influence, +8 Instability" },
-  rewrite_headline: { id: "rewrite_headline", name: "Rewrite the Headline", branch: "omen", cost: 22, cooldownSeconds: 40, unlockCost: 2, prerequisites: [], targetRule: "Hostile event or Exposure above 20", summary: "-15 Exposure, -1 event severity, -2 Influence" },
+import { BALANCE } from "./balance";
+import type { ActionDefinition, ActionId, Specialization } from "../game/types";
+export const ACTIONS: Record<ActionId, ActionDefinition> = {
+  recruit: { name: "Secret gathering", description: "Recruit up to 35 unaware people or believers.", influence: 18, dread: 0, followers: 0, cooldown: 12 },
+  expand: { name: "Establish a cell", description: "Send the dream to an adjacent region. Rebuild anywhere if all cells are lost.", influence: 30, dread: 0, followers: 0, cooldown: 0 },
+  sacrifice: { name: "Sacrifice followers", description: "Consume 40 followers for 25 Dread. Their future income is lost.", influence: 0, dread: 0, followers: BALANCE.sacrificeFollowers, cooldown: 6 },
+  reveal: { name: "Begin public worship", description: "Double ongoing recruitment. Invite scrutiny and backlash.", influence: 10, dread: 0, followers: 0, cooldown: 6 },
+  hide: { name: "Return underground", description: "End public recruitment. Existing evidence and rituals remain visible.", influence: 0, dread: 0, followers: 0, cooldown: 6 },
+  conceal: { name: "Conceal the evidence", description: "Remove up to 25 Exposure and 1 world awareness. Public worship and rituals retain an evidence floor.", influence: 20, dread: 0, followers: 0, cooldown: 12 },
+  manifest: { name: "Impossible manifestation", description: "Turn deniers and unaware people into believers. Belief also fuels resistance.", influence: 0, dread: 20, followers: 0, cooldown: 18 },
+  prepare: { name: "Prepare a ritual site", description: "Commit Dread and 40 Influence, then maintain local support for 24 months. Each further site costs more.", influence: 40, dread: 60, followers: 0, cooldown: 0 },
+  counter: { name: "Obstruct the investigation", description: "Burn your local connections to neutralize this region's threat. They take 12 months to rebuild.", influence: 30, dread: 0, followers: 0, cooldown: 12 },
+  exploit: { name: "Exploit the omen", description: "Claim a shared nightmare's Dread or accelerate a ritual during an eclipse.", influence: 10, dread: 0, followers: 0, cooldown: 0 },
+  convert: { name: "Convert a prominent figure", description: "A hidden celebrity earns Influence; a politician slows investigations.", influence: 45, dread: 0, followers: 0, cooldown: 0 },
+  reveal_figure: { name: "Reveal their allegiance", description: "Recruit up to 60 people and advance the local site by 8 months once. Ends the secret benefit.", influence: 0, dread: 0, followers: 0, cooldown: 0 },
 };
-
-export const UPGRADES: Record<UpgradeId, UpgradeDefinition> = {
-  hidden_cells: { id: "hidden_cells", name: "Hidden Cells", branch: "ritual", unlockCost: 3, prerequisite: "secret_gathering", summary: "Secret Gathering adds 3 less Exposure; crackdowns remove 25% less Cult." },
-  contagious_dreams: { id: "contagious_dreams", name: "Contagious Dreams", branch: "madness", unlockCost: 3, prerequisite: "whispered_dreams", summary: "Every 20s the strongest region spreads +1 Influence to an adjacent region below 30." },
-  false_consensus: { id: "false_consensus", name: "False Consensus", branch: "omen", unlockCost: 3, prerequisite: "impossible_omen", summary: "Exposure suppression -15%; opportunity events last 20% longer." },
+export const SPECIALIZATIONS: Record<Specialization, { name: string; description: string }> = {
+  recruitment: { name: "Congregation", description: "+35% automatic recruitment. Build a broad following." },
+  infiltration: { name: "Hidden hand", description: "Threats arrive 2 months later; obstructing them costs a third less." },
+  terror: { name: "Harbinger", description: "Sacrifices yield 35 Dread; manifestations cost 15 Dread." },
 };

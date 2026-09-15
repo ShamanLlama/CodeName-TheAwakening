@@ -1,47 +1,84 @@
 # The Awakening of Cthulhu
 
-A deterministic, single-player strategy MVP built from `The_Awakening_of_Cthulhu_MVP_GDD.md`. Spread influence through eight world regions, manage Exposure and Suppression, exploit events, and survive the 45-second Awakening.
+A playable, single-player world-map strategy prototype. The design source of truth is the [GDD](docs/gdd/README.md). Build cults, spend Influence, sacrifice followers for Dread, and prepare Cthulhu's awakening before the stars pass out of alignment.
 
-## Run it
+## Start playing
 
 Requires Node.js 22 or newer.
 
-```bash
+~~~bash
 npm install
 npm run dev
-```
+~~~
 
-Open the local URL printed by Vite. Choose a difficulty and optional seed, place a foothold, select an ability, then choose a highlighted region. The top bar pauses or changes simulation speed. Upgrades spend Insight; the gear opens audio settings and restart. Runs, tutorial state, settings, and best results save locally.
+Open the local URL printed by Vite. For a fixed address:
 
-## Rules
+~~~bash
+npm run dev -- --host 127.0.0.1 --port 4173 --strictPort
+~~~
 
-- Influence is population-weighted across eight explicit regions; the target is 60/70/80% on Easy/Normal/Hard.
-- Regional cults generate Dread. Abilities spend Dread and usually add Exposure or Instability.
-- Every five simulation seconds, Exposure, hostile events, and broad influence raise Suppression. Reaching 100 loses immediately.
-- At the Influence target and 100 Dread, start the 45-second Awakening. Keep Influence above the target and Suppression below 100 to win.
-- Seeds make random event timing and outcomes reproducible.
+Then open http://127.0.0.1:4173 in your browser.
 
-## Architecture
+1. Choose Easy for a first test and optionally enter a seed.
+2. Click **Enter the dream**, read the guide, and choose your first region.
+3. Select a region, then use its actions in **Cult**, **Rituals**, or **Opportunities**.
+4. Pause whenever you need to plan. Immediate actions work while paused.
+5. Expand **Playtest controls** at the bottom to advance a month, year, or decade. These controls advance recruitment, threats, and deadlines; they grant no resources.
+6. Use **Settings → Export playtest report** to download a run report for feedback.
 
-- `src/data/`: balance constants for regions, difficulties, abilities, upgrades, and events.
-- `src/game/engine.ts`: pure fixed-step commands, progression, and win/loss rules.
-- `src/game/director.ts`: deterministic event eligibility, pressure, spawn, and expiry logic.
-- `src/game/persistence.ts`: validated versioned LocalStorage envelope and telemetry export.
-- `src/App.tsx`: React presentation and browser clock; game rules stay in the engine.
-- `src/tests/fixtures/`: deterministic scenario inputs from the GDD.
+The game saves locally after actions and monthly updates. Reloading resumes your run. Switching away from the browser tab pauses play. Audio is muted by default and can be enabled in Settings.
 
-The browser advances the pure engine in whole simulated seconds. Speed changes how many simulated seconds are supplied; pause supplies none. Balance changes belong in `src/data/` or the named formulas in `src/game/derived.ts` and `src/game/director.ts`.
+On desktop, the world chronicle stays at the bottom of the viewport. Its threat watch lists deadlines, projected follower and income losses, and ritual disruption, with direct counter actions. Click a threat marker or region name to inspect it. The forecast above the map explains how much preparation and final-rite time you still need.
 
-## Checks
+## First-run objective
 
-```bash
+- Cult strength is your living followers. They recruit automatically and generate Influence.
+- Influence funds recruitment, expansion, concealment, investigations, and prominent-person conversions.
+- Sacrificing 40 local followers grants 25 Dread, reducing future income. It also shrinks the cult, which slows world awareness.
+- Public worship doubles recruitment before other modifiers; backlash temporarily reduces that benefit.
+- Deniers resist ordinary recruitment. Manifestations create believers, who can also strengthen opposition.
+- Each ritual site must be supported by a quarter of its region's population, so a site in Oceania needs 75 followers and one in South Asia needs 450. Populous regions recruit well but host rituals badly.
+- Sites cost 40 Influence and 60, 100, then 160 Dread, and take 24 supported months to prepare.
+- World awareness rises with the share of humanity that follows you. It throttles income and recruitment as it climbs, and at 100% the world hunts every cell and the run ends. A large cult is a liability.
+- Obstructing a threat costs 30 Influence per severity level and burns that region's connections for 12 months, so you cannot defend everywhere. Concealing evidence is the only way to push awareness back down.
+- Reserve 100 Dread for the final rite.
+- After 200 months, the alignment opens and the game pauses. Start the final rite, then resume time and maintain three sites for 12 months within the 24-month window.
+- Missing the deadline loses the run. Interrupted rites retain progress, but the calendar keeps advancing.
+
+A campaign takes about 7 minutes at 1×, excluding pauses. These are initial playtest values, not final balance.
+
+## What to test
+
+Try an early public cult, a late public surge, and a public stronghold supported by hidden cells. Tell us where you started, your seed and difficulty, when the game felt slow or unclear, and which actions seemed too strong or too costly. The exported report records sacrifices, spending, revelations, threats, and the result.
+
+Reports also include regional snapshots and identify how much of the event log is retained. They do not record real session duration; please note roughly how long you played. The first human run and resulting feedback changes are recorded in the [implementation status](docs/implementation-checklist.md#human-playtest--seed-ff53a4ca-2026-09-06).
+
+Generic celebrities and politicians appear as opportunities. Secret celebrities earn Influence; secret politicians delay new threats. Public revelation grants recruits and local ritual progress once, but ends their secret benefit and triggers backlash. One permanent doctrine further changes recruitment, infiltration, or sacrifice rewards.
+
+## Saves
+
+New rules use the separate LocalStorage key `cthulhu-awakening-save-v2`. Earlier saves remain under `cthulhu-awakening-save`; compatible audio settings are copied, but old runs do not resume under new rules. Corrupt new-format saves are retained under a recovery key before starting fresh. If browser storage is blocked, play continues without saving.
+
+## Code and validation
+
+The interactive Earth map uses Natural Earth's public-domain country outlines. Geometry is bundled locally and grouped into the eight gameplay regions. [Map source and attribution](src/assets/NATURAL_EARTH.md) includes the pinned release and regeneration command.
+
+- `src/data/balance.ts`: initial calendar, economy, and ritual values.
+- `src/game/engine.ts`: pure commands and monthly simulation.
+- `src/game/director.ts`: seeded regional threats and opportunities.
+- `src/game/derived.ts`: population transfers, income, and readiness.
+- `src/game/persistence.ts`: save validation, recovery, and playtest export.
+- `src/App.tsx`: browser clock, map, actions, and feedback.
+- `src/tests/playthrough.ts`: test-only player policies using legal commands.
+
+~~~bash
 npm run lint
 npm run typecheck
 npm test
 npm run e2e
 npm run build
-```
+~~~
 
-Playwright covers setup, foothold placement, casting, unlocking, pause, save/resume, and scripted win/loss. Development builds expose a collapsible debug panel with the run seed, meter controls, forced events, scripted outcomes, and telemetry export; production builds omit it.
+The current tests include nine legal strategy playthroughs across three seeds, population conservation, sacrifices, event responses, alignment boundaries, and save compatibility. Browser tests cover player actions, pause/reload, a legally prepared finale, deadline loss, legacy preservation, and responsive layouts.
 
-The automated checks validate correctness and reproducibility. Session pacing, comprehension, branch variety, target win rates, and replay appeal still require human playtests.
+[Implementation status](docs/implementation-checklist.md) records what was checked. [The implementation plan](docs/implementation-plan.md) explains the design-to-code changes. Human playtests are still needed to establish pacing, difficulty, comprehension, and replay appeal.
