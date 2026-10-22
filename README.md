@@ -1,38 +1,33 @@
 # The Awakening of Cthulhu
 
-> **Godot build:** the game is being ported to Godot for itch.io. See [godot/README.md](godot/README.md). This web version is the rules reference until the port replaces it.
+A single-player world-map strategy game by Lucid Labworks Studio. Build cults, spend Influence, sacrifice followers for Dread, and prepare Cthulhu's awakening before the stars pass out of alignment.
 
-A playable, single-player world-map strategy prototype. The design source of truth is the [GDD](docs/gdd/README.md). Build cults, spend Influence, sacrifice followers for Dread, and prepare Cthulhu's awakening before the stars pass out of alignment.
+The game is built in Godot 4.7, mainly for the browser on itch.io, with Linux and Windows desktop builds. Every graphic and sound is generated in code. The design source of truth is the [GDD](docs/gdd/README.md).
 
-## Start playing
+This repository holds two versions:
 
-Requires Node.js 22 or newer.
+- `godot/`: the game. Setup, tests and export are in [godot/README.md](godot/README.md).
+- `src/`: the original React and TypeScript web prototype. Its rules engine is still the reference that the Godot rules are tested against. The prototype as it was before the port is kept on the [`old-web`](https://github.com/ShamanLlama/CodeName-TheAwakening/tree/old-web) branch.
 
-~~~bash
-npm install
-npm run dev
-~~~
+## Play
 
-Open the local URL printed by Vite. For a fixed address:
+Requires Godot 4.7 on your `PATH`.
 
 ~~~bash
-npm run dev -- --host 127.0.0.1 --port 4173 --strictPort
+godot --path godot
 ~~~
 
-Then open http://127.0.0.1:4173 in your browser.
+1. Choose a difficulty, optionally enter a world seed, and click **BEGIN**.
+2. Read the guide, click a region on the map, then click **BEGIN HERE** to place your first cult.
+3. Click any region to open its panel. Its actions are grouped under **CULT**, **RITES** and **OMENS**. Hover an action to see its effect, risk, and why it is unavailable.
+4. Threats stack at the top left. Click **OBSTRUCT** on a card to counter one.
+5. Click the event line in the bottom bar to open the chronicle.
 
-1. Choose Easy for a first test and optionally enter a seed.
-2. Click **Enter the dream**, read the guide, and choose your first region.
-3. Select a region, then use its actions in **Cult**, **Rituals**, or **Opportunities**.
-4. Pause whenever you need to plan. Immediate actions work while paused.
-5. Expand **Playtest controls** at the bottom to advance a month, year, or decade. These controls advance recruitment, threats, and deadlines; they grant no resources.
-6. Use **Settings → Export playtest report** to download a run report for feedback.
+Space pauses, 1 and 2 set the speed, and Esc closes the region panel or opens the menu. Immediate actions work while paused. The game saves after actions and monthly updates, and reloading resumes the run. Play pauses when the window loses focus. Use **Menu → Export playtest report** to save a run report for feedback.
 
-The game saves locally after actions and monthly updates. Reloading resumes your run. Switching away from the browser tab pauses play. Audio is muted by default and can be enabled in Settings.
+Debug builds, including runs from the editor, add playtest controls to the menu that advance 1, 12 or 120 months. They advance recruitment, threats and deadlines, and grant no resources.
 
-On desktop, the world chronicle stays at the bottom of the viewport. Its threat watch lists deadlines, projected follower and income losses, and ritual disruption, with direct counter actions. Click a threat marker or region name to inspect it. The forecast above the map explains how much preparation and final-rite time you still need.
-
-## First-run objective
+## Rules
 
 - Cult strength is your living followers. They recruit automatically and generate Influence.
 - Influence funds recruitment, expansion, concealment, investigations, and prominent-person conversions.
@@ -43,44 +38,55 @@ On desktop, the world chronicle stays at the bottom of the viewport. Its threat 
 - Sites cost 40 Influence and 60, 100, then 160 Dread, and take 24 supported months to prepare.
 - World awareness rises with the share of humanity that follows you. It throttles income and recruitment as it climbs, and at 100% the world hunts every cell and the run ends. A large cult is a liability.
 - Obstructing a threat costs 30 Influence per severity level and burns that region's connections for 12 months, so you cannot defend everywhere. Concealing evidence is the only way to push awareness back down.
+- Generic celebrities and politicians appear as opportunities. Secret celebrities earn Influence; secret politicians delay new threats. Public revelation grants recruits and local ritual progress once, but ends their secret benefit and triggers backlash.
+- One permanent doctrine further changes recruitment, infiltration, or sacrifice rewards.
 - Reserve 100 Dread for the final rite.
-- After 200 months, the alignment opens and the game pauses. Start the final rite, then resume time and maintain three sites for 12 months within the 24-month window.
+- After 200 months the alignment opens and the game pauses. Start the final rite, then maintain three sites for 12 months within the 24-month window.
 - Missing the deadline loses the run. Interrupted rites retain progress, but the calendar keeps advancing.
 
 A campaign takes about 7 minutes at 1×, excluding pauses. These are initial playtest values, not final balance.
 
 ## What to test
 
-Try an early public cult, a late public surge, and a public stronghold supported by hidden cells. Tell us where you started, your seed and difficulty, when the game felt slow or unclear, and which actions seemed too strong or too costly. The exported report records sacrifices, spending, revelations, threats, and the result.
+Try an early public cult, a late public surge, and a public stronghold supported by hidden cells. Tell us where you started, your seed and difficulty, when the game felt slow or unclear, and which actions seemed too strong or too costly.
 
-Reports also include regional snapshots and identify how much of the event log is retained. They do not record real session duration; please note roughly how long you played. The first human run and resulting feedback changes are recorded in the [implementation status](docs/implementation-checklist.md#human-playtest--seed-ff53a4ca-2026-09-06).
+The exported report records sacrifices, spending, revelations, threats, regional snapshots and the result. It does not record real session time, so please note roughly how long you played. The first human run and the changes it prompted are recorded in the [implementation status](docs/implementation-checklist.md#human-playtest--seed-ff53a4ca-2026-09-06).
 
-Generic celebrities and politicians appear as opportunities. Secret celebrities earn Influence; secret politicians delay new threats. Public revelation grants recruits and local ritual progress once, but ends their secret benefit and triggers backlash. One permanent doctrine further changes recruitment, infiltration, or sacrifice rewards.
+## Develop
 
-## Saves
-
-New rules use the separate LocalStorage key `cthulhu-awakening-save-v2`. Earlier saves remain under `cthulhu-awakening-save`; compatible audio settings are copied, but old runs do not resume under new rules. Corrupt new-format saves are retained under a recovery key before starting fresh. If browser storage is blocked, play continues without saving.
-
-## Code and validation
-
-The interactive Earth map uses Natural Earth's public-domain country outlines. Geometry is bundled locally and grouped into the eight gameplay regions. [Map source and attribution](src/assets/NATURAL_EARTH.md) includes the pinned release and regeneration command.
-
-- `src/data/balance.ts`: initial calendar, economy, and ritual values.
-- `src/game/engine.ts`: pure commands and monthly simulation.
-- `src/game/director.ts`: seeded regional threats and opportunities.
-- `src/game/derived.ts`: population transfers, income, and readiness.
-- `src/game/persistence.ts`: save validation, recovery, and playtest export.
-- `src/App.tsx`: browser clock, map, actions, and feedback.
-- `src/tests/playthrough.ts`: test-only player policies using legal commands.
+Install the Node tooling once (Node.js 22 or newer). It runs the prototype, its tests, and the rule-parity recordings.
 
 ~~~bash
-npm run lint
-npm run typecheck
-npm test
-npm run e2e
-npm run build
+npm install
 ~~~
 
-The current tests include nine legal strategy playthroughs across three seeds, population conservation, sacrifices, event responses, alignment boundaries, and save compatibility. Browser tests cover player actions, pause/reload, a legally prepared finale, deadline loss, legacy preservation, and responsive layouts.
+| Command | What it does |
+|---|---|
+| `npm run godot:test` | Runs the Godot rule, save and parity tests |
+| `npm run godot:web` | Exports the web build to `godot/build/web/` |
+| `npm test` | Runs the TypeScript rule tests, and fails if the parity recordings are stale |
+| `npm run golden` | Re-records the parity recordings after a TypeScript rule change |
+| `npm run lint`, `npm run typecheck` | Checks the TypeScript code |
+| `npm run dev` | Runs the web prototype in the browser |
+| `npm run e2e`, `npm run build` | Browser tests and production build for the web prototype |
 
-[Implementation status](docs/implementation-checklist.md) records what was checked. [The implementation plan](docs/implementation-plan.md) explains the design-to-code changes. Human playtests are still needed to establish pacing, difficulty, comprehension, and replay appeal.
+To change a rule, change it in `src/game/` first, run `npm run golden`, port the change to `godot/core/`, then run `npm run godot:test`. The parity tests replay nine recorded TypeScript runs in Godot and require identical results. See [Rule parity](godot/README.md#rule-parity).
+
+Desktop export commands and the itch.io upload steps are in [godot/README.md](godot/README.md#export).
+
+### Layout
+
+| Path | Contents |
+|---|---|
+| `godot/core/` | Godot rules: balance, data, RNG, engine, threats, saves |
+| `godot/map/`, `godot/ui/` | Map projection and drawing, screens, panels, dialogs, sound |
+| `godot/tests/` | Headless test runner and the recorded parity runs |
+| `src/data/balance.ts` | Reference calendar, economy and ritual values |
+| `src/game/` | Reference rules: commands, monthly simulation, threat director, saves |
+| `src/tests/` | TypeScript rule tests, scripted playthroughs and the parity recorder |
+| `scripts/build-earth-map.mjs` | Regenerates the map geometry for both versions |
+| `docs/` | GDD, implementation plan and status, playtest notes |
+
+The map uses Natural Earth's public-domain country outlines, grouped into the eight gameplay regions. [Map source and attribution](src/assets/NATURAL_EARTH.md) covers the pinned release and how to regenerate the geometry.
+
+[Implementation status](docs/implementation-checklist.md) records what was checked, and [the implementation plan](docs/implementation-plan.md) explains the design-to-code changes. Human playtests are still needed to establish pacing, difficulty, comprehension and replay appeal.
