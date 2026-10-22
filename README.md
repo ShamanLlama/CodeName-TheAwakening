@@ -1,5 +1,7 @@
 # The Awakening of Cthulhu
 
+> **Godot build:** the game is being ported to Godot for itch.io. See [godot/README.md](godot/README.md). This web version is the rules reference until the port replaces it.
+
 A playable, single-player world-map strategy prototype. The design source of truth is the [GDD](docs/gdd/README.md). Build cults, spend Influence, sacrifice followers for Dread, and prepare Cthulhu's awakening before the stars pass out of alignment.
 
 ## Start playing

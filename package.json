@@ -10,7 +10,10 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "golden": "RECORD_GOLDEN=1 vitest run src/tests/golden-traces.test.ts",
+    "godot:test": "godot --headless --path godot --import && godot --headless --path godot -s res://tests/run_tests.gd",
+    "godot:web": "mkdir -p godot/build/web && godot --headless --path godot --export-release Web build/web/index.html"
   },
   "dependencies": {
     "react": "^19.2.8",

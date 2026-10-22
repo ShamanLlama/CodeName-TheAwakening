@@ -1,8 +1,10 @@
 import { BALANCE as B } from "../data/balance";
-import { advanceSimulation, chooseSpecialization, createGameState, performAction, placeStartingFoothold, previewAction, startAwakening } from "../game/engine";
+import * as engine from "../game/engine";
 import { deadline, readySites, siteRequirement } from "../game/derived";
 import type { ActionId, GameState, RegionId } from "../game/types";
 export type Strategy = "early" | "late" | "hub";
+// The commands a policy may issue. The golden-trace recorder substitutes a recording copy.
+export type PlayApi = Pick<typeof engine, "advanceSimulation" | "chooseSpecialization" | "createGameState" | "performAction" | "placeStartingFoothold" | "previewAction" | "startAwakening">;
 // Ritual support scales with regional population, so sites go in small regions.
 // Africa stays the starting cell: populous and credulous, it is a recruiting ground, not a site.
 export const TARGETS: RegionId[] = ["latin_america", "middle_east", "oceania"];
@@ -16,7 +18,8 @@ function dreadOwed(state: GameState): number {
   return owed;
 }
 // Test-only player policy. Every gain comes through normal actions and monthly simulation.
-export function play(strategy: Strategy, seed: string, stopMonth: number = deadline): GameState {
+export function play(strategy: Strategy, seed: string, stopMonth: number = deadline, api: PlayApi = engine): GameState {
+  const { advanceSimulation, chooseSpecialization, createGameState, performAction, placeStartingFoothold, previewAction, startAwakening } = api;
   let state = placeStartingFoothold(createGameState({ seed, difficulty: "normal" }), FARM).state;
   const act = (id: ActionId, region: RegionId) => {
     if (previewAction(state, id, region).ok) state = performAction(state, id, region).state;
