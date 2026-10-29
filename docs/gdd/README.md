@@ -1,52 +1,68 @@
-# The Awakening of Cthulhu — Game Design Document
+# The Awakening of Cthulhu — GDD
 
-This folder is the **design source of truth** for the current build. It is written by
-reverse-engineering the shipped code, so every rule here describes what the game
-actually does, not what was once proposed.
+**Versión documental:** 0.2 · **Fecha:** 2026-10-28 · **Estado:** documentación de la implementación en curso.
 
-## How to read it
+Este es el GDD de trabajo del juego de Lucid Labworks Studio. Adapta las plantillas de
+Game Time Continuum y aprovecha la documentación de reglas existente. La implementación
+actual es el objeto de esta primera etapa: documentar lo que ya está implementado.
+Los objetivos confirmados son partidas de **15–30 minutos** y una mezcla de
+**estrategia, narrativa y horror**. Se distinguen del estado actual, con unos siete
+minutos de simulación a 1× más pausas. Las propuestas y las decisiones pendientes se
+identifican expresamente; esta etapa no compromete un rediseño ni funcionalidades nuevas.
 
-| Document | Answers |
+El documento se trabaja en español. Los términos de interfaz y los identificadores
+del código se conservan en inglés cuando ayudan a localizar una regla. El juego actual
+está en Godot; React/TypeScript es el prototipo de referencia de sus reglas.
+
+## Por dónde empezar
+
+Lee [Resumen y visión](01_Informacion_General/Resumen_y_vision.md),
+[Experiencia y loops](02_Game_Design/Experiencia_y_loops.md) y
+[Decisiones pendientes](00_Indice_y_Control/Decisiones_pendientes.md).
+Para modificar una regla, consulta después su referencia detallada.
+
+| Área adaptada de GTC | Documento de trabajo | Contenido y estado |
+| --- | --- | --- |
+| 00 — Índice y control | [Control y origen](00_Indice_y_Control/Control_y_origen.md) · [Decisiones](00_Indice_y_Control/Decisiones_pendientes.md) · [Glosario](00_Indice_y_Control/Glosario.md) | Convenciones, procedencia, cambios y preguntas |
+| 01 — Información general | [Resumen y visión](01_Informacion_General/Resumen_y_vision.md) | Concepto, plataformas actuales y objetivos confirmados |
+| 02 — Game Design | [Experiencia y loops](02_Game_Design/Experiencia_y_loops.md) | Pilares actuales, decisiones, acciones y progresión |
+| 03 — Mapa estratégico y ritmo | [Mapa y ritmo](03_Mapa_Estrategico/Mapa_y_ritmo.md) | Sustituye las fichas de niveles por regiones, conexiones y fases |
+| 04 — Narrativa | [Mundo y narrativa sistémica](04_Narrativa/Mundo_y_narrativa.md) | Premisa actual y tono pendiente |
+| 05 — Arte | [Dirección visual](05_Arte/Direccion_visual.md) | Lenguaje visual del prototipo; dirección final abierta |
+| 06 — Audio | [Dirección de audio](06_Audio/Direccion_de_audio.md) | Efectos existentes y función sonora propuesta |
+| 07 — UI/UX | [Interfaz y accesibilidad](07_UI_UX/Interfaz_y_accesibilidad.md) | Flujo actual, información crítica y validación pendiente |
+| 08 — Programación y Technical Design | [Base técnica](08_Programacion_y_Technical_Design/Base_tecnica.md) | Motor, reglas, guardado y validación |
+| 09 — Producción | [Alcance y validación](09_Produccion/Alcance_y_validacion.md) | Inventario actual, riesgos y siguientes comprobaciones |
+| 10 — Público y negocio | [Público y distribución](10_Marketing_y_Negocio/Publico_y_distribucion.md) | Hipótesis de audiencia y decisiones comerciales abiertas |
+
+## Referencia detallada de la implementación
+
+Los capítulos previos se conservan como referencia de `alignment-1`; el nuevo índice
+los integra sin duplicar sus reglas. Están en inglés y describen la base implementada,
+no el alcance comprometido de una futura versión.
+
+| Documento | Pregunta que resuelve |
 | --- | --- |
-| [01 — Overview](01-overview.md) | What is this game, what does a run look like, how do you win or lose? |
-| [02 — Economy](02-economy.md) | Influence, Dread, and what they buy |
-| [03 — Population](03-population.md) | Belief, recruitment, and the conservation rule everything else relies on |
-| [04 — Visibility and awareness](04-visibility.md) | Exposure, the awareness clock, secrecy versus growth |
-| [05 — Opposition](05-opposition.md) | How the world notices you, threatens you, and what it costs to push back |
-| [06 — Ritual sites and the endgame](06-ritual-sites.md) | Where rituals go, what they cost, and how the final rite resolves |
-| [07 — Balance values](07-balance.md) | Where the numbers live and what each one controls |
-| [08 — Design rationale](08-rationale.md) | Why the systems are shaped this way, with playtest evidence |
-| [09 — Open problems](09-open-problems.md) | Known design debt that is measured but not yet fixed |
+| [01 — Overview](01-overview.md) | Premisa, estados, resolución mensual y condiciones de victoria/derrota |
+| [02 — Economy](02-economy.md) | Influence, Dread, seguidores y costes |
+| [03 — Population](03-population.md) | Creencias, reclutamiento y conservación de población |
+| [04 — Visibility and awareness](04-visibility.md) | Exposición regional y conocimiento global |
+| [05 — Opposition](05-opposition.md) | Amenazas, oportunidades y respuesta del mundo |
+| [06 — Ritual sites](06-ritual-sites.md) | Soporte, preparación e interrupción del rito |
+| [07 — Balance values](07-balance.md) | Parámetros y fotografía fechada de valores |
+| [08 — Design rationale](08-rationale.md) | Motivos de los cambios y evidencia registrada |
+| [09 — Open problems](09-open-problems.md) | Problemas observados e hipótesis por volver a comprobar |
 
-New to the project? Read 01, then 08. The rationale document explains the reasoning
-behind most of the rules and will save you from re-deriving decisions that were already
-settled by playtesting.
+Los valores ejecutables viven en los datos y las reglas del código. Las fotografías
+fechadas del GDD no los reemplazan. La relación entre las dos implementaciones está
+explicada en [Base técnica](08_Programacion_y_Technical_Design/Base_tecnica.md).
 
-## Conventions
+## Historia y evidencia
 
-**Numbers are not authoritative here.** `src/data/balance.ts` is the single source of
-truth for every tunable value. These documents explain what each constant *means* and
-how systems interact; where a value appears in prose it is illustrative. [07 — Balance
-values](07-balance.md) carries a dated snapshot and says plainly when it was taken.
-
-**Code pointers use `path:line`.** They were accurate when written and are there to get
-you to the right function, not to be exact forever. If a pointer misses, search for the
-named export.
-
-**"The world" means the simulation's opposition**, driven by `src/game/director.ts`. It is
-not an AI opponent; it is a set of scheduled pressures.
-
-## Status and history
-
-This build is the `alignment-1` ruleset (`GameState.ruleset`). Two earlier designs are
-kept for provenance and should not be used as design references:
-
-- [`docs/archive/GDD_mvp_proposal.md`](../archive/GDD_mvp_proposal.md) — the pre-implementation
-  proposal this folder supersedes. Useful for original intent and the fiction; its numbers,
-  calendar, and several systems no longer match the build.
-- [`docs/archive/GDD_legacy_prototype.md`](../archive/GDD_legacy_prototype.md) — the superseded
-  percentage-influence and Suppression rules, replaced before `alignment-1`.
-
-Related working documents that are *not* design authority:
-[implementation plan](../implementation-plan.md), [implementation
-checklist](../implementation-checklist.md), and [playtest reports](../playtests/).
+Los diseños [MVP](../archive/GDD_mvp_proposal.md) y
+[legacy](../archive/GDD_legacy_prototype.md) son antecedentes archivados. El
+[plan de implementación](../implementation-plan.md), el
+[registro de implementación](../implementation-checklist.md) y los
+[playtests](../playtests/) aportan contexto y evidencia fechada. Algunas pruebas
+corresponden a calendarios y economías anteriores: sus resultados no demuestran
+el balance de la versión actual.

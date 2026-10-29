@@ -8,7 +8,7 @@ Two separate meters. Confusing them is the most common way to misread the game.
 | Represents | Local evidence | What humanity collectively knows |
 | Range | 0–100 | 0–100 |
 | Drives | Threat frequency and severity in that region | Income, recruitment, threat severity — and defeat |
-| Reduced by | `conceal` | `conceal`, and shrinking the cult |
+| Reduced by | `conceal` and hidden-cell drift toward its floor | `conceal`; shrinking the cult reduces future growth only |
 | Fatal? | No | **Yes, at 100** |
 
 ## Exposure

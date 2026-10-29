@@ -43,7 +43,7 @@ and a test enforces that (`src/game/engine.test.ts`, "does not generate Dread by
 Dread is clamped by `BALANCE.dreadCap`. Unlike the Influence cap this one is reachable and
 is a real constraint: you cannot stockpile indefinitely ahead of the escalating site costs.
 
-**Dread buys:** ritual sites (at an escalating price) and the final rite.
+**Dread buys:** manifestations, ritual sites (at an escalating price), and the final rite.
 
 ### Sacrifice is the game's central trade
 
@@ -52,7 +52,8 @@ Sacrifice converts followers into Dread, and it does three things at once:
 1. Gains Dread you cannot get any other way in bulk.
 2. **Permanently** destroys followers — they move to the `losses` bucket and never return
    ([03 — Population](03-population.md)).
-3. Lowers your income *and* lowers world awareness, because the cult is now smaller.
+3. Lowers your income and the cult-size contribution to **future awareness growth**.
+   Sacrifice does not subtract awareness that has already accumulated.
 
 That third effect means sacrifice is not purely a cost. When awareness is the thing
 killing you, burning followers is a defensive move as well as an economic one. The tension
