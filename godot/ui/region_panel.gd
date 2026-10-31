@@ -1,6 +1,6 @@
 extends PanelContainer
-## The selected region: its people, what threatens it, and what the cult can do there.
-## Explanations live in the detail box under the actions, not under every button.
+## The selected region's case file: its people, what threatens it, and what the cult can do
+## there. Explanations live in the detail box under the actions, not under every button.
 
 const P = preload("res://ui/palette.gd")
 const B = preload("res://core/balance.gd")
@@ -17,6 +17,7 @@ var region := ""
 var group := "CULT"
 
 var _body: VBoxContainer
+var _file: Label
 var _name: Label
 var _stance: Label
 var _stats: GridContainer
@@ -37,7 +38,8 @@ func _init(owner_game, owner_screen) -> void:
 
 
 func _ready() -> void:
-	add_theme_stylebox_override("panel", UiTheme.box(P.PANEL_SOLID, P.EDGE, 1, Vector4(0, 0, 0, 0)))
+	add_theme_stylebox_override("panel", UiTheme.box(P.PAPER, P.DESK_EDGE, 1, Vector4(0, 0, 0, 0)))
+	material = P.paper(0.14)
 	anchor_left = 1.0
 	anchor_right = 1.0
 	anchor_bottom = 1.0
@@ -59,15 +61,18 @@ func _ready() -> void:
 	var head := Kit.hbox(8)
 	var titles := Kit.vbox(0)
 	titles.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_name = Kit.label("", 30, P.TEXT, "condensed_bold")
+	_file = Kit.caption("", P.FAINT)
+	_name = Kit.label("", 36, P.TEXT, "display")
 	_stance = Kit.caption("")
+	titles.add_child(_file)
 	titles.add_child(_name)
 	titles.add_child(_stance)
 	head.add_child(titles)
-	var close := IconButton.make("close", "Close  (Esc)", func() -> void: screen.deselect())
+	var close := IconButton.make("close", "Close  (Esc)", func() -> void: screen.deselect(), true)
 	close.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	head.add_child(close)
 	_body.add_child(head)
+	_body.add_child(Kit.rule())
 
 	_stats = GridContainer.new()
 	_stats.columns = 3
@@ -89,15 +94,36 @@ func _ready() -> void:
 	_profile = Kit.vbox(10)
 	_body.add_child(_profile)
 
-	_tabs = Kit.hbox(0)
+	# Index tabs: the open one is the same paper as the file, the others sit behind it.
+	_tabs = Kit.hbox(3)
+	var pad := Vector4(8, 5, 8, 5)
+	var open := UiTheme.box(P.PAPER, P.PAPER_EDGE, 0, pad)
+	open.border_width_top = 2
+	open.border_width_left = 1
+	open.border_width_right = 1
+	open.border_color = P.TEXT
+	var behind := UiTheme.box(P.PAPER_SHADE, P.PAPER_EDGE, 0, pad)
+	behind.border_width_bottom = 1
+	behind.border_width_top = 1
+	behind.border_width_left = 1
+	behind.border_width_right = 1
 	for name in GROUPS:
-		var tab := Kit.button(name, func() -> void: _set_group(name))
+		var tab := Kit.button(name.capitalize(), func() -> void: _set_group(name))
 		tab.toggle_mode = true
 		tab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		tab.add_theme_font_size_override("font_size", 15)
+		tab.add_theme_font_override("font", P.font("display_sc"))
+		tab.add_theme_font_size_override("font_size", 19)
+		tab.add_theme_stylebox_override("normal", behind)
+		tab.add_theme_stylebox_override("hover", behind)
+		tab.add_theme_stylebox_override("pressed", open)
+		tab.add_theme_stylebox_override("hover_pressed", open)
+		tab.add_theme_color_override("font_color", P.MUTED)
+		tab.add_theme_color_override("font_hover_color", P.TEXT)
+		tab.add_theme_color_override("font_pressed_color", P.TEXT)
+		tab.add_theme_color_override("font_hover_pressed_color", P.TEXT)
 		_tabs.add_child(tab)
 	_body.add_child(_tabs)
-	_actions = Kit.vbox(4)
+	_actions = Kit.vbox(0)
 	_body.add_child(_actions)
 	_detail = Kit.vbox(6)
 	_body.add_child(_detail)
@@ -124,13 +150,26 @@ func _build_rows() -> void:
 	Kit.clear(_actions)
 	_rows.clear()
 	for tab in _tabs.get_children():
-		tab.button_pressed = tab.text == group
+		tab.button_pressed = tab.text == group.capitalize()
+	# Actions read like entries in a price list, ruled between rows.
+	var pad := Vector4(10, 8, 10, 8)
+	var row_style := UiTheme.box(Color.TRANSPARENT, Color(P.TEXT, 0.18), 0, pad)
+	row_style.border_width_bottom = 1
+	var row_hover := UiTheme.box(Color(P.TEXT, 0.07), Color(P.TEXT, 0.5), 0, pad)
+	row_hover.border_width_bottom = 1
 	for id in GROUPS[group]:
 		var button := Kit.button("", func() -> void: game.act(id, region))
 		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		button.custom_minimum_size = Vector2(0, 40)
-		button.add_theme_font_size_override("font_size", 17)
-		var cost := Kit.label("", 15, P.MUTED, "condensed_semibold")
+		button.add_theme_font_override("font", P.font("body"))
+		button.add_theme_font_size_override("font_size", 18)
+		for state in ["normal", "disabled"]:
+			button.add_theme_stylebox_override(state, row_style)
+		for state in ["hover", "pressed", "hover_pressed"]:
+			button.add_theme_stylebox_override(state, row_hover)
+		button.add_theme_color_override("font_pressed_color", P.TEXT)
+		button.add_theme_color_override("font_hover_pressed_color", P.TEXT)
+		var cost := Kit.label("", 14, P.MUTED, "type_bold")
 		cost.set_anchors_preset(Control.PRESET_RIGHT_WIDE)
 		cost.offset_left = -170
 		cost.offset_right = -12
@@ -151,12 +190,13 @@ func refresh() -> void:
 	var s: Dictionary = game.state
 	var r: Dictionary = s.regions[region]
 	var placing: bool = s.status == "placing"
-	_name.text = GameData.REGIONS[region].name.to_upper()
+	_file.text = "CASE FILE No. %d" % (GameData.REGION_IDS.find(region) + 1)
+	_name.text = GameData.REGIONS[region].name
 	var stance := "NO CULT PRESENCE"
 	var stance_color := P.MUTED
 	if r.population.followers > 0:
 		stance = "PUBLIC CONGREGATION" if r.public else "HIDDEN CELL"
-		stance_color = P.CULT if r.public else P.CULT_DIM.lightened(0.3)
+		stance_color = P.CULT
 	if r.backlashUntil > s.elapsedMonths:
 		stance += "  ·  BACKLASH %d MO" % (r.backlashUntil - s.elapsedMonths)
 	_stance.text = stance
@@ -209,7 +249,7 @@ func _fill_stats(s: Dictionary, r: Dictionary) -> void:
 		cell.tooltip_text = hints.get(item[0], "")
 		cell.mouse_filter = Control.MOUSE_FILTER_PASS
 		cell.add_child(Kit.caption(item[0]))
-		cell.add_child(Kit.label(item[1], 21, item[2], "condensed_semibold"))
+		cell.add_child(Kit.label(item[1], 19, item[2], "body_bold"))
 		_stats.add_child(cell)
 
 
@@ -222,12 +262,13 @@ func _fill_legend(r: Dictionary) -> void:
 		swatch.custom_minimum_size = Vector2(8, 8)
 		swatch.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		item.add_child(swatch)
-		item.add_child(Kit.label("%s %s" % [key.capitalize(), Format.count(r.population[key])], 13, P.MUTED, "condensed"))
+		item.add_child(Kit.label("%s %s" % [key.capitalize(), Format.count(r.population[key])], 13, P.MUTED, "type"))
 		_legend.add_child(item)
 
 
-func _card(accent: Color, deep: Color) -> VBoxContainer:
-	var card := Kit.panel(deep, Color(accent, 0.45), Vector4(14, 11, 14, 12))
+func _card(accent: Color) -> VBoxContainer:
+	var card := Kit.panel(P.PAPER_LIGHT, accent, Vector4(14, 11, 14, 12))
+	card.get_theme_stylebox("panel").border_width_left = 4
 	var box := Kit.vbox(5)
 	card.add_child(box)
 	_cards.add_child(card)
@@ -240,53 +281,53 @@ func _fill_cards(s: Dictionary, r: Dictionary) -> void:
 		return
 	if r.threat != null:
 		var threat: Dictionary = r.threat
-		var box := _card(P.DANGER, Color(0.1, 0.04, 0.04, 0.9))
+		var box := _card(P.DANGER)
 		var head := Kit.hbox(8)
-		var title := Kit.label(GameData.THREAT_NAMES[threat.kind], 17, P.DANGER, "condensed_bold")
+		var title := Kit.body(GameData.THREAT_NAMES[threat.kind], 21, P.DANGER, "display_sc")
 		title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		head.add_child(title)
-		head.add_child(Kit.label("%dM" % (threat.dueMonth - s.elapsedMonths), 17, P.DANGER, "condensed_bold"))
+		head.add_child(Kit.label(Format.months(threat.dueMonth - s.elapsedMonths), 15, P.DANGER, "type_bold"))
 		box.add_child(head)
-		box.add_child(Kit.body("If ignored: " + Threats.describe(r), 14, Color("e8c4bd")))
+		box.add_child(Kit.body("If ignored: " + Threats.describe(r), 15, P.TEXT, "italic"))
 		var preview := GameEngine.preview_action(s, "counter", region)
-		var counter := Kit.outline("OBSTRUCT · %d INFLUENCE" % preview.influence, func() -> void: game.act("counter", region), P.DANGER)
+		var counter := Kit.stamp("OBSTRUCT · %d INFLUENCE" % preview.influence, func() -> void: game.act("counter", region), P.DANGER)
 		counter.disabled = not preview.ok
 		counter.tooltip_text = preview.reason
 		box.add_child(counter)
 	if r.opportunity != null:
 		var omen: Dictionary = r.opportunity
-		var box := _card(P.OMEN, Color(0.07, 0.05, 0.12, 0.9))
+		var box := _card(P.OMEN)
 		var head := Kit.hbox(8)
-		var title := Kit.label(GameData.OPPORTUNITY_NAMES[omen.kind], 17, P.OMEN, "condensed_bold")
+		var title := Kit.body(GameData.OPPORTUNITY_NAMES[omen.kind], 21, P.OMEN, "display")
 		title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		head.add_child(title)
-		head.add_child(Kit.label("%dM" % (omen.expiresMonth - s.elapsedMonths), 17, P.OMEN, "condensed_bold"))
+		head.add_child(Kit.label(Format.months(omen.expiresMonth - s.elapsedMonths), 15, P.OMEN, "type_bold"))
 		box.add_child(head)
 		var action := "exploit" if omen.kind in ["nightmare", "eclipse"] else "convert"
 		var preview := GameEngine.preview_action(s, action, region)
-		var button := Kit.outline(GameData.ACTIONS[action].name.to_upper() + " · %d" % preview.influence, func() -> void: game.act(action, region), P.OMEN)
+		var button := Kit.stamp(GameData.ACTIONS[action].name.to_upper() + " · %d" % preview.influence, func() -> void: game.act(action, region), P.OMEN)
 		button.disabled = not preview.ok
 		button.tooltip_text = preview.effect + ("\n" + preview.reason if not preview.ok else "")
-		box.add_child(Kit.body(preview.effect, 14, Color("cfc4f2")))
+		box.add_child(Kit.body(preview.effect, 15, P.TEXT, "italic"))
 		box.add_child(button)
 	if r.figure != null:
-		var box := _card(P.OMEN, Color(0.07, 0.05, 0.12, 0.9))
+		var box := _card(P.OMEN)
 		var who := "celebrity" if r.figure.kind == "celebrity" else "politician"
 		if r.figure.revealed:
-			box.add_child(Kit.label("PUBLIC " + who.to_upper(), 15, P.OMEN, "condensed_bold"))
+			box.add_child(Kit.label("Public " + who, 20, P.OMEN, "display_sc"))
 		else:
-			box.add_child(Kit.label("SECRET " + who.to_upper(), 15, P.OMEN, "condensed_bold"))
-			box.add_child(Kit.body("+0.6 Influence each month." if who == "celebrity" else "New threats here arrive 2 months later.", 14, Color("cfc4f2")))
+			box.add_child(Kit.label("Secret " + who, 20, P.OMEN, "display_sc"))
+			box.add_child(Kit.body("+0.6 Influence each month." if who == "celebrity" else "New threats here arrive 2 months later.", 15, P.TEXT, "italic"))
 	if r.site.invested:
 		var ready: bool = r.site.progress >= B.SITE_MONTHS
 		var supported := Derived.supported(r)
 		var accent := P.DANGER if not supported else P.CULT if ready else P.OMEN
-		var box := _card(accent, Color(0.05, 0.06, 0.08, 0.9))
+		var box := _card(accent)
 		var head := Kit.hbox(8)
-		var title := Kit.label("RITUAL SITE", 17, accent, "condensed_bold")
+		var title := Kit.label("Ritual Site", 21, accent, "display_sc")
 		title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		head.add_child(title)
-		head.add_child(Kit.label("%d / %d MO" % [r.site.progress, B.SITE_MONTHS], 17, accent, "condensed_bold"))
+		head.add_child(Kit.label("%d / %d MO" % [r.site.progress, B.SITE_MONTHS], 15, accent, "type_bold"))
 		box.add_child(head)
 		var bar := ProgressBar.new()
 		bar.max_value = B.SITE_MONTHS
@@ -296,7 +337,7 @@ func _fill_cards(s: Dictionary, r: Dictionary) -> void:
 		bar.add_theme_stylebox_override("fill", UiTheme.box(accent, Color.TRANSPARENT, 0, Vector4.ZERO))
 		box.add_child(bar)
 		if not supported:
-			box.add_child(Kit.body("Stalled. Needs %s followers here." % Format.count(Derived.site_requirement(r)), 14, Color("e8c4bd")))
+			box.add_child(Kit.body("Stalled. Needs %s followers here." % Format.count(Derived.site_requirement(r)), 15, P.DANGER, "italic"))
 
 
 func _fill_profile(s: Dictionary, r: Dictionary) -> void:
@@ -322,8 +363,8 @@ func _fill_profile(s: Dictionary, r: Dictionary) -> void:
 	var borders: Array[String] = []
 	for other in def.adjacent:
 		borders.append(GameData.REGIONS[other].name)
-	_profile.add_child(Kit.body("Spreads to " + ", ".join(borders) + ".", 15, P.MUTED))
-	var start := Kit.primary("BEGIN HERE", func() -> void: game.place(region))
+	_profile.add_child(Kit.body("Spreads to " + ", ".join(borders) + ".", 16, P.MUTED, "italic"))
+	var start := Kit.primary("Begin Here", func() -> void: game.place(region))
 	start.disabled = s.status != "placing"
 	_profile.add_child(start)
 
@@ -347,18 +388,18 @@ func _refresh_detail() -> void:
 		return
 	var preview := GameEngine.preview_action(game.state, _detail_id, region)
 	_detail.add_child(Kit.rule())
-	_detail.add_child(Kit.label(GameData.ACTIONS[_detail_id].name.to_upper(), 16, P.TEXT, "condensed_bold"))
+	_detail.add_child(Kit.label(GameData.ACTIONS[_detail_id].name, 21, P.TEXT, "display_sc"))
 	_detail.add_child(Kit.body(preview.effect, 15, P.TEXT))
 	if preview.risk:
-		_detail.add_child(Kit.body(preview.risk, 14, Color("f0a69c")))
+		_detail.add_child(Kit.body(preview.risk, 15, P.DANGER, "italic"))
 	if not preview.ok:
-		_detail.add_child(Kit.body(preview.reason, 14, P.WARN))
+		_detail.add_child(Kit.body(preview.reason, 15, P.WARN, "body_bold"))
 
 
 ## Unaware, deniers, believers and followers as one stacked bar.
 class PopulationBar extends Control:
 	const ORDER := ["unaware", "deniers", "believers", "followers"]
-	const COLORS := { "unaware": Color("3a4352"), "deniers": Color("6b7486"), "believers": Color("a68bff"), "followers": Color("c4f135") }
+	const COLORS := { "unaware": Color("b4a07a"), "deniers": Color("7a6a52"), "believers": P.OMEN, "followers": P.CULT }
 	var population: Dictionary = {}
 
 	func _init() -> void:

@@ -1,19 +1,22 @@
 class_name IconButton
 extends Button
 ## A square button whose glyph is drawn in code: pause, play, fast, menu or close.
+## Brass on the dark desk by default; ink when it sits on paper.
 
 const P = preload("res://ui/palette.gd")
 
 var glyph := "play"
+var on_paper := false
 var active := false:
 	set(value):
 		active = value
 		queue_redraw()
 
 
-static func make(kind: String, hint: String, on_press: Callable) -> IconButton:
+static func make(kind: String, hint: String, on_press: Callable, paper := false) -> IconButton:
 	var node := IconButton.new()
 	node.glyph = kind
+	node.on_paper = paper
 	node.tooltip_text = hint
 	node.custom_minimum_size = Vector2(40, 36)
 	node.flat = true
@@ -24,10 +27,15 @@ static func make(kind: String, hint: String, on_press: Callable) -> IconButton:
 
 
 func _draw() -> void:
-	var color := P.CULT if active else P.FAINT if disabled else P.TEXT if is_hovered() else P.MUTED
+	var color: Color
+	if on_paper:
+		color = P.FAINT if disabled else P.TEXT if is_hovered() else P.MUTED
+	else:
+		color = P.BRASS if active else Color(P.LAMP_DIM, 0.35) if disabled else P.LAMP if is_hovered() else P.LAMP_DIM
 	if active:
-		draw_rect(Rect2(Vector2.ZERO, size), Color(P.CULT, 0.1))
-		draw_rect(Rect2(Vector2(0, size.y - 2), Vector2(size.x, 2)), P.CULT)
+		draw_rect(Rect2(Vector2.ZERO, size), Color(P.BRASS, 0.1))
+		draw_rect(Rect2(Vector2(4, size.y - 3), Vector2(size.x - 8, 1.5)), P.BRASS)
+		draw_rect(Rect2(Vector2(4, size.y - 0.75), Vector2(size.x - 8, 0.75)), P.BRASS)
 	var c := size * 0.5
 	match glyph:
 		"pause":

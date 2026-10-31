@@ -1,19 +1,30 @@
 # Dirección visual
 
-**Versión:** 0.1 · **Fecha:** 2026-10-28 · **Estado:** descripción del prototipo; identidad final en revisión.
+**Versión:** 0.2 · **Fecha:** 2026-10-30 · **Estado:** dirección de época confirmada; legibilidad por validar.
 
 ## Lenguaje visual actual
 
-Mapa mundial oscuro, paneles superpuestos, marcadores de culto, rutas, sitios,
-amenazas y presagios. Godot dibuja los elementos gráficos mediante código sobre
-geometría geográfica; la tipografía utiliza Barlow y Barlow Condensed.
-El README de Godot cita Plague Inc. como referencia de presentación estratégica,
-sin que eso defina todavía una dirección artística final.
+Dirección confirmada el 2026-10-30: el archivo secreto de un culto sobre un escritorio
+iluminado por una lámpara, entre 1908 y 1926. El mapa es una carta de navegación antigua:
+mar oscuro dentro de un marco con doble filete, tierra en pergamino manchado, rosa de los
+vientos y la marca de R'lyeh en el Pacífico Sur. Cada panel es un documento: expediente
+(región), recortes de prensa (amenazas), telegramas (avisos), libro mayor (barra inferior)
+y hojas impresas con marco (diálogos). Godot dibuja todo mediante código; el grano del
+papel es un shader sin texturas.
 
-La paleta implementada asigna un acento por significado: verde ácido para culto y
-crecimiento, rojo para peligro, violeta para presagios y Dread, ámbar para advertencias.
-Los fondos oscuros y bordes discretos separan mapa, información y controles.
-Los valores exactos pertenecen a [Palette](../../../godot/ui/palette.gd).
+El calendario muestra fechas reales: la partida empieza en enero de 1908, la alineación
+se abre en septiembre de 1924 y se cierra en septiembre de 1926, alrededor del 23 de marzo
+de 1925, la noche en que R'lyeh emerge en *The Call of Cthulhu*. Solo cambia la
+presentación; las reglas cuentan meses como antes.
+
+El tono de época se limita al marco: los nombres de las mecánicas (Influence, Dread,
+Followers, Obstruct) no cambian. Tipografía: IM Fell English para títulos, Old Standard TT
+para el texto y Courier Prime para los datos mecanografiados.
+
+La paleta asigna un acento por significado, con una tinta para el papel y un tono claro
+para lo oscuro: verdín para el culto, sangre de buey para el peligro, violeta para
+presagios y Dread, ocre para advertencias. Los valores exactos pertenecen a
+[Palette](../../../godot/ui/palette.gd).
 
 ## Función visual propuesta
 
@@ -38,6 +49,6 @@ Pedir a una persona que localice el peligro más urgente y un sitio interrumpido
 Revisar color, tamaño y animación según el resultado.
 
 Fuentes: [mapa](../../../godot/map/world_map.gd), [paleta](../../../godot/ui/palette.gd),
-[README Godot](../../../godot/README.md) y [licencia tipográfica](../../../godot/fonts/OFL-Barlow.txt).
+[README Godot](../../../godot/README.md) y licencias tipográficas en [fonts](../../../godot/fonts/).
 
 [Volver al índice](../README.md)

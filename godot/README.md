@@ -2,7 +2,7 @@
 
 Godot 4.7 (GDScript, Compatibility renderer) port of the web prototype, built for itch.io's browser player. The same project also exports Linux and Windows desktop builds.
 
-The rules in `core/` mirror `src/game/` line for line. Recorded TypeScript runs check that they match (see [Rule parity](#rule-parity)). The interface is new: a full-screen strategy map in the style of Plague Inc., with everything drawn in code. There are no image or audio assets.
+The rules in `core/` mirror `src/game/` line for line. Recorded TypeScript runs check that they match (see [Rule parity](#rule-parity)). The interface is new: a cult's archive on a lamp-lit desk around 1908–1926, with the world as an old survey chart and every panel a document (case file, press clipping, telegram, ledger). Everything is drawn in code; the only assets are three fonts.
 
 ## Run
 
@@ -100,4 +100,4 @@ The Windows build disables `application/modify_resources` because it needs rcedi
 | `dev/` | Scripted playtest strategy, script checker |
 | `tests/` | Headless runner, rule, save and parity tests, golden traces |
 | `data/earth_regions.json` | Country rings by region, from `node scripts/build-earth-map.mjs` |
-| `fonts/` | Barlow and Barlow Condensed (SIL Open Font License, `OFL-Barlow.txt`) |
+| `fonts/` | IM Fell English, Old Standard TT and Courier Prime (SIL Open Font License, `OFL-*.txt`) |

@@ -2,13 +2,13 @@
 
 importer="font_data_dynamic"
 type="FontFile"
-uid="uid://dp6xatwl7txwc"
-path="res://.godot/imported/BarlowCondensed-Medium.ttf-6de474806325db9163b5510637100b25.fontdata"
+uid="uid://dnaci4dq2ft3m"
+path="res://.godot/imported/CourierPrime-Regular.ttf-263a5734dd7eaf01aa8d3d715108f3c5.fontdata"
 
 [deps]
 
-source_file="res://fonts/BarlowCondensed-Medium.ttf"
-dest_files=["res://.godot/imported/BarlowCondensed-Medium.ttf-6de474806325db9163b5510637100b25.fontdata"]
+source_file="res://fonts/CourierPrime-Regular.ttf"
+dest_files=["res://.godot/imported/CourierPrime-Regular.ttf-263a5734dd7eaf01aa8d3d715108f3c5.fontdata"]
 
 [params]
 

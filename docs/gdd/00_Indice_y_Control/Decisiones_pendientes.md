@@ -1,6 +1,6 @@
 # Decisiones pendientes
 
-**Versión:** 0.2 · **Fecha:** 2026-10-28 · **Estado:** D01–D03 confirmadas; D04–D08 pendientes.
+**Versión:** 0.2 · **Fecha:** 2026-10-28 · **Estado:** D01–D03 y D09 confirmadas; D04–D08 pendientes.
 
 Este registro distingue las decisiones confirmadas de las preguntas abiertas.
 La primera etapa del GDD documenta la implementación; los objetivos futuros
@@ -47,6 +47,7 @@ se registran sin presentarlos como características ya disponibles.
 | D06 | Presentación final | Pendiente | — | Arte, audio y producción |
 | D07 | Público, idiomas y dispositivos | Pendiente | — | Público, UX y plataforma |
 | D08 | Entrega y recursos | Pendiente | — | Producción y negocio |
+| D09 | Época y estética de interfaz | Confirmada | Archivo del culto en un escritorio de noche, 1908–1926, con calendario real; tono de época solo en el marco, sin renombrar mecánicas — 2026-10-30 | Arte, UI/UX y narrativa |
 
 No convertir preguntas pendientes en funcionalidades comprometidas. Los problemas
 observados del prototipo siguen en [Open problems](../09-open-problems.md).

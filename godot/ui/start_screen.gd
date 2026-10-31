@@ -1,5 +1,6 @@
 extends Control
-## Title and run setup, over a dimmed map where the cult is already spreading.
+## Title and run setup, set like a book's frontispiece beside a chart where the cult is
+## already spreading.
 
 const P = preload("res://ui/palette.gd")
 const B = preload("res://core/balance.gd")
@@ -17,7 +18,7 @@ func _init(owner_game) -> void:
 
 func _ready() -> void:
 	var backdrop := ColorRect.new()
-	backdrop.color = P.OCEAN
+	backdrop.color = P.DESK
 	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(backdrop)
 	var map := WorldMap.new()
@@ -31,9 +32,9 @@ func _ready() -> void:
 	map.set_state(_omen_state(), "")
 	var shade := TextureRect.new()
 	var gradient := Gradient.new()
-	gradient.set_color(0, Color(P.INK, 0.97))
-	gradient.set_color(1, Color(P.INK, 0.25))
-	gradient.add_point(0.45, Color(P.INK, 0.82))
+	gradient.set_color(0, Color(P.DESK, 0.98))
+	gradient.set_color(1, Color(P.DESK, 0.35))
+	gradient.add_point(0.45, Color(P.DESK, 0.85))
 	var texture := GradientTexture2D.new()
 	texture.gradient = gradient
 	texture.fill_to = Vector2(1, 0)
@@ -56,22 +57,32 @@ func _ready() -> void:
 	var title := Kit.vbox(0)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	title.alignment = BoxContainer.ALIGNMENT_CENTER
-	title.add_child(Kit.label("A WORLD-MAP STRATEGY GAME", 16, P.CULT_DIM.lightened(0.2), "condensed_semibold"))
-	var name_lines := Kit.vbox(-34)
-	name_lines.add_child(Kit.label("THE AWAKENING", 104, P.TEXT, "condensed_bold"))
-	name_lines.add_child(Kit.label("OF CTHULHU", 104, P.CULT, "condensed_bold"))
+	title.add_child(Kit.label("BEING A CHRONICLE OF THE YEARS 1908 – 1926", 14, P.BRASS, "type_bold"))
+	var name_lines := Kit.vbox(-30)
+	name_lines.add_child(Kit.label("The Awakening", 112, P.LAMP, "display"))
+	var of := Kit.label("of Cthulhu", 92, P.BRASS, "display_italic")
+	name_lines.add_child(of)
 	title.add_child(name_lines)
 	var gap := Control.new()
-	gap.custom_minimum_size = Vector2(0, 18)
+	gap.custom_minimum_size = Vector2(0, 14)
 	title.add_child(gap)
-	title.add_child(Kit.label("Build the cult. Feed the rite. Wake the god.", 24, P.MUTED, "medium"))
+	var rule := Kit.rule(Color(P.BRASS, 0.7))
+	rule.custom_minimum_size = Vector2(420, 5)
+	rule.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	title.add_child(rule)
 	var gap2 := Control.new()
-	gap2.custom_minimum_size = Vector2(0, 26)
+	gap2.custom_minimum_size = Vector2(0, 14)
 	title.add_child(gap2)
-	title.add_child(Kit.caption("%d months to prepare  ·  3 ritual sites  ·  1 sleeping god" % B.PREPARATION_MONTHS, P.FAINT.lightened(0.25)))
+	title.add_child(Kit.label("Build the cult. Feed the rite. Wake the god.", 26, P.LAMP_DIM, "display_italic"))
+	var gap3 := Control.new()
+	gap3.custom_minimum_size = Vector2(0, 22)
+	title.add_child(gap3)
+	title.add_child(Kit.caption("%d months to prepare  ·  3 ritual sites  ·  1 sleeping god" % B.PREPARATION_MONTHS, P.LAMP_DIM))
 	row.add_child(title)
 
-	var setup := Kit.panel(Color(0.04, 0.05, 0.07, 0.92), P.EDGE_STRONG, Vector4(28, 26, 28, 26))
+	var setup := Kit.panel(P.PAPER, P.DESK_EDGE, Vector4(32, 30, 32, 30))
+	setup.material = P.paper(0.16)
+	Kit.frame(setup)
 	setup.custom_minimum_size = Vector2(430, 0)
 	setup.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	var form := Kit.vbox(14)
@@ -79,12 +90,12 @@ func _ready() -> void:
 	row.add_child(setup)
 
 	if game.storage_notice:
-		form.add_child(Kit.body(game.storage_notice, 15, P.WARN))
+		form.add_child(Kit.body(game.storage_notice, 15, P.WARN, "body_bold"))
 	var saved = game.state
 	if saved != null and not GameEngine.is_over(saved):
 		form.add_child(Kit.caption("Run in progress"))
-		form.add_child(Kit.label("%s  ·  %s" % [Derived.calendar(saved.elapsedMonths), GameData.DIFFICULTIES[saved.difficulty].name], 19, P.TEXT, "condensed_semibold"))
-		var resume := Kit.primary("CONTINUE", func() -> void: game.show_game())
+		form.add_child(Kit.label("%s  ·  %s" % [Format.date(saved.elapsedMonths), GameData.DIFFICULTIES[saved.difficulty].name], 22, P.TEXT, "display"))
+		var resume := Kit.primary("Continue", func() -> void: game.show_game())
 		resume.custom_minimum_size = Vector2(0, 50)
 		form.add_child(resume)
 		form.add_child(Kit.rule())
@@ -92,7 +103,9 @@ func _ready() -> void:
 	form.add_child(Kit.caption("New awakening"))
 	var levels := Kit.hbox(0)
 	for id in GameData.DIFFICULTY_IDS:
-		var button := Kit.button(GameData.DIFFICULTIES[id].name.to_upper(), func() -> void: _pick(id))
+		var button := Kit.button(GameData.DIFFICULTIES[id].name, func() -> void: _pick(id))
+		button.add_theme_font_override("font", P.font("display_sc"))
+		button.add_theme_font_size_override("font_size", 20)
 		button.toggle_mode = true
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		button.custom_minimum_size = Vector2(0, 42)
@@ -104,18 +117,18 @@ func _ready() -> void:
 	_seed.max_length = 40
 	_seed.add_theme_font_size_override("font_size", 17)
 	form.add_child(_seed)
-	var begin := Kit.primary("BEGIN", func() -> void: game.begin(_difficulty, _seed.text))
+	var begin := Kit.primary("Begin", func() -> void: game.begin(_difficulty, _seed.text))
 	begin.custom_minimum_size = Vector2(0, 50)
 	form.add_child(begin)
 	_seed.text_submitted.connect(func(_text: String) -> void: game.begin(_difficulty, _seed.text))
 	if saved != null and not GameEngine.is_over(saved):
-		form.add_child(Kit.body("Beginning anew replaces the run in progress.", 14, P.FAINT.lightened(0.2)))
+		form.add_child(Kit.body("Beginning anew replaces the run in progress.", 15, P.MUTED, "italic"))
 	if game.last_result != null:
 		var result: Dictionary = game.last_result
-		form.add_child(Kit.body("Last run: %s at month %d · seed %s" % ["awakened" if result.won else "failed", result.month, result.seed], 14, P.MUTED))
+		form.add_child(Kit.body("Last run: %s in %s · seed %s" % ["awakened" if result.won else "failed", Format.date(result.month), result.seed], 15, P.MUTED, "italic"))
 	_pick(_difficulty)
 
-	var credit := Kit.label("Map: Natural Earth, public domain  ·  v" + str(ProjectSettings.get_setting("application/config/version")), 13, P.FAINT)
+	var credit := Kit.label("Map: Natural Earth, public domain  ·  v" + str(ProjectSettings.get_setting("application/config/version")), 12, Color(P.LAMP_DIM, 0.6), "type")
 	credit.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
 	credit.position = Vector2(96, -40)
 	credit.offset_top = -40

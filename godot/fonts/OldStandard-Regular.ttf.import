@@ -2,13 +2,13 @@
 
 importer="font_data_dynamic"
 type="FontFile"
-uid="uid://bvswuijidwjfc"
-path="res://.godot/imported/Barlow-Medium.ttf-8007a5e75edcf46b13afe8de23758271.fontdata"
+uid="uid://bswkto8ajb360"
+path="res://.godot/imported/OldStandard-Regular.ttf-9b3b77923e311e5266c3a0c686f2443f.fontdata"
 
 [deps]
 
-source_file="res://fonts/Barlow-Medium.ttf"
-dest_files=["res://.godot/imported/Barlow-Medium.ttf-8007a5e75edcf46b13afe8de23758271.fontdata"]
+source_file="res://fonts/OldStandard-Regular.ttf"
+dest_files=["res://.godot/imported/OldStandard-Regular.ttf-9b3b77923e311e5266c3a0c686f2443f.fontdata"]
 
 [params]
 

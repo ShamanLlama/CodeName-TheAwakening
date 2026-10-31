@@ -1,5 +1,6 @@
 extends Control
-## Modal dialogs over the strategy screen. The clock is held while one is open.
+## Modal dialogs over the strategy screen, printed as framed sheets. The clock is held while
+## one is open.
 
 const P = preload("res://ui/palette.gd")
 const B = preload("res://core/balance.gd")
@@ -21,13 +22,15 @@ func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	var backdrop := ColorRect.new()
-	backdrop.color = Color(P.INK, 0.74)
+	backdrop.color = Color(P.DESK, 0.8)
 	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(backdrop)
 	var center := CenterContainer.new()
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(center)
-	_box = Kit.panel(P.PANEL_SOLID, P.EDGE_STRONG, Vector4(32, 28, 32, 28))
+	_box = Kit.panel(P.PAPER, P.DESK_EDGE, Vector4(40, 34, 40, 34))
+	_box.material = P.paper(0.16)
+	Kit.frame(_box)
 	center.add_child(_box)
 	_content = Kit.vbox(16)
 	_box.add_child(_content)
@@ -73,7 +76,10 @@ func _rebuild() -> void:
 
 
 func _title(text: String, color := P.TEXT) -> void:
-	_content.add_child(Kit.label(text, 34, color, "condensed_bold"))
+	var title := Kit.vbox(4)
+	title.add_child(Kit.label(text, 40, color, "display"))
+	title.add_child(Kit.rule(Color(color, 0.6)))
+	_content.add_child(title)
 
 
 func _row_buttons(buttons: Array) -> HBoxContainer:
@@ -86,26 +92,27 @@ func _row_buttons(buttons: Array) -> HBoxContainer:
 
 func _guide() -> void:
 	_box.custom_minimum_size = Vector2(620, 0)
-	_title("HOW THE AWAKENING WORKS")
+	_title("How the Awakening Works")
 	var steps := [
 		["GROW", "Cells recruit on their own and earn Influence. Spread into neighbouring regions."],
 		["SACRIFICE", "Followers become Dread. Dread pays for the rites."],
 		["BUILD THREE SITES", "A site needs a quarter of its region's people and 24 months. Small regions are easier to hold."],
 		["STAY HIDDEN", "Threats strike your cells. Obstruct them, conceal evidence, and keep world awareness under 100%."],
-		["AWAKEN", "At month 200 the stars align. Spend 100 Dread and hold three sites for 12 months."],
+		["AWAKEN", "In September 1924, month 200, the stars align. Spend 100 Dread and hold three sites for 12 months before September 1926."],
 	]
 	for i in steps.size():
 		var row := Kit.hbox(16)
-		var number := Kit.label(str(i + 1), 34, P.CULT, "condensed_bold")
-		number.custom_minimum_size = Vector2(28, 0)
+		var number := Kit.label(["I", "II", "III", "IV", "V"][i], 30, P.CULT, "display")
+		number.custom_minimum_size = Vector2(44, 0)
+		number.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		row.add_child(number)
 		var text := Kit.vbox(0)
 		text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		text.add_child(Kit.label(steps[i][0], 18, P.TEXT, "condensed_bold"))
+		text.add_child(Kit.label(steps[i][0].capitalize(), 21, P.TEXT, "display_sc"))
 		text.add_child(Kit.body(steps[i][1], 16, P.MUTED))
 		row.add_child(text)
 		_content.add_child(row)
-	var go := Kit.primary("UNDERSTOOD", func() -> void:
+	var go := Kit.primary("Understood", func() -> void:
 		game.complete_tutorial()
 		close())
 	_row_buttons([go])
@@ -113,7 +120,7 @@ func _guide() -> void:
 
 func _menu() -> void:
 	_box.custom_minimum_size = Vector2(440, 0)
-	_title("PAUSED")
+	_title("Paused")
 	var column := Kit.vbox(8)
 	_content.add_child(column)
 	for entry in [["RESUME", close], ["HOW TO PLAY", func() -> void: open("guide")], ["CHRONICLE", func() -> void: open("chronicle")], ["EXPORT PLAYTEST REPORT", func() -> void: game.export_report()]]:
@@ -139,7 +146,8 @@ func _menu() -> void:
 	sound.add_child(slider)
 	column.add_child(sound)
 	column.add_child(Kit.rule())
-	var abandon := Kit.outline("ABANDON THIS RUN", Callable(), P.DANGER)
+	var abandon := Kit.stamp("ABANDON THIS RUN", Callable(), P.DANGER)
+	abandon.custom_minimum_size = Vector2(0, 38)
 	abandon.pressed.connect(func() -> void:
 		if _confirm_abandon:
 			close()
@@ -164,23 +172,25 @@ func _menu() -> void:
 func _doctrine() -> void:
 	var s: Dictionary = game.state
 	_box.custom_minimum_size = Vector2(860, 0)
-	_title("CHOOSE A DOCTRINE")
-	_content.add_child(Kit.body("One per run, for %d Influence. The choice is permanent." % GameData.SPECIALIZATION_COST, 16, P.MUTED))
+	_title("Choose a Doctrine")
+	_content.add_child(Kit.body("One per run, for %d Influence. The choice is permanent." % GameData.SPECIALIZATION_COST, 17, P.MUTED, "italic"))
 	var row := Kit.hbox(12)
 	_content.add_child(row)
 	for id in GameData.SPECIALIZATION_IDS:
 		var def: Dictionary = GameData.SPECIALIZATIONS[id]
 		var chosen: bool = s.specialization == id
-		var card := Kit.panel(P.CULT_DEEP if chosen else P.RAISED, P.CULT if chosen else P.EDGE, Vector4(18, 16, 18, 16))
+		var card := Kit.panel(P.PAPER_LIGHT, P.CULT if chosen else P.PAPER_EDGE, Vector4(18, 16, 18, 16))
+		if chosen:
+			card.get_theme_stylebox("panel").set_border_width_all(2)
 		card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		card.custom_minimum_size = Vector2(0, 210)
 		var box := Kit.vbox(10)
 		card.add_child(box)
-		box.add_child(Kit.label(def.name.to_upper(), 24, P.CULT if chosen else P.TEXT, "condensed_bold"))
+		box.add_child(Kit.label(def.name, 26, P.CULT if chosen else P.TEXT, "display_sc"))
 		var text := Kit.body(def.description, 16, P.MUTED)
 		text.size_flags_vertical = Control.SIZE_EXPAND_FILL
 		box.add_child(text)
-		var pick := Kit.primary("CHOSEN" if chosen else "CHOOSE", func() -> void:
+		var pick := Kit.primary("Chosen" if chosen else "Choose", func() -> void:
 			game.choose_doctrine(id)
 			close())
 		pick.disabled = s.specialization != null or s.influence < GameData.SPECIALIZATION_COST or not GameEngine.is_active(s)
@@ -192,7 +202,7 @@ func _doctrine() -> void:
 func _chronicle() -> void:
 	var s: Dictionary = game.state
 	_box.custom_minimum_size = Vector2(760, 0)
-	_title("CHRONICLE")
+	_title("The Chronicle")
 	_content.add_child(Kit.caption("Seed %s · %s · latest first" % [s.seed, GameData.DIFFICULTIES[s.difficulty].name]))
 	var scroll := ScrollContainer.new()
 	scroll.custom_minimum_size = Vector2(0, 470)
@@ -205,16 +215,16 @@ func _chronicle() -> void:
 	entries.reverse()
 	for entry in entries:
 		var kind_of: String = game.classify(entry.message)
-		var accent: Color = { "threat": P.DANGER, "loss": P.DANGER, "omen": P.OMEN, "site": P.CULT, "phase": P.CULT }.get(kind_of, P.FAINT)
+		var accent: Color = { "threat": P.DANGER, "loss": P.DANGER, "omen": P.OMEN, "site": P.CULT, "phase": P.CULT }.get(kind_of, Color(P.TEXT, 0.25))
 		var row := Kit.hbox(14)
 		var stripe := ColorRect.new()
 		stripe.color = accent
 		stripe.custom_minimum_size = Vector2(2, 0)
 		row.add_child(stripe)
-		var when := Kit.label(Derived.calendar(entry.month).replace("Year ", "Y").replace(" · Month ", " · M"), 14, P.MUTED, "condensed_semibold")
-		when.custom_minimum_size = Vector2(76, 0)
+		var when := Kit.label(Format.date_short(entry.month), 13, P.MUTED, "type_bold")
+		when.custom_minimum_size = Vector2(80, 0)
 		row.add_child(when)
-		var text := Kit.body(entry.message, 15, P.TEXT)
+		var text := Kit.body(entry.message, 16, P.TEXT)
 		text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		row.add_child(text)
 		var pad := MarginContainer.new()
@@ -223,15 +233,15 @@ func _chronicle() -> void:
 		pad.add_child(row)
 		list.add_child(pad)
 	if entries.is_empty():
-		list.add_child(Kit.body("The world has not yet heard your name.", 16, P.MUTED))
+		list.add_child(Kit.body("The world has not yet heard your name.", 17, P.MUTED, "italic"))
 	_row_buttons([Kit.button("CLOSE", close)])
 
 
 func _alignment() -> void:
 	var s: Dictionary = game.state
 	_box.custom_minimum_size = Vector2(600, 0)
-	_title("THE STARS ARE RIGHT", P.CULT)
-	_content.add_child(Kit.body("%d months remain to complete the awakening. Time is paused." % (B.DEADLINE - s.elapsedMonths), 17, P.TEXT))
+	_title("The Stars Are Right", P.CULT)
+	_content.add_child(Kit.body("%d months remain to complete the awakening; the alignment closes in %s. Time is paused." % [B.DEADLINE - s.elapsedMonths, Format.date(B.DEADLINE)], 17, P.TEXT, "italic"))
 	var checks := Kit.vbox(8)
 	_content.add_child(checks)
 	var sites := 0
@@ -246,7 +256,7 @@ func _alignment() -> void:
 		checks.add_child(_check(false, "Unfunded site", "Fund a site in a small region"))
 	checks.add_child(_check(s.dread >= B.FINAL_DREAD, "Dread", "%s / %d" % [Format.count(s.dread), B.FINAL_DREAD]))
 	var reason := GameEngine.awakening_reason(s)
-	var begin := Kit.primary("BEGIN THE FINAL RITE · 100 DREAD", func() -> void:
+	var begin := Kit.primary("Begin the Final Rite · 100 Dread", func() -> void:
 		close()
 		game.awaken()
 		# The alignment paused the clock; the rite needs time to pass.
@@ -257,17 +267,17 @@ func _alignment() -> void:
 	later.custom_minimum_size = Vector2(0, 44)
 	_row_buttons([begin, later])
 	if reason:
-		_content.add_child(Kit.body(reason, 15, P.WARN))
+		_content.add_child(Kit.body(reason, 15, P.WARN, "body_bold"))
 
 
 func _check(ok: bool, name: String, detail: String) -> HBoxContainer:
 	var row := Kit.hbox(12)
 	var mark := Kit.label("◆" if ok else "◇", 18, P.CULT if ok else P.FAINT)
 	row.add_child(mark)
-	var title := Kit.label(name.to_upper(), 17, P.TEXT if ok else P.MUTED, "condensed_semibold")
+	var title := Kit.label(name, 20, P.TEXT if ok else P.MUTED, "display_sc")
 	title.custom_minimum_size = Vector2(170, 0)
 	row.add_child(title)
-	row.add_child(Kit.label(detail, 16, P.MUTED))
+	row.add_child(Kit.label(detail, 16, P.MUTED, "italic"))
 	return row
 
 
@@ -276,22 +286,23 @@ func _end() -> void:
 	_box.custom_minimum_size = Vector2(620, 0)
 	var won: bool = s.status == "won"
 	var aware: bool = s.resultReason != null and s.resultReason.begins_with("The world knows")
-	_title("CTHULHU AWAKENS" if won else "THE WORLD KNOWS" if aware else "THE ALIGNMENT HAS PASSED", P.CULT if won else P.DANGER)
-	_content.add_child(Kit.body(s.resultReason if s.resultReason else "", 17, P.TEXT))
+	_title("Cthulhu Awakens" if won else "The World Knows" if aware else "The Alignment Has Passed", P.CULT if won else P.DANGER)
+	_content.add_child(Kit.caption(Format.date(s.elapsedMonths)))
+	_content.add_child(Kit.body(s.resultReason if s.resultReason else "", 17, P.TEXT, "italic"))
 	var grid := GridContainer.new()
 	grid.columns = 3
 	grid.add_theme_constant_override("h_separation", 28)
 	grid.add_theme_constant_override("v_separation", 12)
 	var t: Dictionary = s.telemetry
-	for item in [["Month", str(s.elapsedMonths)], ["Followers", Format.count(Derived.total_followers(s))], ["Sites held", "%d / 3" % Derived.ready_sites(s)],
+	for item in [["Months", str(s.elapsedMonths)], ["Followers", Format.count(Derived.total_followers(s))], ["Sites held", "%d / 3" % Derived.ready_sites(s)],
 		["Sacrificed", Format.count(t.sacrificed)], ["Lost to opposition", Format.count(t.raidLosses)], ["Threats obstructed", str(t.threatsCountered)]]:
 		var cell := Kit.vbox(0)
 		cell.add_child(Kit.caption(item[0]))
-		cell.add_child(Kit.label(item[1], 24, P.TEXT, "condensed_semibold"))
+		cell.add_child(Kit.label(item[1], 25, P.TEXT, "body_bold"))
 		grid.add_child(cell)
 	_content.add_child(grid)
 	_content.add_child(Kit.caption("Seed %s · %s" % [s.seed, GameData.DIFFICULTIES[s.difficulty].name]))
-	var again := Kit.primary("NEW AWAKENING", func() -> void:
+	var again := Kit.primary("New Awakening", func() -> void:
 		close()
 		game.abandon())
 	_row_buttons([again, Kit.button("EXPORT REPORT", func() -> void: game.export_report()), Kit.button("VIEW THE MAP", close)])

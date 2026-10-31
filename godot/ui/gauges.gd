@@ -1,11 +1,11 @@
 extends RefCounted
-## Small drawn gauges for the bottom HUD.
+## Small drawn instruments for the ledger at the bottom of the screen.
 
 const P = preload("res://ui/palette.gd")
 const B = preload("res://core/balance.gd")
 
 
-## Segmented awareness meter. The run is lost at 100.
+## A brass dial with a needle. Past 60% it reads in the red; at 100 the run is lost.
 class Awareness extends Control:
 	var value := 0.0:
 		set(next):
@@ -13,30 +13,49 @@ class Awareness extends Control:
 			queue_redraw()
 
 	func _init() -> void:
-		custom_minimum_size = Vector2(230, 14)
+		custom_minimum_size = Vector2(96, 52)
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 
+	func _point(center: Vector2, radius: float, percent: float) -> Vector2:
+		return center + Vector2.from_angle(PI + PI * percent / 100.0) * radius
+
 	func _draw() -> void:
-		var segments := 25
-		var gap := 2.0
-		var width := (size.x - gap * (segments - 1)) / segments
-		for i in segments:
-			var lit := value >= (i + 1) * 100.0 / segments
-			var partial := not lit and value > i * 100.0 / segments
-			var color := P.DANGER if lit else Color(P.DANGER, 0.45) if partial else Color("1b2029")
-			if lit and i >= segments - 5:
-				color = P.DANGER.lightened(0.25)
-			draw_rect(Rect2(i * (width + gap), 0, width, size.y), color)
+		var center := Vector2(size.x * 0.5, size.y - 6)
+		var radius := minf(size.x * 0.5 - 4, size.y - 10)
+		draw_arc(center, radius, PI, TAU, 48, Color(P.TEXT, 0.7), 1.5, true)
+		draw_arc(center, radius - 4, PI + PI * 0.6, TAU, 24, Color(P.DANGER, 0.85), 5.0, true)
+		for i in 11:
+			var outer := _point(center, radius, i * 10.0)
+			var inner := _point(center, radius - (7.0 if i % 5 == 0 else 4.0), i * 10.0)
+			draw_line(inner, outer, Color(P.TEXT, 0.75), 1.2 if i % 5 == 0 else 0.8, true)
+		var tip := _point(center, radius - 3, clampf(value, 0.0, 100.0))
+		draw_line(center, tip, P.TEXT, 2.0, true)
+		draw_circle(center, 4.5, P.BRASS)
+		draw_arc(center, 4.5, 0.0, TAU, 16, P.TEXT, 1.0, true)
+		draw_line(Vector2(center.x - radius - 2, center.y + 0.5), Vector2(center.x + radius + 2, center.y + 0.5), Color(P.TEXT, 0.5), 1.0)
 
 
-## One diamond per required site: hollow when unfunded, filling as preparation advances,
-## solid green when ready, red when its region no longer supports it.
+## One wax seal per required site: an outline when unfunded, filling as preparation advances,
+## verdigris when ready, oxblood when its region no longer supports it.
 class Sites extends Control:
 	var state: Dictionary = {}
 
 	func _init() -> void:
-		custom_minimum_size = Vector2(120, 22)
+		custom_minimum_size = Vector2(120, 30)
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	func _seal(c: Vector2, radius: float) -> PackedVector2Array:
+		var points := PackedVector2Array()
+		for k in 36:
+			var angle := k * TAU / 36.0
+			points.append(c + Vector2.from_angle(angle) * (radius + (1.2 if k % 2 == 0 else -0.6)))
+		return points
+
+	func _star(c: Vector2, radius: float, color: Color) -> void:
+		var star := PackedVector2Array()
+		for k in 6:
+			star.append(c + Vector2.from_angle(-PI / 2 + (k * 2 % 5) * TAU / 5.0) * radius)
+		draw_polyline(star, color, 1.2, true)
 
 	func _draw() -> void:
 		var sites: Array[Dictionary] = []
@@ -46,20 +65,25 @@ class Sites extends Control:
 					sites.append(state.regions[id])
 		sites.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a.site.progress > b.site.progress)
 		for i in B.REQUIRED_SITES:
-			var c := Vector2(14 + i * 36, size.y * 0.5)
-			var diamond := PackedVector2Array([c + Vector2(0, -10), c + Vector2(10, 0), c + Vector2(0, 10), c + Vector2(-10, 0), c + Vector2(0, -10)])
+			var c := Vector2(16 + i * 38, size.y * 0.5)
+			var seal := _seal(c, 12.0)
+			var outline := seal.duplicate()
+			outline.append(seal[0])
 			if i >= sites.size():
-				draw_polyline(diamond, P.FAINT, 1.4, true)
+				for k in range(0, outline.size() - 1, 3):
+					draw_line(outline[k], outline[k + 1], P.FAINT, 1.2, true)
 				continue
 			var r: Dictionary = sites[i]
 			var ready: bool = r.site.progress >= B.SITE_MONTHS
 			var color := P.DANGER if not Derived.supported(r) else P.CULT if ready else P.OMEN
 			if ready:
-				draw_colored_polygon(diamond.slice(0, 4), color)
+				draw_colored_polygon(seal, color)
+				_star(c, 7.0, P.PAPER_LIGHT)
 			else:
 				var fill := float(r.site.progress) / B.SITE_MONTHS
-				var level := c.y + 10 - 20 * fill
-				var clipped := Geometry2D.intersect_polygons(diamond.slice(0, 4), PackedVector2Array([Vector2(c.x - 11, level), Vector2(c.x + 11, level), Vector2(c.x + 11, c.y + 11), Vector2(c.x - 11, c.y + 11)]))
-				for part in clipped:
-					draw_colored_polygon(part, Color(color, 0.55))
-				draw_polyline(diamond, color, 1.4, true)
+				var level := c.y + 13 - 26 * fill
+				var below := PackedVector2Array([Vector2(c.x - 14, level), Vector2(c.x + 14, level), Vector2(c.x + 14, c.y + 14), Vector2(c.x - 14, c.y + 14)])
+				for part in Geometry2D.intersect_polygons(seal, below):
+					draw_colored_polygon(part, Color(color, 0.6))
+				draw_polyline(outline, color, 1.4, true)
+				_star(c, 7.0, Color(color, 0.8))

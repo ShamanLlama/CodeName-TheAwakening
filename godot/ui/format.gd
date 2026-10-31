@@ -21,3 +21,19 @@ static func rate(value: float) -> String:
 
 static func months(value: int) -> String:
 	return "%d month%s" % [value, "" if value == 1 else "s"]
+
+
+## The game opens in January 1908. With a 200-month preparation the alignment opens in
+## September 1924 and closes in September 1926, around the night R'lyeh rose: 23 March 1925.
+const FIRST_YEAR := 1908
+const MONTH_NAMES := ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+
+
+## "March 1925"
+static func date(month: int) -> String:
+	return "%s %d" % [MONTH_NAMES[month % 12], FIRST_YEAR + floori(month / 12.0)]
+
+
+## "Mar 1925"
+static func date_short(month: int) -> String:
+	return "%s %d" % [MONTH_NAMES[month % 12].left(3), FIRST_YEAR + floori(month / 12.0)]

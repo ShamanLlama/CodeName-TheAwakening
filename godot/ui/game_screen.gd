@@ -1,12 +1,14 @@
 extends Control
-## The strategy screen: a full-bleed map between a slim top bar and a bottom HUD, with the
-## threat stack on the left, toasts at the top, the selected region on the right and dialogs.
+## The strategy screen: a survey chart on a dark desk, between a slim top bar and the ledger,
+## with press clippings for threats on the left, telegrams at the top, the selected region's
+## case file on the right, and dialogs.
 
 const P = preload("res://ui/palette.gd")
 const B = preload("res://core/balance.gd")
 const RegionPanel = preload("res://ui/region_panel.gd")
 const Dialogs = preload("res://ui/dialogs.gd")
 const Gauges = preload("res://ui/gauges.gd")
+const LAMP_SHADER = preload("res://ui/lamp.gdshader")
 const TOP := 58.0
 const BOTTOM := 104.0
 
@@ -46,7 +48,7 @@ func _init(owner_game) -> void:
 
 func _ready() -> void:
 	var backdrop := ColorRect.new()
-	backdrop.color = P.OCEAN
+	backdrop.color = P.DESK
 	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(backdrop)
@@ -56,6 +58,12 @@ func _ready() -> void:
 	map.offset_bottom = -BOTTOM - 8
 	add_child(map)
 	map.region_pressed.connect(select)
+	var lamp := ColorRect.new()
+	lamp.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	lamp.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	lamp.material = ShaderMaterial.new()
+	lamp.material.shader = LAMP_SHADER
+	add_child(lamp)
 	_build_top()
 	_build_bottom()
 	_build_overlays()
@@ -105,13 +113,16 @@ func _unhandled_input(event: InputEvent) -> void:
 
 # --- Layout ------------------------------------------------------------------------------
 
+## The top bar is the dark edge of the desk; the bottom one is a strip of ledger paper.
 func _bar(top: bool) -> PanelContainer:
-	var bar := Kit.panel(P.PANEL, Color.TRANSPARENT, Vector4(20, 0, 14, 0))
-	var style := UiTheme.box(P.PANEL, P.EDGE, 0, Vector4(20, 0, 14, 0))
+	var bar := Kit.panel()
+	var style := UiTheme.box(P.DESK_RAISED if top else P.PAPER, P.BRASS if top else P.PAPER_EDGE, 0, Vector4(20, 0, 14, 0))
 	if top:
-		style.border_width_bottom = 1
+		style.border_width_bottom = 2
+		bar.material = null
 	else:
-		style.border_width_top = 1
+		style.border_width_top = 3
+		style.border_color = P.DESK_EDGE
 	bar.add_theme_stylebox_override("panel", style)
 	bar.set_anchors_preset(Control.PRESET_TOP_WIDE if top else Control.PRESET_BOTTOM_WIDE)
 	if top:
@@ -129,15 +140,15 @@ func _build_top() -> void:
 	var left := Kit.hbox(10)
 	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	left.alignment = BoxContainer.ALIGNMENT_BEGIN
-	var mark := Kit.label("THE AWAKENING", 20, P.TEXT, "condensed_bold")
+	var mark := Kit.label("The Awakening", 24, P.LAMP, "display_sc")
 	left.add_child(mark)
-	left.add_child(Kit.label("OF CTHULHU", 20, P.CULT, "condensed_bold"))
+	left.add_child(Kit.label("of Cthulhu", 22, P.BRASS, "display_italic"))
 	row.add_child(left)
-	var center := Kit.vbox(0)
+	var center := Kit.vbox(-2)
 	center.alignment = BoxContainer.ALIGNMENT_CENTER
-	_date = Kit.label("", 19, P.TEXT, "condensed_semibold")
+	_date = Kit.label("", 25, P.LAMP, "display")
 	_date.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_countdown = Kit.caption("")
+	_countdown = Kit.caption("", P.LAMP_DIM)
 	_countdown.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	center.add_child(_date)
 	center.add_child(_countdown)
@@ -164,8 +175,8 @@ func _readout(parent: Control, caption: String, color: Color, hint: String) -> A
 	box.tooltip_text = hint
 	box.mouse_filter = Control.MOUSE_FILTER_PASS
 	box.add_child(Kit.caption(caption))
-	var value := Kit.label("0", 32, color, "condensed_bold")
-	var sub := Kit.label("", 14, P.MUTED, "condensed")
+	var value := Kit.label("0", 31, color, "body_bold")
+	var sub := Kit.label("", 12, P.MUTED, "type")
 	box.add_child(value)
 	box.add_child(sub)
 	parent.add_child(box)
@@ -174,7 +185,7 @@ func _readout(parent: Control, caption: String, color: Color, hint: String) -> A
 
 func _build_bottom() -> void:
 	var bar := _bar(false)
-	var row := Kit.hbox(26)
+	var row := Kit.hbox(24)
 	bar.add_child(row)
 	var influence := _readout(row, "Influence", P.TEXT, "Earned each month by your followers. Spent on every cult action.")
 	_influence = influence[0]
@@ -186,6 +197,8 @@ func _build_bottom() -> void:
 	doctrine.add_child(Kit.caption("Doctrine"))
 	_doctrine = Kit.button("", func() -> void: open_dialog("doctrine"))
 	_doctrine.custom_minimum_size = Vector2(150, 0)
+	_doctrine.add_theme_font_override("font", P.font("display_sc"))
+	_doctrine.add_theme_font_size_override("font_size", 18)
 	doctrine.add_child(_doctrine)
 	row.add_child(doctrine)
 	row.add_child(_divider())
@@ -200,7 +213,7 @@ func _build_bottom() -> void:
 		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 			open_dialog("chronicle"))
 	_ticker_head = Kit.caption("")
-	_ticker = Kit.body("", 16, P.TEXT)
+	_ticker = Kit.body("", 17, P.TEXT, "italic")
 	_ticker.max_lines_visible = 2
 	_ticker.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	ticker.add_child(_ticker_head)
@@ -208,12 +221,13 @@ func _build_bottom() -> void:
 	row.add_child(ticker)
 	row.add_child(_divider())
 
-	var awareness := Kit.vbox(8)
+	var awareness := Kit.vbox(2)
 	awareness.alignment = BoxContainer.ALIGNMENT_CENTER
 	awareness.tooltip_text = "How much of the world knows. It climbs with the share of humanity that follows you, with public worship and with ritual sites.\nIt slows income and recruitment. At 100% the run is lost."
 	awareness.mouse_filter = Control.MOUSE_FILTER_PASS
 	_awareness_caption = Kit.caption("")
 	_awareness = Gauges.Awareness.new()
+	_awareness.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	awareness.add_child(_awareness_caption)
 	awareness.add_child(_awareness)
 	row.add_child(awareness)
@@ -227,15 +241,15 @@ func _build_bottom() -> void:
 	sites.add_child(_sites)
 	row.add_child(sites)
 
-	_rite = Kit.primary("BEGIN THE FINAL RITE", func() -> void: open_dialog("alignment"))
+	_rite = Kit.primary("Begin the Final Rite", func() -> void: open_dialog("alignment"))
 	_rite.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(_rite)
 
 
 func _divider() -> ColorRect:
 	var line := ColorRect.new()
-	line.color = P.EDGE
-	line.custom_minimum_size = Vector2(1, 56)
+	line.color = Color(P.TEXT, 0.35)
+	line.custom_minimum_size = Vector2(1, 64)
 	line.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	return line
 
@@ -254,27 +268,28 @@ func _build_overlays() -> void:
 	_toasts.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_toasts)
 
-	_banner = Kit.panel(Color(0.17, 0.11, 0.03, 0.92), Color(P.WARN, 0.6), Vector4(14, 8, 14, 8))
+	_banner = Kit.panel(P.PAPER_LIGHT, P.WARN, Vector4(14, 8, 14, 8))
 	_banner.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
 	_banner.offset_bottom = -BOTTOM - 14
 	_banner.offset_left = -330
 	_banner.offset_right = 330
 	_banner.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	_banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_banner_text = Kit.body("", 15, Color("ffd9a0"))
+	_banner_text = Kit.body("", 15, P.WARN, "body_bold")
 	_banner_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_banner.add_child(_banner_text)
 	add_child(_banner)
 
-	_prompt = Kit.panel(P.PANEL, P.CULT_DIM, Vector4(22, 12, 22, 14))
+	_prompt = Kit.panel(P.PAPER, P.PAPER_EDGE, Vector4(26, 16, 26, 16))
+	Kit.frame(_prompt, Color(P.CULT, 0.6), 5.0)
 	_prompt.set_anchors_preset(Control.PRESET_CENTER_TOP)
 	_prompt.offset_top = TOP + 22
-	_prompt.offset_left = -260
-	_prompt.offset_right = 260
-	var prompt := Kit.vbox(2)
-	var title := Kit.label("CHOOSE WHERE THE DREAM TAKES ROOT", 22, P.CULT, "condensed_bold")
+	_prompt.offset_left = -270
+	_prompt.offset_right = 270
+	var prompt := Kit.vbox(0)
+	var title := Kit.label("Choose where the dream takes root", 27, P.CULT, "display")
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	var sub := Kit.label("Pick a region on the map", 15, P.MUTED)
+	var sub := Kit.label("Pick a region on the map", 15, P.MUTED, "italic")
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	prompt.add_child(title)
 	prompt.add_child(sub)
@@ -292,17 +307,17 @@ func refresh() -> void:
 	var placing: bool = s.status == "placing"
 	var over := GameEngine.is_over(s)
 	var month: int = s.elapsedMonths
-	_date.text = Derived.calendar(month).to_upper()
+	_date.text = Format.date(month)
 	match s.status:
 		"placing":
-			_countdown.text = "%d MONTHS TO ALIGNMENT" % B.PREPARATION_MONTHS
+			_countdown.text = "%d MONTHS TO THE ALIGNMENT" % B.PREPARATION_MONTHS
 		"playing":
-			_countdown.text = "%d MONTHS TO ALIGNMENT" % (B.PREPARATION_MONTHS - month)
+			_countdown.text = "%d MONTHS TO THE ALIGNMENT" % (B.PREPARATION_MONTHS - month)
 		"alignment", "awakening":
 			_countdown.text = "THE STARS ARE RIGHT · %d MONTHS LEFT" % (B.DEADLINE - month)
 		_:
 			_countdown.text = "CTHULHU AWAKENS" if s.status == "won" else "THE RUN HAS ENDED"
-	_countdown.add_theme_color_override("font_color", P.CULT if s.status in ["alignment", "awakening", "won"] else P.MUTED)
+	_countdown.add_theme_color_override("font_color", P.CULT_BRIGHT if s.status in ["alignment", "awakening", "won"] else P.LAMP_DIM)
 	for i in _speed.size():
 		_speed[i].active = s.speed == i and not placing and not over
 		_speed[i].disabled = placing or over
@@ -312,18 +327,19 @@ func refresh() -> void:
 	_dread.text = Format.count(s.dread)
 	_followers.text = Format.count(Derived.total_followers(s))
 	if s.specialization != null:
-		_doctrine.text = GameData.SPECIALIZATIONS[s.specialization].name.to_upper()
+		_doctrine.text = GameData.SPECIALIZATIONS[s.specialization].name
 	else:
-		_doctrine.text = "CHOOSE · 40"
+		_doctrine.text = "Choose · 40"
 	_doctrine.disabled = placing or over
 
 	var last: Dictionary = s.log[-1] if s.log else {}
-	_ticker_head.text = ("CHRONICLE · " + Derived.calendar(last.month).to_upper()) if last else "CHRONICLE"
+	_ticker_head.text = ("Chronicle · " + Format.date(last.month)).to_upper() if last else "CHRONICLE"
 	_ticker.text = last.get("message", "The world sleeps. Choose where the dream begins.")
 
 	_awareness.value = s.awareness
 	_awareness_caption.text = "WORLD AWARENESS  %d%%" % floori(s.awareness)
 	_awareness_caption.add_theme_color_override("font_color", P.DANGER if s.awareness >= 60 else P.MUTED)
+	_awareness_caption.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 
 	var ready := Derived.ready_sites(s)
 	_sites.state = s
@@ -362,13 +378,15 @@ func _rebuild_threats(s: Dictionary) -> void:
 		_threats.add_child(_threat_card(s, id))
 
 
+## A press clipping: the headline names the threat, the stamp obstructs it.
 func _threat_card(s: Dictionary, id: String) -> Control:
 	var r: Dictionary = s.regions[id]
 	var threat: Dictionary = r.threat
 	var months: int = threat.dueMonth - s.elapsedMonths
 	var urgent := months <= 3
-	var accent := P.WARN if urgent else P.DANGER
-	var card := Kit.panel(Color(0.09, 0.04, 0.04, 0.93), Color(accent, 0.45), Vector4(12, 9, 12, 10))
+	var card := Kit.panel(P.PAPER_LIGHT, P.DANGER if urgent else P.PAPER_EDGE, Vector4(12, 9, 12, 10))
+	if urgent:
+		card.get_theme_stylebox("panel").set_border_width_all(2)
 	card.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	card.tooltip_text = GameData.THREAT_NAMES[threat.kind] + ".\nIf ignored: " + Threats.describe(r)
 	card.gui_input.connect(func(event: InputEvent) -> void:
@@ -376,11 +394,12 @@ func _threat_card(s: Dictionary, id: String) -> Control:
 			select(id))
 	var row := Kit.hbox(10)
 	card.add_child(row)
-	var text := Kit.vbox(2)
+	var text := Kit.vbox(3)
 	text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	text.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var kind_name := { "investigation": "INVESTIGATION", "raid": "RAID", "occult": "OCCULT HUNTERS" }
-	text.add_child(Kit.label(kind_name[threat.kind] + " · " + GameData.REGIONS[id].name.to_upper(), 15, accent, "condensed_bold"))
+	var kind_name := { "investigation": "Investigation", "raid": "Police Raid", "occult": "Occult Hunters" }
+	text.add_child(Kit.label(kind_name[threat.kind], 21, P.DANGER, "display_sc"))
+	text.add_child(Kit.caption(GameData.REGIONS[id].name, P.MUTED))
 	var c := Threats.consequences(r)
 	var effects: Array[String] = ["−%d followers" % ceili(c.followers)]
 	if c.preparationLost:
@@ -389,19 +408,21 @@ func _threat_card(s: Dictionary, id: String) -> Control:
 		effects.append("cell lost")
 	elif c.interruptsSite:
 		effects.append("rite broken")
-	text.add_child(Kit.label(" · ".join(effects), 14, Color("e8c4bd")))
+	text.add_child(Kit.label(" · ".join(effects), 15, P.TEXT, "italic"))
 	row.add_child(text)
-	var right := Kit.vbox(4)
-	right.alignment = BoxContainer.ALIGNMENT_CENTER
-	var due := Kit.label("%dM" % months, 22, accent, "condensed_bold")
-	due.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	var right := Kit.vbox(0)
+	right.alignment = BoxContainer.ALIGNMENT_BEGIN
+	var due := Kit.label(str(months), 30, P.DANGER, "body_bold")
+	due.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	right.add_child(due)
+	var unit := Kit.caption("months" if months != 1 else "month", P.DANGER)
+	unit.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	right.add_child(unit)
 	row.add_child(right)
 	var preview := GameEngine.preview_action(s, "counter", id)
-	var counter := Kit.outline("OBSTRUCT · %d" % preview.influence, func() -> void: game.act("counter", id), accent)
+	var counter := Kit.stamp("OBSTRUCT · %d" % preview.influence, func() -> void: game.act("counter", id), P.DANGER)
 	counter.disabled = not preview.ok
 	counter.tooltip_text = preview.reason if not preview.ok else "Burn local connections to stop it. They take 12 months to rebuild."
-	counter.add_theme_font_size_override("font_size", 14)
 	text.add_child(counter)
 	counter.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	return card
@@ -415,16 +436,17 @@ func _on_events(entries: Array) -> void:
 		_toast(entry.message, kind)
 
 
+## A telegram strip: typed capitals on yellowed paper, marked in the colour of its news.
 func _toast(message: String, kind: String) -> void:
 	var accent: Color = { "threat": P.DANGER, "loss": P.DANGER, "omen": P.OMEN, "site": P.CULT, "phase": P.CULT, "end": P.TEXT, "refused": P.WARN }.get(kind, P.MUTED)
-	var toast := Kit.panel(Color(0.04, 0.05, 0.07, 0.95), Color(accent, 0.5), Vector4(14, 9, 14, 10))
+	var toast := Kit.panel(Color("e3d5a6"), Color(P.PAPER_EDGE, 0.8), Vector4(12, 8, 14, 9))
 	toast.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var row := Kit.hbox(12)
 	var stripe := ColorRect.new()
 	stripe.color = accent
-	stripe.custom_minimum_size = Vector2(3, 0)
+	stripe.custom_minimum_size = Vector2(4, 0)
 	row.add_child(stripe)
-	var text := Kit.body(message, 15, P.TEXT)
+	var text := Kit.body(message.to_upper(), 14, P.TEXT, "type")
 	text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(text)
 	toast.add_child(row)

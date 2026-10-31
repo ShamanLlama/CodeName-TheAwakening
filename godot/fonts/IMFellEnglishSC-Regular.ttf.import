@@ -2,13 +2,13 @@
 
 importer="font_data_dynamic"
 type="FontFile"
-uid="uid://dnngy0hgkbrwf"
-path="res://.godot/imported/Barlow-Regular.ttf-aa94a1b4223a789b3e1e6f67061e2d19.fontdata"
+uid="uid://iasdajcgycip"
+path="res://.godot/imported/IMFellEnglishSC-Regular.ttf-0386f6e57976568b1042bf0beb6cb804.fontdata"
 
 [deps]
 
-source_file="res://fonts/Barlow-Regular.ttf"
-dest_files=["res://.godot/imported/Barlow-Regular.ttf-aa94a1b4223a789b3e1e6f67061e2d19.fontdata"]
+source_file="res://fonts/IMFellEnglishSC-Regular.ttf"
+dest_files=["res://.godot/imported/IMFellEnglishSC-Regular.ttf-0386f6e57976568b1042bf0beb6cb804.fontdata"]
 
 [params]
 
