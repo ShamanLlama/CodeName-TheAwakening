@@ -16,8 +16,8 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
 
 | Versión | Fecha | Commit | Ruleset | Adaptador | Ronda GTC | Estado |
 | --- | --- | --- | --- | --- | --- | --- |
-| 0.3.0 | 2026-11-02 | `85f5905` (rama `gameplay/alignment-2`) | `alignment-2` | `awakening-1` | Pendiente: crear build y ronda nuevas | En desarrollo |
-| 0.2.0 | 2026-10-30 / 2026-10-31 | `ae38ec0`; adaptador E4–E6 en `6aa2419` | `alignment-1` | `awakening-1` | QA técnica E7 (datos sintéticos) | Retirada al publicar 0.3.0 |
+| 0.3.0 | 2026-11-02 | `85f5905`; exportada desde `dbfb07f` | `alignment-2` | `awakening-1` | «0.3.0 piloto interno · decisiones económicas»: borrador, en pausa | Lista; falta subir a itch.io y abrir la ronda |
+| 0.2.0 | 2026-10-30 / 2026-10-31 | `ae38ec0`; adaptador E4–E6 en `6aa2419` | `alignment-1` | `awakening-1` | QA técnica E7 y «E7 piloto interno de gameplay» (abierta hasta 2026-11-09) | En itch.io hasta subir 0.3.0 |
 
 ### 0.3.0 — `alignment-2`: decisiones económicas
 
@@ -30,6 +30,8 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
 - **Guardados:** una partida `alignment-1` sin terminar no continúa; se conservan ajustes, tutorial y registros de playtest, y el jugador ve un aviso. En nativo se guarda una copia `.retired.json`.
 - **Playtest:** adaptador sin cambios (`awakening-1`); `run_started`/`capture_started` envían `alignment-2`. GTC acepta `alignment-2` en el esquema y en la build (`0005_playtestbuild_ruleset_alignment_2`). Requiere build y ronda nuevas en el Lab.
 - **Tests:** las trazas de `godot/tests/golden/` ya no comparan con el motor TypeScript; se regeneran con `dev/regenerate_goldens.gd` y fijan el comportamiento de `alignment-2`. 36 tests Godot y 102 tests del Lab de GTC (SQLite, 8 omitidos que requieren PostgreSQL).
+- **GTC (2026-11-02):** desplegado `d5cfc40` en Railway (web y mantenimiento, migración `0005`). El receptor rechaza con `422 unsupported_version` un inicio de partida cuyo ruleset no coincide con el de su build. Build «The Awakening 0.3.0 · alignment-2» y su ronda creadas sin abrir y en pausa; pregunta y perfil editables en admin hasta abrirla. Los IDs están en `GTC-page/gtc-web/output/playtests-alignment-2/round-runtime.json`, no en este repositorio.
+- **Artefacto:** `the-awakening-0.3.0-pilot.zip` (SHA-256 `848b4d4e…1e66`), exportado desde un checkout limpio de `dbfb07f` con la configuración de esa ronda; arranca en Chromium local sin errores y sin enviar nada antes del consentimiento. No se ha subido a itch.io.
 - **Medición (2026-11-02, bot, Normal, 24 seeds × 3 estrategias):** victorias 58/72 → 49/72; Influence final mediana late 267 → 116 y hub 136 → 69; meses con ≥100 sin uso late 54,5 → 29,5 y hub 30 → 3. Easy y Hard no se midieron.
 
 ### 0.2.0 — base `alignment-1`
