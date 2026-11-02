@@ -11,6 +11,7 @@ var screen
 var kind := ""
 var _box: PanelContainer
 var _content: VBoxContainer
+var _scroll: ScrollContainer
 var _confirm_abandon := false
 
 
@@ -29,12 +30,18 @@ func _ready() -> void:
 	var center := CenterContainer.new()
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(center)
-	_box = Kit.panel(P.PAPER, P.DESK_EDGE, Vector4(40, 34, 40, 34))
+	var pad := 22 if Kit.compact else 40
+	_box = Kit.panel(P.PAPER, P.DESK_EDGE, Vector4(pad, pad * 0.85, pad, pad * 0.85))
 	_box.material = P.paper(0.16)
 	Kit.frame(_box)
 	center.add_child(_box)
-	_content = Kit.vbox(16)
-	_box.add_child(_content)
+	# Long sheets scroll inside the frame instead of running off a short screen.
+	_scroll = ScrollContainer.new()
+	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_box.add_child(_scroll)
+	_content = Kit.vbox(12 if Kit.compact else 16)
+	_content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_scroll.add_child(_content)
 	visible = false
 
 
@@ -75,11 +82,26 @@ func _rebuild() -> void:
 		"alignment": _alignment()
 		"end": _end()
 		"playtest": _playtest()
+	var room := get_viewport_rect().size
+	_box.custom_minimum_size.x = minf(_box.custom_minimum_size.x, room.x - 32)
+	_fit_height.call_deferred()
+
+
+## Sizes the scroll area to the sheet's content, up to the screen's height.
+func _fit_height() -> void:
+	_scroll.custom_minimum_size.y = 0
+	await get_tree().process_frame
+	if not is_inside_tree():
+		return
+	var pad: float = _box.get_theme_stylebox("panel").get_minimum_size().y
+	var limit := get_viewport_rect().size.y - pad - 24
+	_scroll.custom_minimum_size.y = minf(_content.get_combined_minimum_size().y, limit)
+	_scroll.scroll_vertical = 0
 
 
 func _title(text: String, color := P.TEXT) -> void:
 	var title := Kit.vbox(4)
-	title.add_child(Kit.label(text, 40, color, "display"))
+	title.add_child(Kit.label(text, 32 if Kit.compact else 40, color, "display"))
 	title.add_child(Kit.rule(Color(color, 0.6)))
 	_content.add_child(title)
 

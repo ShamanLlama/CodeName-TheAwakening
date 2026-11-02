@@ -9,8 +9,9 @@ const RegionPanel = preload("res://ui/region_panel.gd")
 const Dialogs = preload("res://ui/dialogs.gd")
 const Gauges = preload("res://ui/gauges.gd")
 const LAMP_SHADER = preload("res://ui/lamp.gdshader")
-const TOP := 58.0
-const BOTTOM := 104.0
+# Bar heights; slimmer on short screens so the chart and the case file keep their room.
+var TOP := 50.0 if Kit.compact else 58.0
+var BOTTOM := 82.0 if Kit.compact else 104.0
 
 var game
 var map: WorldMap
@@ -142,7 +143,8 @@ func _build_top() -> void:
 	left.alignment = BoxContainer.ALIGNMENT_BEGIN
 	var mark := Kit.label("The Awakening", 24, P.LAMP, "display_sc")
 	left.add_child(mark)
-	left.add_child(Kit.label("of Cthulhu", 22, P.BRASS, "display_italic"))
+	if not Kit.compact:
+		left.add_child(Kit.label("of Cthulhu", 22, P.BRASS, "display_italic"))
 	row.add_child(left)
 	var center := Kit.vbox(-2)
 	center.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -171,11 +173,11 @@ func _build_top() -> void:
 func _readout(parent: Control, caption: String, color: Color, hint: String) -> Array[Label]:
 	var box := Kit.vbox(0)
 	box.alignment = BoxContainer.ALIGNMENT_CENTER
-	box.custom_minimum_size = Vector2(118, 0)
+	box.custom_minimum_size = Vector2(84 if Kit.compact else 118, 0)
 	box.tooltip_text = hint
 	box.mouse_filter = Control.MOUSE_FILTER_PASS
 	box.add_child(Kit.caption(caption))
-	var value := Kit.label("0", 31, color, "body_bold")
+	var value := Kit.label("0", 25 if Kit.compact else 31, color, "body_bold")
 	var sub := Kit.label("", 12, P.MUTED, "type")
 	box.add_child(value)
 	box.add_child(sub)
@@ -185,7 +187,7 @@ func _readout(parent: Control, caption: String, color: Color, hint: String) -> A
 
 func _build_bottom() -> void:
 	var bar := _bar(false)
-	var row := Kit.hbox(24)
+	var row := Kit.hbox(14 if Kit.compact else 24)
 	bar.add_child(row)
 	var influence := _readout(row, "Influence", P.TEXT, "Earned each month by your followers, minus %s per funded site.\nSpent on every cult action. Keep a reserve for the alignment." % Js.num(B.SITE_UPKEEP))
 	_influence = influence[0]
@@ -196,9 +198,9 @@ func _build_bottom() -> void:
 	doctrine.alignment = BoxContainer.ALIGNMENT_CENTER
 	doctrine.add_child(Kit.caption("Doctrine"))
 	_doctrine = Kit.button("", func() -> void: open_dialog("doctrine"))
-	_doctrine.custom_minimum_size = Vector2(150, 0)
+	_doctrine.custom_minimum_size = Vector2(120 if Kit.compact else 150, 0)
 	_doctrine.add_theme_font_override("font", P.font("display_sc"))
-	_doctrine.add_theme_font_size_override("font_size", 18)
+	_doctrine.add_theme_font_size_override("font_size", Kit.fs(18))
 	doctrine.add_child(_doctrine)
 	row.add_child(doctrine)
 	row.add_child(_divider())
@@ -220,6 +222,10 @@ func _build_bottom() -> void:
 	ticker.add_child(_ticker)
 	row.add_child(ticker)
 	row.add_child(_divider())
+	# Short screens drop the ticker line; the chronicle stays in the menu and in the toasts.
+	if Kit.compact:
+		_ticker.max_lines_visible = 1
+		_ticker_head.visible = false
 
 	var awareness := Kit.vbox(2)
 	awareness.alignment = BoxContainer.ALIGNMENT_CENTER

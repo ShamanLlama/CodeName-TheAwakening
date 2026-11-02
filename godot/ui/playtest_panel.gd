@@ -20,7 +20,7 @@ func _ready() -> void:
 	var choice := CheckBox.new()
 	choice.name = "PlaytestParticipation"
 	choice.text = "I agree to share this playtest with GTC"
-	choice.add_theme_font_size_override("font_size", 15)
+	choice.add_theme_font_size_override("font_size", Kit.fs(15))
 	choice.button_pressed = game.lab.confirmed
 	choice.disabled = game.blocked or not game.lab.configured() or game.lab.corrupt
 	choice.toggled.connect(func(value: bool) -> void:

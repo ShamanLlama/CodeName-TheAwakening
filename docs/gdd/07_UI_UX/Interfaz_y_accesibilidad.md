@@ -1,6 +1,6 @@
 # Interfaz, aprendizaje y accesibilidad
 
-**Versión:** 0.1 · **Fecha:** 2026-10-28 · **Estado:** flujo Godot documentado; usabilidad por validar.
+**Versión:** 0.2 · **Fecha:** 2026-11-02 · **Estado:** flujo Godot documentado; pantallas cortas y táctiles adaptadas en 0.3.2; usabilidad por validar.
 
 ## Flujo implementado
 
@@ -28,6 +28,12 @@ velocidad normal. El menú incluye guía, sonido y exportación del reporte de p
 para prepararlo y completar el rito, considerando las aceleraciones disponibles.
 **Decisión permitida con riesgo:** sacrificar seguidores que sostienen un sitio.
 
+## Pantallas cortas y táctiles (0.3.2, 2026-11-02)
+
+El diseño base es 1600×900. Antes se reducía entero a cualquier pantalla: en un teléfono horizontal (~844×390 px CSS) un texto de 15 quedaba en unos 6,5 px. Ahora `main._fit_window()` reduce la altura base hasta 520 para que una unidad nunca mida menos de 0,75 px CSS, usando la densidad del navegador. Con menos de 760 de altura base se activa el modo compacto (`Kit.compact`): los textos de lectura crecen (`Kit.fs`, mínimo 15), las barras son más bajas, el teletipo inferior queda en una línea, el título de inicio se reduce, y el formulario de inicio y los diálogos se desplazan dentro de su hoja con barra visible. En vertical, un aviso pide girar el teléfono. Una ventana de escritorio normal no cambia.
+
+En el panel de región, las acciones y su explicación van antes de las estadísticas. Con ratón, pasar sobre una acción la explica y hacer clic la ejecuta. En pantallas táctiles (`Kit.touch`) un toque solo abre la explicación bajo esa acción, con un botón para ejecutarla; otro toque la cierra. El panel se desplaza arrastrando, y un arrastre no pulsa el botón bajo el dedo. No se ha probado todavía en un teléfono físico con esta versión.
+
 ## Barreras por comprobar
 
 La orientación actual a ratón y tooltips necesita revisión para otras formas de
@@ -35,8 +41,8 @@ entrada. La paleta usa colores semánticos y el mapa contiene efectos animados;
 no se ha comprobado equivalencia sin color, reducción de movimiento, lectura con
 tecnologías de asistencia ni recorrido completo con teclado en Godot.
 
-El texto visible está en inglés. Idiomas de publicación, escalado de texto, mandos,
-pantallas táctiles y garantías de accesibilidad siguen abiertos. Los requisitos del
+El texto visible está en inglés. Idiomas de publicación, escalado de texto elegido por
+el jugador, mandos y garantías de accesibilidad siguen abiertos. Los requisitos del
 antiguo prompt web no prueban que estas capacidades estén presentes en el port.
 
 ## Prueba de comprensión propuesta

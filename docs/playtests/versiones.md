@@ -20,6 +20,13 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
 | 0.3.0 | 2026-11-02 | `85f5905`; exportada desde `dbfb07f` | `alignment-2` | `awakening-1` | «0.3.0 playtest por invitación · decisiones económicas», cerrada el mismo día sin partidas | Reemplazada por 0.3.1 |
 | 0.2.0 | 2026-10-30 / 2026-10-31 | `ae38ec0`; adaptador E4–E6 en `6aa2419` | `alignment-1` | `awakening-1` | QA técnica E7 y «E7 piloto interno de gameplay» (abierta hasta 2026-11-09) | Reemplazada en itch.io por 0.3.0 el 2026-11-02 |
 
+### 0.3.2 — legible en teléfonos y pantallas cortas
+
+- **Motivo:** en el teléfono la interfaz era ilegible y las descripciones de los poderes quedaban fuera de la pantalla sin forma de leerlas (reporte del 2026-11-02).
+- **Interfaz:** escala adaptable según la pantalla (mínimo 0,75 px CSS por unidad), modo compacto con textos más grandes, barras más bajas, inicio y diálogos con desplazamiento, aviso para girar el teléfono. En el panel de región las acciones van primero; en táctil, un toque explica la acción bajo ella con un botón para ejecutarla, y el panel se desplaza arrastrando. Detalle en [Interfaz y accesibilidad](../gdd/07_UI_UX/Interfaz_y_accesibilidad.md).
+- **Reglas y playtest:** sin cambios (`alignment-2`, `awakening-1`). Los eventos no registran qué explicaciones se abren.
+- **Tests:** 40 tests Godot, incluidos escala de texto compacta y flujo táctil de acciones. Capturas a 844×390 CSS con densidad 2 y a 1600×900; sin teléfono físico todavía.
+
 ### 0.3.1 — participación preguntada y recordada
 
 - **Motivo:** aumentar la participación en el playtest sin casillas premarcadas, que no constituyen consentimiento.

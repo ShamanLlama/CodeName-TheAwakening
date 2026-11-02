@@ -3,12 +3,25 @@ class_name Kit
 
 const P = preload("res://ui/palette.gd")
 
+## True on short screens (phones, small windows, itch.io's inline frame). Set by main before
+## a screen is built; small type grows so it stays readable once the canvas is scaled down.
+static var compact := false
+## Touch devices pick an action first and confirm it, because a tap is also a hover.
+static var touch := false
+
+
+## Font size for the current layout. Display sizes stay; reading sizes grow in compact.
+static func fs(size: int) -> int:
+	if not compact or size >= 24:
+		return size
+	return maxi(roundi(size * 1.15), 15)
+
 
 static func label(text: String, size := 16, color := P.TEXT, weight := "body") -> Label:
 	var node := Label.new()
 	node.text = text
 	node.add_theme_font_override("font", P.font(weight))
-	node.add_theme_font_size_override("font_size", size)
+	node.add_theme_font_size_override("font_size", fs(size))
 	node.add_theme_color_override("font_color", color)
 	return node
 
@@ -45,7 +58,7 @@ static func primary(text: String, on_press: Callable = Callable(), accent := P.C
 	for state in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
 		node.add_theme_color_override(state, P.PAPER_LIGHT)
 	node.add_theme_font_override("font", P.font("display_sc"))
-	node.add_theme_font_size_override("font_size", 21)
+	node.add_theme_font_size_override("font_size", fs(21))
 	return node
 
 
@@ -58,7 +71,7 @@ static func stamp(text: String, on_press: Callable, accent: Color) -> Button:
 	node.add_theme_stylebox_override("pressed", UiTheme.box(Color(accent, 0.28), accent, 2, pad))
 	node.add_theme_stylebox_override("disabled", UiTheme.box(Color.TRANSPARENT, Color(accent, 0.3), 2, pad))
 	node.add_theme_font_override("font", P.font("type_bold"))
-	node.add_theme_font_size_override("font_size", 14)
+	node.add_theme_font_size_override("font_size", fs(14))
 	node.add_theme_color_override("font_color", accent)
 	node.add_theme_color_override("font_hover_color", accent.darkened(0.2))
 	node.add_theme_color_override("font_pressed_color", accent.darkened(0.3))

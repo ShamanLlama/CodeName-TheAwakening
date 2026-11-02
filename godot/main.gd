@@ -8,6 +8,7 @@ signal events(entries: Array)
 const B = preload("res://core/balance.gd")
 const StartScreen = preload("res://ui/start_screen.gd")
 const GameScreen = preload("res://ui/game_screen.gd")
+const P = preload("res://ui/palette.gd")
 
 var state = null
 var settings := { "muted": false, "volume": 40.0 }
@@ -35,11 +36,13 @@ var _shot := {}
 
 
 func _ready() -> void:
+	_shot = _shot_args()
+	_fit_window()
 	theme = UiTheme.build()
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	get_window().size_changed.connect(_on_window_resized)
 	sfx = Sfx.new()
 	add_child(sfx)
-	_shot = _shot_args()
 	if _shot:
 		blocked = true
 	else:
@@ -143,6 +146,65 @@ func show_game() -> void:
 	_swap(GameScreen.new(self))
 	_lab_sync()
 	_commit()
+
+
+## The canvas keeps a 16:9 base that shrinks on short screens, so one base pixel is never
+## smaller than 0.75 CSS pixels: phones in landscape get a 520-unit-tall layout instead of a
+## 900-unit one shrunk to illegibility. Desktop windows of normal size are unchanged.
+const MIN_PIXEL := 0.75
+var portrait := false
+var _rotate: Control
+
+
+func _fit_window() -> void:
+	var window := get_window()
+	var ratio := float(_shot.get("dpr", "0"))
+	if ratio <= 0:
+		ratio = DisplayServer.screen_get_scale() if OS.has_feature("web") else 1.0
+	var css := Vector2(window.size) / maxf(1.0, ratio)
+	var height := clampf(css.y / MIN_PIXEL, 520.0, 900.0)
+	window.content_scale_size = Vector2i(roundi(height * 16.0 / 9.0), roundi(height))
+	Kit.compact = height < 760.0
+	Kit.touch = DisplayServer.is_touchscreen_available() or _shot.has("touch")
+	portrait = Kit.touch and css.x < css.y
+
+
+func _on_window_resized() -> void:
+	var was := Kit.compact
+	_fit_window()
+	_show_rotate_hint()
+	if was == Kit.compact or _screen == null:
+		return
+	# Type sizes are fixed when a screen is built, so rebuild it in the new layout.
+	theme = UiTheme.build()
+	if _screen is GameScreen:
+		var region: String = _screen.selected
+		_holds = 0
+		_swap(GameScreen.new(self))
+		if region:
+			_screen.select.call_deferred(region)
+	elif _screen is StartScreen:
+		show_start()
+
+
+## Phones held upright cannot fit the chart; ask for landscape instead of shrinking it.
+func _show_rotate_hint() -> void:
+	if _rotate == null:
+		_rotate = ColorRect.new()
+		_rotate.color = P.DESK
+		_rotate.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		_rotate.mouse_filter = Control.MOUSE_FILTER_STOP
+		var center := CenterContainer.new()
+		center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		var text := Kit.label("Turn your device sideways to read the chart.", 30, P.LAMP, "display")
+		text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		text.custom_minimum_size = Vector2(380, 0)
+		center.add_child(text)
+		_rotate.add_child(center)
+		add_child(_rotate)
+	_rotate.visible = portrait
+	move_child(_rotate, -1)
 
 
 func _swap(screen: Control) -> void:
@@ -502,6 +564,8 @@ func _stage_shot() -> void:
 			show_game()
 	if _shot.has("select") and _screen is GameScreen:
 		_screen.select(_shot.select)
+		if _shot.has("choose"):
+			_screen.panel._choose(_shot.choose)
 	if _shot.has("dialog") and _screen is GameScreen:
 		_screen.open_dialog(_shot.dialog)
 	for _frame in 20:
