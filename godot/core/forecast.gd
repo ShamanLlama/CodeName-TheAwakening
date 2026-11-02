@@ -1,5 +1,5 @@
 class_name Forecast
-## The ritual timetable shown to the player. Mirrors src/game/forecast.ts.
+## The ritual timetable shown to the player. alignment-1 mirrored src/game/forecast.ts.
 
 const B = preload("res://core/balance.gd")
 
@@ -7,6 +7,19 @@ const B = preload("res://core/balance.gd")
 static func ritual(state: Dictionary) -> Dictionary:
 	if GameEngine.is_over(state):
 		return { "urgent": false, "message": state.resultReason if state.resultReason != null else "Run complete." }
+	var result := _ritual(state)
+	var hunt_in: int = B.PREPARATION_MONTHS - state.elapsedMonths
+	if hunt_in <= 0:
+		result.message += " The world hunts ritual sites; keep Influence for obstruction."
+	elif hunt_in <= B.FINALE_WARNING_MONTHS:
+		result.message += " Threats against ritual sites intensify in %d months." % hunt_in
+	if Derived.net_influence_per_month(state) < 0:
+		result.urgent = true
+		result.message += " Site upkeep exceeds income."
+	return result
+
+
+static func _ritual(state: Dictionary) -> Dictionary:
 	var ready := Derived.ready_sites(state)
 	if state.status == "awakening":
 		var remaining: int = B.FINAL_MONTHS - state.finalProgress

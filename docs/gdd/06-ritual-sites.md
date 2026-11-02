@@ -1,5 +1,7 @@
 # 06 — Ritual sites and the endgame
 
+> **`alignment-2` (2026-11-02):** Los sitios cuestan 1 Influence al mes; sin pago quedan inactivos y no avanzan ni sostienen el rito. Desde el mes 200 la presión de amenazas sobre sitios sube +0,15, con aviso en el mes 176. Véase [Experiencia y loops](02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-2--2026-11-02). El resto de este capítulo describe `alignment-1`.
+
 Three prepared, supported ritual sites are the only way to win. Everything else in the game
 exists to get you three sites and keep them alive.
 

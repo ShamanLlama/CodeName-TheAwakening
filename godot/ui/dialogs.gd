@@ -98,9 +98,9 @@ func _guide() -> void:
 	var steps := [
 		["GROW", "Cells recruit on their own and earn Influence. Spread into neighbouring regions."],
 		["SACRIFICE", "Followers become Dread. Dread pays for the rites."],
-		["BUILD THREE SITES", "A site needs a quarter of its region's people and 24 months. Small regions are easier to hold."],
-		["STAY HIDDEN", "Threats strike your cells. Obstruct them, conceal evidence, and keep world awareness under 100%."],
-		["AWAKEN", "In September 1924, month 200, the stars align. Spend 100 Dread and hold three sites for 12 months before September 1926."],
+		["BUILD THREE SITES", "A site needs a quarter of its region's people and 24 months, and costs %s Influence every month. Small regions are easier to hold." % Js.num(B.SITE_UPKEEP)],
+		["STAY HIDDEN", "Threats strike your cells. Obstruct them, and conceal to lower world awareness; concealment costs more as awareness rises. Keep awareness under 100%."],
+		["AWAKEN", "In September 1924, month 200, the stars align and the world hunts your sites. Spend 100 Dread and hold three sites for 12 months before September 1926."],
 	]
 	for i in steps.size():
 		var row := Kit.hbox(16)
@@ -252,7 +252,7 @@ func _alignment() -> void:
 		if not r.site.invested:
 			continue
 		sites += 1
-		var ready: bool = r.site.progress >= B.SITE_MONTHS and Derived.supported(r)
+		var ready: bool = r.site.progress >= B.SITE_MONTHS and Derived.supported(r) and not r.site.dormant
 		checks.add_child(_check(ready, GameData.REGIONS[id].name, Derived.site_label(r)))
 	for i in maxi(0, B.REQUIRED_SITES - sites):
 		checks.add_child(_check(false, "Unfunded site", "Fund a site in a small region"))

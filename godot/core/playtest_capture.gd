@@ -115,7 +115,7 @@ func start_run(state: Dictionary, from_start := true) -> void:
 		"clock": empty_clock(), "sessions": 1, "comments": 0, "closed": false, "stopped": false, "seen": {}, "last_event": {}, "last_session_id": ""}
 	data.active = id
 	session_live = true
-	emit_event("run_started" if from_start else "capture_started", {"difficulty": state.difficulty, "seed": state.seed, "ruleset": "alignment-1"}, state)
+	emit_event("run_started" if from_start else "capture_started", {"difficulty": state.difficulty, "seed": state.seed, "ruleset": state.ruleset}, state)
 	emit_event("session_started", {"mode": "new" if from_start else "partial"}, state)
 	data.signature = signature(state)
 	urgent = true

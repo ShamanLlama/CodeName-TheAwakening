@@ -1,0 +1,40 @@
+# Registro de versiones para playtest
+
+Cada build que pueda llegar a un playtest, con o sin GTC Playtest Lab, tiene una entrada aquí. Sirve para saber qué reglas e interfaz vio cada jugador y no mezclar datos de builds distintas.
+
+## Regla
+
+Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
+
+1. **Versión del juego** (`config/version` en `godot/project.godot`): sube en cada build distribuida. Cambio de reglas o balance → versión menor (0.3.0); solo UI, texto o correcciones → parche (0.2.1).
+2. **Ruleset** (hoy `alignment-1`): cambia con cualquier modificación de reglas o valores de balance. Se envía en `run_started`/`capture_started` y se guarda en los saves.
+3. **Adaptador** (hoy `awakening-1`): cambia si cambian acciones, regiones, doctrinas, eventos o sus campos. Requiere actualizar el contrato en `GTC-page/gtc-web/contracts/playtests/`.
+4. **GTC:** una build nueva exige build y ronda nuevas en el Lab. No se comparan rondas con reglas o política de reloj distintas sin decirlo.
+5. **Entrada en este registro**, en la misma rama que el cambio: fecha, versión, commit, ruleset, adaptador, cambios, motivo y medición que lo respalda.
+
+## Versiones
+
+| Versión | Fecha | Commit | Ruleset | Adaptador | Ronda GTC | Estado |
+| --- | --- | --- | --- | --- | --- | --- |
+| 0.3.0 | 2026-11-02 | rama `gameplay/alignment-2`, sin commitear | `alignment-2` | `awakening-1` | Pendiente: crear build y ronda nuevas | En desarrollo |
+| 0.2.0 | 2026-10-30 / 2026-10-31 | `ae38ec0` + adaptador E4 sin commitear | `alignment-1` | `awakening-1` | QA técnica E7 (datos sintéticos) | Retirada al publicar 0.3.0 |
+
+### 0.3.0 — `alignment-2`: decisiones económicas
+
+- **Motivo:** con `alignment-1` la Influence sobraba tras financiar los tres sitios y defender casi nunca obligaba a elegir. Diseño y medición completos en [Experiencia y loops](../gdd/02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-2--2026-11-02).
+- **Reglas:**
+  - Mantenimiento de 1 Influence al mes por sitio financiado; sin pago, el sitio queda inactivo (no avanza ni cuenta para el rito).
+  - `conceal` quita 3 de awareness y cuesta 20 + la mitad de la awareness; se puede usar en el mínimo de exposición si hay awareness.
+  - Desde el mes 200, +0,15 de presión de amenazas en regiones con sitio; aviso en el mes 176 y en la previsión ritual.
+- **Interfaz:** ingreso neto con coste de sitios, etiqueta de sitio inactivo, textos de guía, tooltip de Influence y descripción de acciones.
+- **Guardados:** una partida `alignment-1` sin terminar no continúa; se conservan ajustes, tutorial y registros de playtest, y el jugador ve un aviso. En nativo se guarda una copia `.retired.json`.
+- **Playtest:** adaptador sin cambios (`awakening-1`); `run_started`/`capture_started` envían `alignment-2`. GTC acepta `alignment-2` en el esquema y en la build (`0005_playtestbuild_ruleset_alignment_2`). Requiere build y ronda nuevas en el Lab.
+- **Tests:** las trazas de `godot/tests/golden/` ya no comparan con el motor TypeScript; se regeneran con `dev/regenerate_goldens.gd` y fijan el comportamiento de `alignment-2`. 36 tests Godot y 102 tests del Lab de GTC (SQLite, 8 omitidos que requieren PostgreSQL).
+- **Medición (2026-11-02, bot, Normal, 24 seeds × 3 estrategias):** victorias 58/72 → 49/72; Influence final mediana late 267 → 116 y hub 136 → 69; meses con ≥100 sin uso late 54,5 → 29,5 y hub 30 → 3. Easy y Hard no se midieron.
+
+### 0.2.0 — base `alignment-1`
+
+- **Reglas:** port de las reglas del prototipo TypeScript a Godot 4.7, verificado por trazas de paridad (`godot/tests/test_golden.gd`). Calendario de 200 meses de preparación, 24 de alineación y 12 de rito final.
+- **Interfaz:** archivo del culto 1908–1926 (`ae38ec0`).
+- **Playtest:** adaptador E4 de GTC Playtest Lab con consentimiento, cola durable y reloj por sesión ([guía](../playtest-lab.md)). La configuración del repositorio mantiene la recolección apagada.
+- **Medición de referencia (2026-11-02, bot scripteado, no humanos):** 36 partidas Normal con `dev/playthrough.gd` (early/late/hub × 12 seeds). Tres sitios financiados hacia el mes 112–137 y listos hacia el 139–167; después quedan 50–60 meses con ≥100 Influence sin uso en las estrategias late/hub y 145–869 Influence al final. Motiva la revisión de decisiones económicas. Con la política adaptada a 0.3.0 (reserva y ocultamiento selectivo) la misma base da 58/72 victorias sobre 24 seeds.

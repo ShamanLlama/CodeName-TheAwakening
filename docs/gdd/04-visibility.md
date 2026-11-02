@@ -1,5 +1,7 @@
 # 04 — Visibility and awareness
 
+> **`alignment-2` (2026-11-02):** `conceal` quita 3 de awareness por 20 + la mitad de la awareness actual, y se puede usar en el mínimo de exposición si hay awareness. "The only brake" ya no tiene un techo fijo: el límite es la Influence. Véase [Experiencia y loops](02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-2--2026-11-02). El resto de este capítulo describe `alignment-1`.
+
 Two separate meters. Confusing them is the most common way to misread the game.
 
 | | **Exposure** | **Awareness** |

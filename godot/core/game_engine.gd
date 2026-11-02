@@ -1,5 +1,6 @@
 class_name GameEngine
-## The monthly cult simulation. Mirrors src/game/engine.ts.
+## The monthly cult simulation. alignment-1 mirrored src/game/engine.ts; alignment-2 adds site
+## upkeep, escalating concealment, and pressure on ritual sites during the alignment.
 ## Commands never mutate their input: they return a result holding a changed deep copy, or the
 ## untouched input state when refused.
 
@@ -30,15 +31,15 @@ static func create_game_state(difficulty: String, seed: String) -> Dictionary:
 		regions[id] = {
 			"population": { "unaware": region_capacity - deniers, "deniers": deniers, "believers": 0.0, "followers": 0.0, "losses": 0.0 },
 			"public": false, "exposure": 0.0, "madness": 0.0, "backlashUntil": 0, "cooldowns": {},
-			"site": { "invested": false, "progress": 0 }, "threat": null, "opportunity": null, "figure": null,
+			"site": { "invested": false, "progress": 0, "dormant": false }, "threat": null, "opportunity": null, "figure": null,
 		}
 	return {
-		"version": 2, "ruleset": "alignment-1", "status": "placing", "difficulty": difficulty, "seed": seed,
+		"version": 2, "ruleset": B.RULESET, "status": "placing", "difficulty": difficulty, "seed": seed,
 		"rngState": Rng.seed_to_state(seed), "elapsedMonths": 0, "speed": 1,
 		"influence": B.STARTING_INFLUENCE, "dread": B.STARTING_DREAD, "awareness": 0.0,
 		"specialization": null, "finalProgress": 0, "regions": regions, "log": [], "nextLogId": 1, "resultReason": null,
 		"telemetry": { "actions": {}, "sacrificed": 0.0, "raidLosses": 0.0, "influenceEarned": 0.0, "influenceSpent": 0.0,
-			"dreadEarned": 0.0, "dreadSpent": 0.0, "threatsCountered": 0, "revelations": {} },
+			"dreadEarned": 0.0, "dreadSpent": 0.0, "upkeepPaid": 0.0, "threatsCountered": 0, "revelations": {} },
 	}
 
 
@@ -59,6 +60,11 @@ static func counter_cost(state: Dictionary, r: Dictionary) -> int:
 	return int(Js.round_half_up(base * 2 / 3.0)) if state.specialization == "infiltration" else base
 
 
+## A watched world is dearer to deceive: concealment costs more as awareness rises.
+static func conceal_cost(state: Dictionary) -> int:
+	return GameData.ACTIONS.conceal.influence + int(Js.round_half_up(state.awareness * B.CONCEAL_AWARENESS_PRICE))
+
+
 ## Each further ritual site costs more Dread than the last.
 static func site_dread_cost(state: Dictionary) -> int:
 	var funded := 0
@@ -74,7 +80,7 @@ static func preview_action(state: Dictionary, id: String, region_id: String) -> 
 	var a: Dictionary = GameData.ACTIONS[id]
 	var r: Dictionary = state.regions[region_id]
 	var p: Dictionary = r.population
-	var cost_influence: int = counter_cost(state, r) if id == "counter" else a.influence
+	var cost_influence: int = counter_cost(state, r) if id == "counter" else conceal_cost(state) if id == "conceal" else a.influence
 	var cost_dread: int = 15 if id == "manifest" and state.specialization == "terror" else site_dread_cost(state) if id == "prepare" else a.dread
 	var cost_followers: int = a.followers
 	var reason := "" if is_active(state) else "Start a run before acting; completed runs cannot change."
@@ -89,7 +95,7 @@ static func preview_action(state: Dictionary, id: String, region_id: String) -> 
 	if not reason and id == "expand" and Derived.total_followers(state) > 0 and not _has_adjacent_cell(state, region_id): reason = "Requires a cult in an adjacent region."
 	if not reason and id == "reveal" and r.public: reason = "Worship is already public."
 	if not reason and id == "hide" and not r.public: reason = "This cult is already underground."
-	if not reason and id == "conceal" and r.exposure <= _evidence_floor(r): reason = "No concealable evidence. Public rites remain visible."
+	if not reason and id == "conceal" and r.exposure <= _evidence_floor(r) and state.awareness <= 0: reason = "Nothing to conceal. Public rites remain visible."
 	if not reason and id == "manifest" and p.deniers + p.unaware < 1: reason = "Everyone here already believes."
 	if not reason and id == "prepare" and r.site.invested: reason = "This site's preparation is already funded."
 	if not reason and id == "prepare" and not Derived.supported(r): reason = "Maintain at least " + Js.num(Derived.site_requirement(r)) + " local followers."
@@ -114,10 +120,13 @@ static func preview_action(state: Dictionary, id: String, region_id: String) -> 
 		risk = "+12 Exposure. Fewer than " + Js.num(Derived.site_requirement(r)) + " followers interrupts this site's ritual."
 	elif id == "reveal":
 		risk = "+18 Exposure, +5 world awareness; recruitment backlash for 6 months, then full public growth."
+	elif id == "conceal":
+		effect = "−" + Js.fixed(minf(25.0, maxf(0.0, r.exposure - _evidence_floor(r))), 0) + " Exposure, −" + Js.fixed(minf(B.CONCEAL_AWARENESS, state.awareness), 0) \
+			+ " world awareness. The price rises with awareness."
 	elif id == "manifest":
 		risk = "+15 Exposure and +8 awareness. New believers can strengthen resistance."
 	elif id == "prepare":
-		risk = "Site remains exposed, even underground. An occult response is scheduled."
+		risk = "Upkeep %s Influence/month while funded; unpaid months stall the site. Site remains exposed, even underground. An occult response is scheduled." % Js.num(B.SITE_UPKEEP)
 		if preparation_left < B.SITE_MONTHS:
 			risk += " Needs acceleration to finish in time: %d preparation months, then a %d-month final rite." % [B.SITE_MONTHS - acceleration, B.FINAL_MONTHS]
 	elif id == "reveal_figure":
@@ -185,6 +194,7 @@ static func perform_action(state: Dictionary, id: String, region_id: String) -> 
 			next.awareness = Derived.clamp_pct(next.awareness + 8)
 		"prepare":
 			r.site.invested = true
+			r.site.dormant = false
 			r.exposure = maxf(40.0, r.exposure)
 			next.awareness = Derived.clamp_pct(next.awareness + 8)
 			Director.schedule_threat(next, region_id, true)
@@ -210,6 +220,21 @@ static func perform_action(state: Dictionary, id: String, region_id: String) -> 
 			r.backlashUntil = next.elapsedMonths + 12
 	Derived.add_log(next, GameData.ACTIONS[id].name + " · " + GameData.REGIONS[region_id].name + ". " + preview.effect)
 	return success(next)
+
+
+## Sites are paid in region order. A site the cult cannot pay lies dormant for the month.
+static func _pay_upkeep(s: Dictionary) -> void:
+	for id in GameData.REGION_IDS:
+		var site: Dictionary = s.regions[id].site
+		if not site.invested:
+			continue
+		var was_dormant: bool = site.dormant
+		site.dormant = s.influence < B.SITE_UPKEEP
+		if not site.dormant:
+			s.influence -= B.SITE_UPKEEP
+			s.telemetry.upkeepPaid += B.SITE_UPKEEP
+		if site.dormant and not was_dormant:
+			Derived.add_log(s, "The ritual site in " + GameData.REGIONS[id].name + " lies dormant: upkeep of %s Influence is unpaid." % Js.num(B.SITE_UPKEEP))
 
 
 static func _grant_dread(s: Dictionary, amount: float) -> void:
@@ -275,6 +300,7 @@ static func advance_simulation(state: Dictionary, months: float) -> Dictionary:
 		var income := minf(Derived.influence_per_month(next), maxf(0.0, B.INFLUENCE_CAP - next.influence))
 		next.influence += income
 		next.telemetry.influenceEarned += income
+		_pay_upkeep(next)
 		for id in GameData.REGION_IDS:
 			var r: Dictionary = next.regions[id]
 			Derived.recruit(r, Derived.recruitment_per_month(next, r))
@@ -283,7 +309,7 @@ static func advance_simulation(state: Dictionary, months: float) -> Dictionary:
 				if r.public or r.site.invested:
 					next.awareness = Derived.clamp_pct(next.awareness + 0.075)
 			r.madness = maxf(0.0, r.madness - 0.3)
-			if r.site.invested and Derived.supported(r) and r.site.progress < B.SITE_MONTHS:
+			if r.site.invested and not r.site.dormant and Derived.supported(r) and r.site.progress < B.SITE_MONTHS:
 				r.site.progress += 1
 				if r.site.progress == B.SITE_MONTHS:
 					Derived.add_log(next, "The ritual site in " + GameData.REGIONS[id].name + " is prepared.")

@@ -1,6 +1,6 @@
 # Decisiones pendientes
 
-**Versión:** 0.2 · **Fecha:** 2026-10-28 · **Estado:** D01–D03 y D09 confirmadas; D04–D08 pendientes.
+**Versión:** 0.3 · **Fecha:** 2026-11-02 · **Estado:** D01–D03, D09 y D10 confirmadas; D04–D08 pendientes.
 
 Este registro distingue las decisiones confirmadas de las preguntas abiertas.
 La primera etapa del GDD documenta la implementación; los objetivos futuros
@@ -48,6 +48,7 @@ se registran sin presentarlos como características ya disponibles.
 | D07 | Público, idiomas y dispositivos | Pendiente | — | Público, UX y plataforma |
 | D08 | Entrega y recursos | Pendiente | — | Producción y negocio |
 | D09 | Época y estética de interfaz | Confirmada | Archivo del culto en un escritorio de noche, 1908–1926, con calendario real; tono de época solo en el marco, sin renombrar mecánicas — 2026-10-30 | Arte, UI/UX y narrativa |
+| D10 | Decisiones económicas y registro de versiones | Confirmada | Mejorar las decisiones sin tocar los pilares: mantenimiento de sitios, ocultamiento según awareness y caza de sitios (`alignment-2`, juego 0.3.0). Todo cambio se refleja en el sistema de playtest y en el [registro de versiones](../../playtests/versiones.md) — 2026-11-02 | Game Design, balance y playtesting |
 
 No convertir preguntas pendientes en funcionalidades comprometidas. Los problemas
 observados del prototipo siguen en [Open problems](../09-open-problems.md).

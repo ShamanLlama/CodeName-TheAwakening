@@ -1,5 +1,5 @@
 class_name Derived
-## Values derived from game state. Mirrors src/game/derived.ts. Sums run in REGION_IDS order,
+## Values derived from game state. alignment-1 mirrored src/game/derived.ts. Sums run in REGION_IDS order,
 ## the same order JavaScript iterates the regions object, so floating-point results match.
 
 const B = preload("res://core/balance.gd")
@@ -52,7 +52,7 @@ static func ready_sites(state: Dictionary) -> int:
 	var count := 0
 	for id in GameData.REGION_IDS:
 		var r: Dictionary = state.regions[id]
-		if r.site.invested and r.site.progress >= B.SITE_MONTHS and supported(r):
+		if r.site.invested and not r.site.dormant and r.site.progress >= B.SITE_MONTHS and supported(r):
 			count += 1
 	return count
 
@@ -85,9 +85,25 @@ static func recruitment_per_month(state: Dictionary, r: Dictionary) -> float:
 		* (1.0 + r.madness / 500.0) * GameData.DIFFICULTIES[state.difficulty].recruitment * awareness_drag(state))
 
 
+## Monthly Influence owed by funded sites.
+static func site_upkeep(state: Dictionary) -> float:
+	var sum := 0.0
+	for id in GameData.REGION_IDS:
+		if state.regions[id].site.invested:
+			sum += B.SITE_UPKEEP
+	return sum
+
+
+## Income after site upkeep; negative when the sites cost more than the cult earns.
+static func net_influence_per_month(state: Dictionary) -> float:
+	return influence_per_month(state) - site_upkeep(state)
+
+
 static func site_label(r: Dictionary) -> String:
 	if not r.site.invested:
 		return "No ritual site"
+	if r.site.dormant:
+		return "Dormant · upkeep unpaid"
 	if not supported(r):
 		return "Interrupted · needs " + Js.num(site_requirement(r)) + " followers"
 	return "Ritual prepared" if r.site.progress >= B.SITE_MONTHS else "Preparing · %d/%d months" % [r.site.progress, B.SITE_MONTHS]
@@ -118,5 +134,5 @@ static func lose_followers(r: Dictionary, amount: float) -> float:
 	p.losses += removed
 	if p.followers <= 0:
 		r.public = false
-		r.site = { "invested": false, "progress": 0 }
+		r.site = { "invested": false, "progress": 0, "dormant": false }
 	return removed

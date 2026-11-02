@@ -15,7 +15,7 @@ static func ready(month := B.PREPARATION_MONTHS) -> Dictionary:
 	s.dread = 200.0
 	for id in ["africa", "europe", "latin_america"]:
 		Derived.recruit(s.regions[id], Derived.site_requirement(s.regions[id]) + 60)
-		s.regions[id].site = { "invested": true, "progress": 24 }
+		s.regions[id].site = { "invested": true, "progress": 24, "dormant": false }
 	return s
 
 
@@ -109,3 +109,73 @@ func test_javascript_number_formatting() -> void:
 	check_eq(Js.num(75.0), "75")
 	check_eq(Js.num(100.0 - 97.3), "2.700000000000003")
 	check_eq(Rng.next_random(Rng.seed_to_state("same")), Rng.next_random(Rng.seed_to_state("same")))
+
+
+# --- alignment-2 ------------------------------------------------------------------------
+
+func test_site_upkeep_is_paid_monthly_and_unpaid_sites_lie_dormant() -> void:
+	var s := ready(B.PREPARATION_MONTHS - 30)
+	s.status = "playing"
+	for id in ["africa", "europe", "latin_america"]:
+		s.regions[id].site.progress = 10
+	s.influence = 100.0
+	var paid := GameEngine.advance_simulation(s, 1)
+	check_eq(paid.telemetry.upkeepPaid, 3 * B.SITE_UPKEEP, "three sites paid")
+	check_eq(paid.regions.africa.site.progress, 11, "paid site advances")
+	check_eq(Derived.net_influence_per_month(paid), Derived.influence_per_month(paid) - 3 * B.SITE_UPKEEP)
+	# An empty treasury and a tiny cult cannot pay: the sites lie dormant and say so.
+	var broke := paid.duplicate(true)
+	broke.influence = 0.0
+	for id in GameData.REGION_IDS:
+		var p: Dictionary = broke.regions[id].population
+		if p.followers > 10:
+			p.unaware += p.followers - 10
+			p.followers = 10.0
+	var stalled := GameEngine.advance_simulation(broke, 1)
+	check(stalled.regions.africa.site.dormant, "unpaid site is dormant")
+	check_eq(Derived.site_label(stalled.regions.africa), "Dormant · upkeep unpaid")
+	check(stalled.log.any(func(e: Dictionary) -> bool: return e.message.contains("lies dormant")), "dormancy is logged")
+	# Paying again wakes the site.
+	stalled.influence = 50.0
+	check(not GameEngine.advance_simulation(stalled, 1).regions.africa.site.dormant, "paid site wakes")
+
+
+func test_dormant_sites_cannot_start_or_carry_the_final_rite() -> void:
+	var s := ready()
+	s.regions.europe.site.dormant = true
+	check_eq(Derived.ready_sites(s), 2)
+	check(not GameEngine.start_awakening(s).ok, "a dormant site cannot carry the rite")
+	s.regions.europe.site.dormant = false
+	check(GameEngine.start_awakening(s).ok, "paid sites can")
+
+
+func test_conceal_price_rises_with_awareness_and_lowers_it() -> void:
+	var s := start()
+	s.awareness = 40.0
+	s.influence = 100.0
+	s.regions.africa.exposure = 0.0
+	var preview := GameEngine.preview_action(s, "conceal", "africa")
+	check(preview.ok, "awareness alone can be concealed: " + preview.reason)
+	check_eq(preview.influence, 20 + 20, "20 plus half of awareness")
+	var result := GameEngine.perform_action(s, "conceal", "africa")
+	check_eq(result.state.awareness, 40.0 - B.CONCEAL_AWARENESS)
+	check_eq(result.state.influence, s.influence - 40)
+	var calm := start()
+	calm.regions.africa.exposure = 0.0
+	check(not GameEngine.preview_action(calm, "conceal", "africa").ok, "nothing to conceal without evidence or awareness")
+	check_eq(GameEngine.conceal_cost(calm), 20)
+
+
+func test_alignment_hunt_is_announced_in_advance() -> void:
+	var s := start()
+	s = GameEngine.advance_simulation(s, B.PREPARATION_MONTHS - B.FINALE_WARNING_MONTHS)
+	check(s.log.any(func(e: Dictionary) -> bool: return e.message.begins_with("The world senses the coming alignment")), "warning logged")
+	check(not Director.site_hunt(s), "hunt not yet active")
+	check(Forecast.ritual(s).message.contains("Threats against ritual sites intensify in %d months" % B.FINALE_WARNING_MONTHS), "forecast warns")
+	var aligned := ready()
+	check(Director.site_hunt(aligned), "hunt active once the stars are right")
+	check(Forecast.ritual(aligned).message.contains("The world hunts ritual sites"), "forecast names the hunt")
+
+
+func test_new_state_records_the_current_ruleset() -> void:
+	check_eq(start().ruleset, B.RULESET)

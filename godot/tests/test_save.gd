@@ -60,3 +60,25 @@ func test_files_round_trip_and_keep_a_recovery_copy() -> void:
 	DirAccess.remove_absolute(TEST_SAVE)
 	DirAccess.remove_absolute(TEST_RECOVERY)
 	check(not SaveData.load_run(TEST_SAVE).blocked, "missing save starts fresh")
+
+
+func test_retired_ruleset_run_is_dropped_but_the_save_is_kept() -> void:
+	var s: Dictionary = GameEngine.place_starting_foothold(GameEngine.create_game_state("normal", "old"), "africa").state
+	s.ruleset = "alignment-1"
+	var save := SaveData.default_save()
+	save.state = s
+	save.settings.volume = 70
+	save.tutorialComplete = true
+	var decoded = SaveData.decode_save(JSON.stringify(save))
+	check(decoded != null, "envelope still loads")
+	if decoded == null:
+		return
+	check(decoded.state == null, "retired run cannot continue")
+	check_eq(decoded.settings.volume, 70.0)
+	check(decoded.tutorialComplete, "tutorial flag kept")
+	var notice := SaveData.take_retired_notice(decoded)
+	check(notice.contains("alignment-1") and notice.contains(Balance.RULESET), notice)
+	check(not decoded.has("retiredRuleset"), "marker removed before saving")
+	s.ruleset = "unknown-9"
+	save.state = s
+	check(SaveData.decode_save(JSON.stringify(save)) == null, "unknown rulesets stay unreadable")

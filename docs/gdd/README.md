@@ -38,7 +38,10 @@ Para modificar una regla, consulta después su referencia detallada.
 ## Referencia detallada de la implementación
 
 Los capítulos previos se conservan como referencia de `alignment-1`; el nuevo índice
-los integra sin duplicar sus reglas. Están en inglés y describen la base implementada,
+los integra sin duplicar sus reglas. Los cambios de `alignment-2` (2026-11-02) están en
+[Experiencia y loops](02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-2--2026-11-02)
+y en la fotografía de valores de [07 — Balance](07-balance.md); los capítulos afectados
+llevan una nota al inicio. Están en inglés y describen la base implementada,
 no el alcance comprometido de una futura versión.
 
 | Documento | Pregunta que resuelve |

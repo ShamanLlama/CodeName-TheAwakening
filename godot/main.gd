@@ -425,6 +425,8 @@ static func classify(message: String) -> String:
 			return "faded" if message.contains(" passes in ") else "omen"
 	if message.contains("is prepared"):
 		return "site"
+	if message.contains("lies dormant") or message.begins_with("The world senses the coming alignment"):
+		return "threat"
 	if message.begins_with("The stars align") or message.begins_with("The final rite begins"):
 		return "phase"
 	if message.begins_with("Three surviving") or message.begins_with("The world knows") or message.begins_with("The alignment has passed"):

@@ -4,6 +4,10 @@ Phase E4 is implemented and verified locally (2026-10-31). Collection is **disab
 
 The [GTC wire contract](../../../GTC-page/gtc-web/contracts/playtests/README.md) is authoritative. The neighboring checkout is required for that link and the receiver integration tests.
 
+## Rulesets
+
+The adapter reports the save's ruleset in `run_started`/`capture_started` (`Balance.RULESET`). Since 0.3.0 (2026-11-02) that is `alignment-2`; the GTC schema accepts `alignment-1` and `alignment-2`. A save holding an unfinished `alignment-1` run loads without that run: settings, tutorial and playtest records stay, and the start screen explains why. Every build is listed with its ruleset and date in [the version log](playtests/versiones.md); a ruleset change needs a new GTC build and round.
+
 ## Player flow
 
 The title screen offers an unchecked participation box when a collection is configured. Its notice identifies difficulty, choices, actual resource spending, world seed, progress, session times, a random round ID and six-month detailed retention. Players should keep personal details out of the seed. Playing without checking it creates no tester/run/event IDs and sends no telemetry.

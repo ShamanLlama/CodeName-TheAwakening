@@ -187,7 +187,7 @@ func _build_bottom() -> void:
 	var bar := _bar(false)
 	var row := Kit.hbox(24)
 	bar.add_child(row)
-	var influence := _readout(row, "Influence", P.TEXT, "Earned each month by your followers. Spent on every cult action.")
+	var influence := _readout(row, "Influence", P.TEXT, "Earned each month by your followers, minus %s per funded site.\nSpent on every cult action. Keep a reserve for the alignment." % Js.num(B.SITE_UPKEEP))
 	_influence = influence[0]
 	_influence_rate = influence[1]
 	_dread = _readout(row, "Dread", P.OMEN, "Power for the rites. Gained only by sacrifice and omens.\nSites cost 60, 100 and 160. The final rite costs 100.")[0]
@@ -323,7 +323,9 @@ func refresh() -> void:
 		_speed[i].disabled = placing or over
 
 	_influence.text = Format.count(s.influence)
-	_influence_rate.text = Format.rate(Derived.influence_per_month(s)) + " / MONTH"
+	var upkeep := Derived.site_upkeep(s)
+	_influence_rate.text = Format.rate(Derived.net_influence_per_month(s)) + " / MONTH" + (" · SITES −" + Js.num(upkeep) if upkeep > 0 else "")
+	_influence_rate.add_theme_color_override("font_color", P.DANGER if Derived.net_influence_per_month(s) < 0 else P.MUTED)
 	_dread.text = Format.count(s.dread)
 	_followers.text = Format.count(Derived.total_followers(s))
 	if s.specialization != null:

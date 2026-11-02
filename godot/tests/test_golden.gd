@@ -1,12 +1,14 @@
 extends "res://tests/test_case.gd"
-## Replays the TypeScript engine's recorded runs (src/tests/golden-traces.test.ts) and requires
-## identical state, derived values, action previews, command results and log text.
+## Replays recorded runs and requires identical state, derived values, action previews, command
+## results and log text. alignment-1 traces came from the TypeScript engine; since alignment-2 they
+## are regenerated from this engine by dev/regenerate_goldens.gd after an intentional rules change,
+## so any other change to the outcome fails here.
 
 const GOLDEN_DIR := "res://tests/golden/"
 
 
-func test_every_trace_matches_the_typescript_engine() -> void:
-	var files := Array(DirAccess.get_files_at(GOLDEN_DIR)).filter(func(f: String) -> bool: return f.ends_with(".json.gz"))
+func test_every_trace_matches_the_recorded_engine() -> void:
+	var files := Array(DirAccess.get_files_at(GOLDEN_DIR)).filter(func(f: String) -> bool: return f.ends_with(".json.gz") and f != "policy-endings.json.gz")
 	check(files.size() >= 9, "expected at least nine golden traces, found %d" % files.size())
 	for file in files:
 		replay(load_trace(GOLDEN_DIR + file))
@@ -19,6 +21,7 @@ static func load_trace(path: String) -> Dictionary:
 
 func replay(trace: Dictionary) -> void:
 	var name: String = trace.name
+	check_eq(trace.get("ruleset"), Balance.RULESET, name + " ruleset")
 	var state := GameEngine.create_game_state(trace.difficulty, trace.seed)
 	if not snapshot_matches(trace.initial, state, 1, name + " initial"):
 		return
@@ -100,10 +103,11 @@ static func previews(state: Dictionary) -> Dictionary:
 	return all
 
 
-func test_playthrough_policy_port_reaches_the_recorded_endings() -> void:
-	for pair in [["early", "rlyeh"], ["late", "dagon"], ["hub", "the-deep"], ["early", "resume"]]:
-		var trace := load_trace(GOLDEN_DIR + "strategy-%s-%s.json.gz" % pair)
-		var final := Playthrough.play(pair[0], pair[1])
+func test_playthrough_policy_reaches_the_recorded_endings() -> void:
+	var endings := load_trace(GOLDEN_DIR + "policy-endings.json.gz")
+	check_eq(endings.ruleset, Balance.RULESET, "policy endings ruleset")
+	for run in endings.runs:
+		var final := Playthrough.play(run.strategy, run.seed)
 		var plain := final.duplicate()
 		plain.erase("log")
-		check_eq(plain, trace.steps[-1].after.state, "%s/%s final state" % pair)
+		check_eq(plain, run.state, "%s/%s final state" % [run.strategy, run.seed])

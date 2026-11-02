@@ -21,6 +21,25 @@ alone silently changes difficulty:
 | `raidLossShare` / `threatLossShare` | `raidLossFloor` / `threatLossFloor` | A high flat floor makes small regions disproportionately fragile |
 | `awarenessPerCapita` | `concealAwareness` and the conceal cooldown | Together they set the maximum sustainable cult size |
 
+## Snapshot — 2026-11-02 (`alignment-2`, Godot)
+
+Source of truth: `godot/core/balance.gd`. Only the values that changed or were added since
+`alignment-1` are listed; everything else matches the snapshot below. The calendar is 200
+preparation months in the Godot build.
+
+| Constant | Value | Controls |
+| --- | --- | --- |
+| `RULESET` | `alignment-2` | Ruleset recorded in saves and playtest events |
+| `SITE_UPKEEP` | 1.0 | Influence per funded site per month; unpaid sites lie dormant |
+| `CONCEAL_AWARENESS` | 3.0 (was 1) | Awareness removed per conceal |
+| `CONCEAL_AWARENESS_PRICE` | 0.5 | Extra Influence per point of awareness on top of the base 20 |
+| `FINALE_SITE_PRESSURE` | 0.15 | Added threat pressure on site regions from month 200 |
+| `FINALE_WARNING_MONTHS` | 24 | Months of warning before the site hunt |
+
+Coupling: `SITE_UPKEEP` with `INFLUENCE_PER_FOLLOWER` (a minimal site's own followers
+roughly pay its upkeep, so dormancy only bites an empty treasury), and
+`CONCEAL_AWARENESS` / `CONCEAL_AWARENESS_PRICE` with `AWARENESS_PER_CAPITA`.
+
 ## Snapshot — 2026-09-14
 
 Taken from `src/data/balance.ts` at the `alignment-1` ruleset. Grouped by what they control.

@@ -48,7 +48,7 @@ func load_save() -> Dictionary:
 		var decoded = SaveData.decode_save(raw)
 		if decoded == null:
 			return {"save": SaveData.default_save(), "blocked": true, "notice": "The browser save is unreadable. It has been retained; this session continues in memory."}
-		return {"save": decoded, "blocked": false, "notice": ""}
+		return {"save": decoded, "blocked": false, "notice": SaveData.take_retired_notice(decoded)}
 	return SaveData.load_run(path)
 
 func persist(save: Dictionary) -> int:

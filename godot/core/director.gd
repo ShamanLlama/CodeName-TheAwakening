@@ -1,5 +1,5 @@
 class_name Director
-## World response: threats and opportunities. Mirrors src/game/director.ts. Mutates only an
+## World response: threats and opportunities. alignment-1 mirrored src/game/director.ts. Mutates only an
 ## engine-owned copy. A threat is separate from the opportunity slot.
 
 const B = preload("res://core/balance.gd")
@@ -50,14 +50,22 @@ static func resolve_world(state: Dictionary) -> void:
 			Derived.add_log(state, region_name + " loses " + Js.fixed(loss, 0) + " followers to " + threat.kind + "; income −" + Js.fixed(c.incomeLost, 2) + "/month." + detail)
 
 
+## True once the stars are right: threats against ritual sites intensify.
+static func site_hunt(state: Dictionary) -> bool:
+	return state.elapsedMonths >= B.PREPARATION_MONTHS
+
+
 static func tick(state: Dictionary) -> void:
+	if state.elapsedMonths == B.PREPARATION_MONTHS - B.FINALE_WARNING_MONTHS:
+		Derived.add_log(state, "The world senses the coming alignment. In %d months threats against ritual sites will intensify; keep Influence in reserve." % B.FINALE_WARNING_MONTHS)
+	var hunt := site_hunt(state)
 	if state.elapsedMonths % 4 == 0:
 		for id in GameData.REGION_IDS:
 			var r: Dictionary = state.regions[id]
 			if r.population.followers <= 0 or r.threat != null:
 				continue
 			var believers: float = r.population.believers / maxf(1.0, Derived.live_population(r))
-			var pressure: float = (0.02 + r.exposure / 500.0 + (0.1 if r.public else 0.0) + (0.12 if r.site.invested else 0.0)
+			var pressure: float = (0.02 + r.exposure / 500.0 + (0.1 if r.public else 0.0) + (0.12 if r.site.invested else 0.0) + (B.FINALE_SITE_PRESSURE if hunt and r.site.invested else 0.0)
 				+ state.awareness / 1500.0 + believers * 0.15 + r.madness / 2000.0) \
 				* GameData.DIFFICULTIES[state.difficulty].pressure * (0.6 + GameData.REGIONS[id].institutionalResistance / 150.0)
 			if random(state) < pressure:

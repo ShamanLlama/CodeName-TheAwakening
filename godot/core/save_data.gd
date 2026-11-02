@@ -7,6 +7,10 @@ const B = preload("res://core/balance.gd")
 const SAVE_PATH := "user://save-v2.json"
 const RECOVERY_PATH := "user://save-v2-recovery.json"
 const SAVE_VERSION := 2
+## Runs saved under these rules cannot continue; the rest of the save (settings, playtest
+## records) is kept and the player starts a new run.
+const RETIRED_RULESETS: Array[String] = ["alignment-1"]
+const RETIRED_NOTICE := "Your unfinished run used older rules (%s) and cannot continue under %s. Settings and playtest records are kept; start a new run."
 
 
 static func default_save() -> Dictionary:
@@ -34,7 +38,7 @@ static func _settings(v) -> bool:
 
 
 static func is_game_state(v) -> bool:
-	if not _record(v) or v.get("version") != 2 or v.get("ruleset") != "alignment-1" or typeof(v.get("seed")) != TYPE_STRING \
+	if not _record(v) or v.get("version") != 2 or v.get("ruleset") != B.RULESET or typeof(v.get("seed")) != TYPE_STRING \
 		or not _integer(v.get("rngState"), 4294967295) or not _integer(v.get("elapsedMonths"), B.DEADLINE) \
 		or not _one_of(v.get("status"), GameData.STATUSES) or not _one_of(v.get("difficulty"), GameData.DIFFICULTY_IDS) \
 		or not _integer(v.get("speed"), 2) or not _number(v.get("influence"), B.INFLUENCE_CAP) \
@@ -57,7 +61,7 @@ static func is_game_state(v) -> bool:
 		if not _record(r) or not _record(r.get("population")) or typeof(r.get("public")) != TYPE_BOOL or not _number(r.get("exposure"), 100) \
 			or not _number(r.get("madness"), 100) or not _integer(r.get("backlashUntil")) or not _record(r.get("cooldowns")) or not _record(r.get("site")) \
 			or typeof(r.site.get("invested")) != TYPE_BOOL or not _integer(r.site.get("progress"), B.SITE_MONTHS) \
-			or not r.site.invested and r.site.progress != 0:
+			or typeof(r.site.get("dormant")) != TYPE_BOOL or not r.site.invested and (r.site.progress != 0 or r.site.dormant):
 			return false
 		var population: Dictionary = r.population
 		var sum := 0.0
@@ -93,7 +97,7 @@ static func is_game_state(v) -> bool:
 	var t = v.get("telemetry")
 	if not _record(t) or not _record(t.get("actions")) or not _record(t.get("revelations")):
 		return false
-	for key in ["sacrificed", "raidLosses", "influenceEarned", "influenceSpent", "dreadEarned", "dreadSpent", "threatsCountered"]:
+	for key in ["sacrificed", "raidLosses", "influenceEarned", "influenceSpent", "dreadEarned", "dreadSpent", "upkeepPaid", "threatsCountered"]:
 		if not _number(t.get(key)):
 			return false
 	for key in t.actions:
@@ -144,6 +148,10 @@ static func decode_save(raw: String):
 	if json.parse(raw) != OK:
 		return null
 	var v = json.data
+	var retired := ""
+	if _record(v) and _record(v.get("state")) and RETIRED_RULESETS.has(v.state.get("ruleset")):
+		retired = v.state.ruleset
+		v.state = null
 	if not _record(v) or v.get("version") != 2 or not _settings(v.get("settings")) or typeof(v.get("tutorialComplete")) != TYPE_BOOL \
 		or (v.get("state") != null and not is_game_state(v.get("state"))):
 		return null
@@ -155,7 +163,18 @@ static func decode_save(raw: String):
 	v.settings.volume = float(v.settings.volume)
 	if v.state != null:
 		normalize_state(v.state)
+	if retired:
+		v.retiredRuleset = retired
 	return v
+
+
+## Removes the retired-ruleset marker from a decoded save and returns the player notice.
+static func take_retired_notice(decoded: Dictionary) -> String:
+	if not decoded.has("retiredRuleset"):
+		return ""
+	var ruleset: String = decoded.retiredRuleset
+	decoded.erase("retiredRuleset")
+	return RETIRED_NOTICE % [ruleset, B.RULESET]
 
 
 static func load_run(path := SAVE_PATH) -> Dictionary:
@@ -167,7 +186,14 @@ static func load_run(path := SAVE_PATH) -> Dictionary:
 	var decoded = decode_save(raw)
 	if decoded == null:
 		return { "save": default_save(), "notice": "This save could not be read. Starting fresh will retain a recovery copy.", "blocked": true }
-	return { "save": decoded, "notice": "", "blocked": false }
+	var notice := take_retired_notice(decoded)
+	if notice:
+		# Keep the retired run aside before the next save replaces it.
+		var file := FileAccess.open(path + ".retired.json", FileAccess.WRITE)
+		if file:
+			file.store_string(raw)
+			file.close()
+	return { "save": decoded, "notice": notice, "blocked": false }
 
 
 ## Copies an unreadable save aside before a new run overwrites it.

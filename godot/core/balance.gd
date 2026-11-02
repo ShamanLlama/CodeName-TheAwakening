@@ -1,6 +1,9 @@
 class_name Balance
-## First-playtest values. Calendar and population scale are game abstractions.
-## Mirrors src/data/balance.ts; parity is checked by tests/test_golden.gd.
+## Tuning values. Calendar and population scale are game abstractions.
+## alignment-1 mirrored src/data/balance.ts; alignment-2 diverges from the TypeScript prototype.
+## Any change here needs a new RULESET and an entry in docs/playtests/versiones.md.
+
+const RULESET := "alignment-2"
 
 const PREPARATION_MONTHS := 200
 const ALIGNMENT_MONTHS := 24
@@ -39,7 +42,16 @@ const THREAT_LOSS_FLOOR := 6
 # Obstructing a threat is a scarce favour, not a purchase: one region at a time.
 const COUNTER_SEVERITY_COST := 30
 const AWARENESS_DRAG := 150.0
-const CONCEAL_AWARENESS := 1.0
+# Concealment is the Influence sink against world awareness. Its price rises with awareness:
+# cheap evidence control early, an expensive cover-up once the world is watching.
+const CONCEAL_AWARENESS := 3.0
+const CONCEAL_AWARENESS_PRICE := 0.5
+# Funded sites cost Influence every month. An unpaid site lies dormant: no preparation, and it
+# cannot carry the final rite that month.
+const SITE_UPKEEP := 1.0
+# Once the stars come right the world hunts ritual sites. Players are warned in advance.
+const FINALE_SITE_PRESSURE := 0.15
+const FINALE_WARNING_MONTHS := 24
 # A cult this large cannot stay secret: awareness climbs with the share of the world
 # that follows you, so hoarding followers is itself a risk.
 const AWARENESS_PER_CAPITA := 1.5

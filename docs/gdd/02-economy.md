@@ -1,5 +1,7 @@
 # 02 — Economy
 
+> **`alignment-2` (2026-11-02):** Cada sitio financiado cuesta 1 Influence al mes; `conceal` cuesta 20 + la mitad de la awareness. Véase [Experiencia y loops](02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-2--2026-11-02). El resto de este capítulo describe `alignment-1`.
+
 Three quantities matter: **Influence**, **Dread**, and **followers**. Only the first two
 are spendable currencies. Followers are both a resource and a liability, which is the
 point — see [04 — Visibility and awareness](04-visibility.md).
