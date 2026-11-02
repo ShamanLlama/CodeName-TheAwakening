@@ -8,7 +8,8 @@ const TTL := 604800
 const CLOCK_KEYS := ["elapsed_ms", "simulation_ms", "planning_ms", "background_ms", "excluded_ms"]
 var config := {}
 var data := fresh()
-# Consent is renewed on each opening; restoring a save never starts collection by itself.
+# Consent is an explicit choice per round, remembered on this device until the player stops.
+# configure() never confirms by itself; main restores a remembered "yes" only for a writable save.
 var confirmed := false
 var session_live := false
 var warning := ""
@@ -74,8 +75,23 @@ func accept() -> bool:
 	if not data.testers.has(config.round_id): data.testers[config.round_id] = identifier()
 	return true
 
+## A remembered "yes" for this round confirms again on opening; "no" or no answer does not.
+func restore() -> bool:
+	if not configured() or corrupt or data.choices.get(config.round_id, false) != true or not data.testers.has(config.round_id): return false
+	return accept()
+
+## True once the player has answered for this round on this device, either way.
+func answered() -> bool:
+	return configured() and data.choices.has(config.round_id)
+
+## Remembers "play without sharing" for this round. No IDs are created.
+func decline() -> void:
+	if not configured() or corrupt or confirmed: return
+	data.choices[config.round_id] = false
+
 func withdraw() -> void:
 	data = fresh()
+	if configured(): data.choices[config.round_id] = false
 	confirmed = false
 	session_live = false
 	corrupt = false

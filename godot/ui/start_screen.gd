@@ -10,6 +10,7 @@ var game
 var _difficulty := "normal"
 var _difficulty_buttons: Dictionary = {}
 var _seed: LineEdit
+var _ask: Control
 
 
 func _init(owner_game) -> void:
@@ -120,10 +121,10 @@ func _ready() -> void:
 	form.add_child(_seed)
 	if game.lab.configured() or game.lab.corrupt or game.lab.pending_events() > 0:
 		form.add_child(PlaytestPanel.new(game, true))
-	var begin := Kit.primary("Begin", func() -> void: game.begin(_difficulty, _seed.text))
+	var begin := Kit.primary("Begin", _begin)
 	begin.custom_minimum_size = Vector2(0, 50)
 	form.add_child(begin)
-	_seed.text_submitted.connect(func(_text: String) -> void: game.begin(_difficulty, _seed.text))
+	_seed.text_submitted.connect(func(_text: String) -> void: _begin())
 	if saved != null and not GameEngine.is_over(saved):
 		form.add_child(Kit.body("Beginning anew replaces the run in progress.", 15, P.MUTED, "italic"))
 	if game.last_result != null:
@@ -137,6 +138,68 @@ func _ready() -> void:
 	credit.offset_top = -40
 	credit.offset_bottom = -20
 	add_child(credit)
+
+
+func _begin() -> void:
+	if game.needs_participation_choice():
+		_ask_participation()
+	else:
+		game.begin(_difficulty, _seed.text)
+
+
+## Asked once per round on this device: an explicit choice, remembered until changed in the menu.
+func _ask_participation() -> void:
+	if _ask != null:
+		return
+	_ask = Control.new()
+	_ask.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_ask.mouse_filter = Control.MOUSE_FILTER_STOP
+	var shade := ColorRect.new()
+	shade.color = Color(P.DESK, 0.82)
+	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_ask.add_child(shade)
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_ask.add_child(center)
+	var sheet := Kit.panel(P.PAPER, P.DESK_EDGE, Vector4(40, 34, 40, 34))
+	sheet.material = P.paper(0.16)
+	Kit.frame(sheet)
+	sheet.custom_minimum_size = Vector2(600, 0)
+	center.add_child(sheet)
+	var content := Kit.vbox(16)
+	sheet.add_child(content)
+	content.add_child(Kit.label("Join the playtest?", 40, P.TEXT, "display"))
+	content.add_child(Kit.rule(Color(P.TEXT, 0.6)))
+	content.add_child(Kit.body("This build is part of a GTC Playtest Lab round. " + PlaytestPanel.NOTICE, 17, P.TEXT))
+	content.add_child(Kit.body("Your answer is remembered on this device. Change it any time in Menu → GTC Playtest Lab.", 15, P.MUTED, "italic"))
+	var row := Kit.hbox(12)
+	var join := Kit.primary("Join the playtest & play", func() -> void: _answer(true))
+	var skip := Kit.button("Play without sharing", func() -> void: _answer(false))
+	skip.add_theme_font_override("font", P.font("display_sc"))
+	skip.add_theme_font_size_override("font_size", 21)
+	for button in [join, skip]:
+		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		button.custom_minimum_size = Vector2(0, 52)
+		row.add_child(button)
+	content.add_child(row)
+	add_child(_ask)
+
+
+func _answer(join: bool) -> void:
+	if join:
+		game.set_participation(true)
+	else:
+		game.decline_participation()
+	_ask.queue_free()
+	_ask = null
+	game.begin(_difficulty, _seed.text)
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if _ask != null and event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
+		_ask.queue_free()
+		_ask = null
+		get_viewport().set_input_as_handled()
 
 
 func _pick(id: String) -> void:

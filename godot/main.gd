@@ -63,6 +63,7 @@ func _ready() -> void:
 			var configured = JSON.parse_string(FileAccess.get_file_as_string("res://data/playtest-config.json"))
 			lab_options = configured if typeof(configured) == TYPE_DICTIONARY else {}
 		lab.configure(lab_options, save.get("playtest", {}))
+		if not blocked: lab.restore()
 		_lab_at = lab_platform.now()
 		_lab_saved_at = _lab_at
 		_lab_checkpoint_at = _lab_at
@@ -320,11 +321,21 @@ func set_participation(accepted: bool) -> void:
 	_commit()
 
 
+## The start screen asks once per round before the first run on this device.
+func needs_participation_choice() -> bool:
+	return lab.configured() and not blocked and not lab.corrupt and not lab.confirmed and not lab.answered()
+
+
+func decline_participation() -> void:
+	lab.decline()
+	_commit()
+
+
 func playtest_status() -> String:
 	if lab.warning: return lab.warning
 	if not lab.configured(): return "Playtest collection is not configured in this build."
 	if blocked: return storage_notice
-	if not lab.confirmed: return "Collection paused. Participation is optional; pending records stay local until you join again."
+	if not lab.confirmed: return "Not sharing. Participation is optional; any pending records stay on this device until you join."
 	if lab.pending_events() > 0: return "%d records pending. %s" % [lab.pending_events(), lab_client.notice if lab_client != null else ""]
 	return "Receipt confirmed and saved locally." if not lab.data.receipt.is_empty() else "Participation enabled. No receipt yet."
 
@@ -466,6 +477,14 @@ func _stage_shot() -> void:
 	match scenario:
 		"start":
 			show_start()
+		"consent":
+			# A configured round with no answer yet, as a new player sees it after Begin.
+			lab.configure({"enabled": true, "endpoint": "https://playtest.example.invalid/api/playtests/v1/batches/",
+				"collection_id": "10000000-0000-4000-8000-000000000001", "build_id": "10000000-0000-4000-8000-000000000002",
+				"round_id": "10000000-0000-4000-8000-000000000003"})
+			blocked = false
+			show_start()
+			_screen._begin()
 		"placing", "guide":
 			state = GameEngine.create_game_state("normal", "omen")
 			show_game()

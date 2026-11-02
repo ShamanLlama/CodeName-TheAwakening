@@ -1,6 +1,7 @@
 extends VBoxContainer
 ## Optional participation, with the same archive typography as the game.
 const P = preload("res://ui/palette.gd")
+const NOTICE := "Share choices (including difficulty and world seed), resource spending, progress and session times with GTC. Random ID per round; no name or email. Detailed records are kept for six months. Keep personal details out of your seed. You can play without sharing."
 var game
 var compact := false
 var _status: Label
@@ -13,9 +14,9 @@ func _init(owner_game, small := false) -> void:
 
 func _ready() -> void:
 	add_child(Kit.caption("GTC Playtest Lab · optional"))
-	add_child(Kit.body("Share choices (including difficulty and world seed), resource spending, progress and session times with GTC. Random ID per round; no name or email. Detailed records are kept for six months. Keep personal details out of your seed. You can play without sharing.", 14 if compact else 16, P.MUTED))
+	add_child(Kit.body(NOTICE, 14 if compact else 16, P.MUTED))
 	if not compact:
-		add_child(Kit.body("Join for this opening. Closing the game pauses uploads until you join again. Stop clears unsent records on this device; it does not erase records already received. Contact the GTC operator to manage those records. Local exports stay under your control.", 15, P.MUTED))
+		add_child(Kit.body("Your choice is remembered on this device until you change it here. Stop clears unsent records on this device; it does not erase records already received. Contact the GTC operator to manage those records. Local exports stay under your control.", 15, P.MUTED))
 	var choice := CheckBox.new()
 	choice.name = "PlaytestParticipation"
 	choice.text = "I agree to share this playtest with GTC"

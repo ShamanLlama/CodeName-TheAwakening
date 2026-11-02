@@ -292,3 +292,54 @@ func test_open_game_menu_counts_planning_not_simulation_or_excluded() -> void:
 	game._lab_focused = false
 	check_eq(game._lab_current_mode(), "background", "background takes priority over an open menu")
 	game.free()
+
+func test_remembered_choice_is_explicit_per_round_and_device() -> void:
+	var state := GameEngine.create_game_state("normal", "remembered")
+	var fresh := Capture.new()
+	fresh.configure(configuration())
+	check(not fresh.answered(), "a new device has no answer")
+	check(not fresh.restore(), "nothing to restore without an answer")
+	# "Yes" survives reopening, with the same tester, but only through restore().
+	var yes := joined()
+	var tester: String = yes.data.testers[configuration().round_id]
+	var reopened := Capture.new()
+	reopened.configure(configuration(), JSON.parse_string(JSON.stringify(yes.snapshot(state))))
+	check(not reopened.confirmed, "configure alone never confirms")
+	check(reopened.answered(), "the answer is remembered")
+	check(reopened.restore() and reopened.confirmed, "a remembered yes confirms again")
+	check_eq(reopened.data.testers[configuration().round_id], tester, "same random tester for the round")
+	# "No" is remembered without creating identifiers, and never confirms.
+	var no := Capture.new()
+	no.configure(configuration())
+	no.decline()
+	check(no.answered() and not no.confirmed, "declining is an answer")
+	check(no.data.testers.is_empty(), "declining creates no IDs")
+	var no_again := Capture.new()
+	no_again.configure(configuration(), JSON.parse_string(JSON.stringify(no.snapshot(state))))
+	check(not no_again.restore() and not no_again.confirmed, "a remembered no stays no")
+	no_again.accept()
+	check(no_again.confirmed, "the player can still join later")
+	# Stopping clears records and is remembered as no.
+	reopened.withdraw()
+	check(reopened.answered() and not reopened.restore(), "stop is remembered as no")
+	# Another round asks again.
+	var other := configuration()
+	other.round_id = "10000000-0000-4000-8000-000000000009"
+	var next_round := Capture.new()
+	next_round.configure(other, JSON.parse_string(JSON.stringify(yes.snapshot(state))))
+	check(not next_round.answered() and not next_round.restore(), "a new round needs a new answer")
+
+func test_start_screen_asks_only_when_a_writable_round_has_no_answer() -> void:
+	var game = load("res://main.gd").new()
+	game.lab.configure(configuration())
+	check(game.needs_participation_choice(), "unanswered round asks")
+	game.blocked = true
+	check(not game.needs_participation_choice(), "a read-only window never asks")
+	game.blocked = false
+	game.lab.decline()
+	check(not game.needs_participation_choice(), "answered rounds do not ask again")
+	var unconfigured = load("res://main.gd").new()
+	unconfigured.lab.configure({})
+	check(not unconfigured.needs_participation_choice(), "builds without collection never ask")
+	game.free()
+	unconfigured.free()

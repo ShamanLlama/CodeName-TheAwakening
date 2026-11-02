@@ -81,7 +81,7 @@ try {
  await page.waitForFunction(()=>{const s=JSON.parse(E4Probe.result);return s.saved_generation===s.generation;});
  const before=(await state(page)).save.playtest;assert(before.jobs.length>0);const pending=before.jobs.map(j=>({id:j.id,body:j.body}));
  await page.screenshot({path:evidenceFile+'.game.png'});await page.close();
- page=await open();let restored=await state(page);assert(!restored.confirmed,'reopening awaits consent');
+ page=await open();let restored=await state(page);assert(restored.confirmed,'reopening restores the remembered yes');
  for(const job of pending)assert.equal(restored.save.playtest.jobs.find(j=>j.id===job.id)?.body,job.body,'reload preserves pending bytes');
  await context.unroute('https://127.0.0.1:58484/**');await command(page,'join','resume','pause','flush');
  await page.waitForFunction(()=>JSON.parse(E4Probe.result).pending===0,undefined,{timeout:45000});
