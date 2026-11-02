@@ -4,6 +4,7 @@ extends Control
 
 const P = preload("res://ui/palette.gd")
 const B = preload("res://core/balance.gd")
+const PlaytestPanel = preload("res://ui/playtest_panel.gd")
 
 var game
 var screen
@@ -73,6 +74,7 @@ func _rebuild() -> void:
 		"chronicle": _chronicle()
 		"alignment": _alignment()
 		"end": _end()
+		"playtest": _playtest()
 
 
 func _title(text: String, color := P.TEXT) -> void:
@@ -123,7 +125,7 @@ func _menu() -> void:
 	_title("Paused")
 	var column := Kit.vbox(8)
 	_content.add_child(column)
-	for entry in [["RESUME", close], ["HOW TO PLAY", func() -> void: open("guide")], ["CHRONICLE", func() -> void: open("chronicle")], ["EXPORT PLAYTEST REPORT", func() -> void: game.export_report()]]:
+	for entry in [["RESUME", close], ["HOW TO PLAY", func() -> void: open("guide")], ["CHRONICLE", func() -> void: open("chronicle")], ["GTC PLAYTEST LAB", func() -> void: open("playtest")], ["EXPORT PLAYTEST REPORT", func() -> void: game.export_report()]]:
 		var button := Kit.button(entry[0], entry[1])
 		button.custom_minimum_size = Vector2(0, 42)
 		column.add_child(button)
@@ -302,7 +304,28 @@ func _end() -> void:
 		grid.add_child(cell)
 	_content.add_child(grid)
 	_content.add_child(Kit.caption("Seed %s · %s" % [s.seed, GameData.DIFFICULTIES[s.difficulty].name]))
+	if game.lab.confirmed and game.lab.active().get("closed", false):
+		_content.add_child(Kit.body("Optional comment to GTC (up to 1,000 characters). Please omit personal details.", 15, P.MUTED))
+		var comment := LineEdit.new()
+		comment.max_length = 1000
+		comment.placeholder_text = "What stood out during this run?"
+		_content.add_child(comment)
+		var status := Kit.caption("")
+		_content.add_child(Kit.button("QUEUE COMMENT", func() -> void:
+			if game.submit_playtest_comment(comment.text):
+				comment.text = ""
+				status.text = "Comment saved locally for delivery."
+			else: status.text = "Comment could not be queued. Export the local record."))
+		_content.add_child(status)
+	_content.add_child(Kit.button("GTC PLAYTEST STATUS", func() -> void: open("playtest")))
 	var again := Kit.primary("New Awakening", func() -> void:
 		close()
 		game.abandon())
 	_row_buttons([again, Kit.button("EXPORT REPORT", func() -> void: game.export_report()), Kit.button("VIEW THE MAP", close)])
+
+
+func _playtest() -> void:
+	_box.custom_minimum_size = Vector2(650, 0)
+	_title("GTC Playtest Lab")
+	_content.add_child(PlaytestPanel.new(game))
+	_row_buttons([Kit.button("CLOSE", close)])

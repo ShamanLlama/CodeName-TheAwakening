@@ -361,11 +361,11 @@ func refresh() -> void:
 	panel.refresh()
 
 	if s.status != _last_status:
+		_last_status = s.status
 		if s.status == "alignment":
 			open_dialog("alignment")
 		elif GameEngine.is_over(s):
 			open_dialog("end")
-		_last_status = s.status
 
 
 func _rebuild_threats(s: Dictionary) -> void:

@@ -183,11 +183,15 @@ static func retain_recovery(path := SAVE_PATH, recovery_path := RECOVERY_PATH) -
 
 
 static func save_run(save: Dictionary, path := SAVE_PATH) -> bool:
-	var file := FileAccess.open(path, FileAccess.WRITE)
+	var temporary := path + ".tmp"
+	var file := FileAccess.open(temporary, FileAccess.WRITE)
 	if file == null:
 		return false
 	file.store_string(JSON.stringify(save))
-	return true
+	file.flush()
+	var written := file.get_error() == OK
+	file.close()
+	return written and DirAccess.rename_absolute(temporary, path) == OK
 
 
 static func result_for(state: Dictionary) -> Dictionary:

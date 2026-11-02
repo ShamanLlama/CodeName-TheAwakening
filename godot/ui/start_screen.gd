@@ -4,6 +4,7 @@ extends Control
 
 const P = preload("res://ui/palette.gd")
 const B = preload("res://core/balance.gd")
+const PlaytestPanel = preload("res://ui/playtest_panel.gd")
 
 var game
 var _difficulty := "normal"
@@ -117,6 +118,8 @@ func _ready() -> void:
 	_seed.max_length = 40
 	_seed.add_theme_font_size_override("font_size", 17)
 	form.add_child(_seed)
+	if game.lab.configured() or game.lab.corrupt or game.lab.pending_events() > 0:
+		form.add_child(PlaytestPanel.new(game, true))
 	var begin := Kit.primary("Begin", func() -> void: game.begin(_difficulty, _seed.text))
 	begin.custom_minimum_size = Vector2(0, 50)
 	form.add_child(begin)
