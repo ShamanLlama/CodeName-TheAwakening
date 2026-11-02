@@ -16,8 +16,18 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
 
 | Versión | Fecha | Commit | Ruleset | Adaptador | Ronda GTC | Estado |
 | --- | --- | --- | --- | --- | --- | --- |
-| 0.3.0 | 2026-11-02 | `85f5905`; exportada desde `dbfb07f` | `alignment-2` | `awakening-1` | «0.3.0 playtest por invitación · decisiones económicas», abierta del 2026-11-02 al 2026-11-16 | En itch.io (Restricted con contraseña) |
+| 0.3.1 | 2026-11-02 | `2256c6c` | `alignment-2` | `awakening-1` | «0.3.1 playtest por invitación · decisiones económicas», abierta del 2026-11-02 al 2026-11-16 | En itch.io (Restricted con contraseña) |
+| 0.3.0 | 2026-11-02 | `85f5905`; exportada desde `dbfb07f` | `alignment-2` | `awakening-1` | «0.3.0 playtest por invitación · decisiones económicas», cerrada el mismo día sin partidas | Reemplazada por 0.3.1 |
 | 0.2.0 | 2026-10-30 / 2026-10-31 | `ae38ec0`; adaptador E4–E6 en `6aa2419` | `alignment-1` | `awakening-1` | QA técnica E7 y «E7 piloto interno de gameplay» (abierta hasta 2026-11-09) | Reemplazada en itch.io por 0.3.0 el 2026-11-02 |
+
+### 0.3.1 — participación preguntada y recordada
+
+- **Motivo:** aumentar la participación en el playtest sin casillas premarcadas, que no constituyen consentimiento.
+- **Interfaz:** al pulsar Begin sin respuesta para la ronda en ese dispositivo, una hoja «Join the playtest?» muestra el aviso completo y dos botones del mismo tamaño: «Join the playtest & play» y «Play without sharing». Escape la cierra sin empezar.
+- **Playtest:** la respuesta se guarda por ronda en los metadatos del guardado. Un sí recordado se confirma de nuevo al abrir el juego (solo con guardado escribible); un no, o Detener en el menú, se recuerda como no y no crea IDs. Una ronda nueva vuelve a preguntar. Antes se renovaba en cada apertura. Reglas y adaptador sin cambios.
+- **GTC:** build «The Awakening 0.3.1 · alignment-2» (`2256c6c`) y ronda nueva, abierta en pausa, probada en el host y habilitada; cierra el 2026-11-16. La ronda 0.3.0 se cerró antes de tiempo sin partidas recibidas. Notas de consentimiento actualizadas en el contrato (`cdaecbc`).
+- **Publicación:** upload `20241172` en itch.io como único archivo jugable; texto de página actualizado en [itch-page.md](itch-page.md). La build alojada coincide con el export, arranca sin errores y no envía nada antes de responder.
+- **Tests:** 38 tests Godot, incluidos respuesta recordada por ronda y dispositivo, «no» sin IDs, Detener recordado como no y ventana de solo lectura sin pregunta. La prueba web E4 se ajustó a la nueva política pero no se volvió a ejecutar.
 
 ### 0.3.0 — `alignment-2`: decisiones económicas
 
