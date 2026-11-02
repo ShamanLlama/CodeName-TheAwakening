@@ -16,8 +16,8 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
 
 | Versión | Fecha | Commit | Ruleset | Adaptador | Ronda GTC | Estado |
 | --- | --- | --- | --- | --- | --- | --- |
-| 0.3.0 | 2026-11-02 | rama `gameplay/alignment-2`, sin commitear | `alignment-2` | `awakening-1` | Pendiente: crear build y ronda nuevas | En desarrollo |
-| 0.2.0 | 2026-10-30 / 2026-10-31 | `ae38ec0` + adaptador E4 sin commitear | `alignment-1` | `awakening-1` | QA técnica E7 (datos sintéticos) | Retirada al publicar 0.3.0 |
+| 0.3.0 | 2026-11-02 | `85f5905` (rama `gameplay/alignment-2`) | `alignment-2` | `awakening-1` | Pendiente: crear build y ronda nuevas | En desarrollo |
+| 0.2.0 | 2026-10-30 / 2026-10-31 | `ae38ec0`; adaptador E4–E6 en `6aa2419` | `alignment-1` | `awakening-1` | QA técnica E7 (datos sintéticos) | Retirada al publicar 0.3.0 |
 
 ### 0.3.0 — `alignment-2`: decisiones económicas
 
