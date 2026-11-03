@@ -1,6 +1,6 @@
 # Interfaz, aprendizaje y accesibilidad
 
-**Versión:** 0.3 · **Fecha:** 2026-11-03 · **Estado:** flujo Godot documentado; pantallas cortas y táctiles adaptadas en 0.3.2, mapa ampliado en 0.3.3; usabilidad por validar.
+**Versión:** 0.4 · **Fecha:** 2026-11-03 · **Estado:** flujo Godot documentado; panel táctil con desplazamiento desde 0.3.2; escala de teléfono original restaurada en 0.3.4; usabilidad por validar.
 
 ## Flujo implementado
 
@@ -28,13 +28,16 @@ velocidad normal. El menú incluye guía, sonido y exportación del reporte de p
 para prepararlo y completar el rito, considerando las aceleraciones disponibles.
 **Decisión permitida con riesgo:** sacrificar seguidores que sostienen un sitio.
 
-## Pantallas cortas y táctiles (0.3.2, 2026-11-02)
+## Teléfonos y pantallas táctiles (0.3.4, 2026-11-03)
 
-El diseño base es 1600×900. Antes se reducía entero a cualquier pantalla: en un teléfono horizontal (~844×390 px CSS) un texto de 15 quedaba en unos 6,5 px. Ahora `main._fit_window()` reduce la altura base hasta 520 para que una unidad nunca mida menos de 0,75 px CSS, usando la densidad del navegador. Con menos de 760 de altura base se activa el modo compacto (`Kit.compact`): los textos de lectura crecen (`Kit.fs`, mínimo 15), las barras son más bajas, el teletipo inferior queda en una línea, el título de inicio se reduce, y el formulario de inicio y los diálogos se desplazan dentro de su hoja con barra visible. En vertical, un aviso pide girar el teléfono. Una ventana de escritorio normal no cambia.
+El diseño base es 1600×900 y se reduce entero a cualquier pantalla, también en el teléfono. En el panel de región, las acciones y su explicación van antes de las estadísticas. Con ratón, pasar sobre una acción la explica y hacer clic la ejecuta. En pantallas táctiles (`Kit.touch`) un toque solo abre la explicación bajo esa acción, con un botón para ejecutarla; otro toque la cierra. El panel se desplaza arrastrando, un arrastre no pulsa el botón bajo el dedo, y la barra de desplazamiento es más ancha y visible.
 
-En el panel de región, las acciones y su explicación van antes de las estadísticas. Con ratón, pasar sobre una acción la explica y hacer clic la ejecuta. En pantallas táctiles (`Kit.touch`) un toque solo abre la explicación bajo esa acción, con un botón para ejecutarla; otro toque la cierra. El panel se desplaza arrastrando, y un arrastre no pulsa el botón bajo el dedo. Primera prueba en teléfono físico (0.3.2, 2026-11-03): el texto se lee, pero el mapa quedaba muy pequeño.
+Intentos descartados tras probarlos en un teléfono físico (2026-11-03):
 
-Mapa en pantallas cortas (0.3.3): la vista general recorta las latitudes polares (se ven de 50° S a 72° N) y llena la altura disponible; la barra superior baja a 46. Al abrir una región, el mapa ya no se encoge al lado del panel: se amplía 1,7 veces sobre esa región, centrada en la parte que el panel no tapa, con una transición corta; al cerrar el panel vuelve a la vista general. Así el texto mantiene el tamaño de 0.3.2 y el mapa gana espacio. En escritorio el mapa sigue completo al lado del panel.
+- **0.3.2:** reducir la altura base hasta 520 en pantallas cortas (una unidad ≥ 0,75 px CSS), con textos más grandes y barras más bajas. El texto se leía, pero el mapa quedaba muy pequeño.
+- **0.3.3:** sobre lo anterior, recortar las latitudes polares y ampliar 1,7 veces la región abierta en vez de encoger el mapa. No convenció.
+
+Se volvió a la escala original y solo se conservó el panel táctil con desplazamiento. El texto pequeño en teléfonos sigue pendiente.
 
 ## Barreras por comprobar
 

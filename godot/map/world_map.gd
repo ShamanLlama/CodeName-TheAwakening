@@ -13,15 +13,11 @@ const MAX_DOTS := 260
 ## Where Johansen found R'lyeh, in The Call of Cthulhu.
 const RLYEH := Vector2(-126.72, -47.15)
 const LAT_RANGE := Vector2(-58, 84)
-## Southern and northern latitudes kept by the trimmed overview.
-const TRIMMED_LATS := Vector2(-50, 72)
 
 var state: Dictionary = {}
 var selected := ""
 var hovered := ""
 var show_labels := true
-## Short screens: the overview crops the polar latitudes so the regions read larger.
-var trim_poles := false
 
 var _sea: Control
 var _land: Node2D
@@ -32,15 +28,6 @@ var _fx: Control
 var _world_rect: Rect2
 var _xform := Transform2D.IDENTITY
 var _zoom := 1.0
-var _offset := Vector2.ZERO
-## Short screens zoom onto the open region instead of shrinking the world beside its file.
-var _focus := ""
-var _focus_inset := 0.0
-var _focus_scale := 1.0
-var _from_zoom := 0.0
-var _from_offset := Vector2.ZERO
-var _blend := 1.0
-var _tween: Tween
 var _time := 0.0
 var _hits: Array[Dictionary] = []
 
@@ -100,67 +87,12 @@ func _process(delta: float) -> void:
 func _layout() -> void:
 	if size.x <= 0 or size.y <= 0:
 		return
-	var target := _view(_focus)
-	var t := ease(_blend, -1.8)
-	_zoom = lerpf(_from_zoom, target.zoom, t) if _from_zoom > 0.0 else target.zoom
-	_offset = _from_offset.lerp(target.offset, t) if _from_zoom > 0.0 else target.offset
-	_xform = Transform2D(0.0, Vector2(_zoom, _zoom), 0.0, _offset)
+	_zoom = minf(size.x / _world_rect.size.x, size.y / _world_rect.size.y)
+	var offset := (size - _world_rect.size * _zoom) * 0.5 - _world_rect.position * _zoom
+	_xform = Transform2D(0.0, Vector2(_zoom, _zoom), 0.0, offset)
 	_land.transform = _xform
 	_sea.queue_redraw()
 	_borders.queue_redraw()
-
-
-## The whole world, or [param region_id] magnified in the uncovered part of the map without
-## showing past the world's edges. With [member trim_poles] the overview fills the height
-## with the inhabited latitudes and lets the Arctic and the Southern Ocean run off the edge.
-func _view(region_id: String) -> Dictionary:
-	var fit := minf(size.x / _world_rect.size.x, size.y / _world_rect.size.y)
-	if not region_id:
-		if not trim_poles:
-			return {"zoom": fit, "offset": (size - _world_rect.size * fit) * 0.5 - _world_rect.position * fit}
-		var top := Geo.project(Vector2(0, TRIMMED_LATS.y)).y
-		var bottom := Geo.project(Vector2(0, TRIMMED_LATS.x)).y
-		var zoom := minf(size.x / _world_rect.size.x, size.y / (bottom - top))
-		var centre := Vector2(_world_rect.get_center().x, (top + bottom) * 0.5)
-		return {"zoom": zoom, "offset": _clamped(size * 0.5 - centre * zoom, zoom, Rect2(Vector2.ZERO, size))}
-	var zoom := fit * _focus_scale
-	var area := Rect2(0, 0, maxf(size.x - _focus_inset, size.x * 0.4), size.y)
-	return {"zoom": zoom, "offset": _clamped(area.get_center() - Geo.anchor(region_id) * zoom, zoom, area)}
-
-
-## Keeps the world covering [param area] where it is big enough to, and centred where not.
-func _clamped(offset: Vector2, zoom: float, area: Rect2) -> Vector2:
-	var low := area.end - _world_rect.end * zoom
-	var high := area.position - _world_rect.position * zoom
-	for axis in 2:
-		if low[axis] <= high[axis]:
-			offset[axis] = clampf(offset[axis], low[axis], high[axis])
-		else:
-			offset[axis] = (low[axis] + high[axis]) * 0.5
-	return offset
-
-
-## Zooms by [param scale] onto [param region_id], centred in the map minus [param inset] on the
-## right, where the region file covers it. An empty id returns to the whole world.
-func focus(region_id: String, inset := 0.0, scale := 1.0) -> void:
-	if region_id == _focus and is_equal_approx(inset, _focus_inset) and is_equal_approx(scale, _focus_scale):
-		return
-	_from_zoom = _zoom
-	_from_offset = _offset
-	_focus = region_id
-	_focus_inset = inset
-	_focus_scale = scale
-	if _tween:
-		_tween.kill()
-	if not is_inside_tree() or _from_zoom <= 0.0:
-		_blend = 1.0
-		_layout()
-		return
-	_blend = 0.0
-	_tween = create_tween()
-	_tween.tween_method(func(value: float) -> void:
-		_blend = value
-		_layout(), 0.0, 1.0, 0.35)
 
 
 func to_screen(world: Vector2) -> Vector2:

@@ -22,6 +22,13 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
 | 0.3.0 | 2026-11-02 | `85f5905`; exportada desde `dbfb07f` | `alignment-2` | `awakening-1` | «0.3.0 playtest por invitación · decisiones económicas», cerrada el mismo día sin partidas | Reemplazada por 0.3.1 |
 | 0.2.0 | 2026-10-30 / 2026-10-31 | `ae38ec0`; adaptador E4–E6 en `6aa2419` | `alignment-1` | `awakening-1` | QA técnica E7 y «E7 piloto interno de gameplay» (abierta hasta 2026-11-09) | Reemplazada en itch.io por 0.3.0 el 2026-11-02 |
 
+### 0.3.4 — escala original con panel táctil
+
+- **Motivo:** en el teléfono físico no convencieron ni la escala de 0.3.2 (mapa muy pequeño) ni el zoom de 0.3.3 (2026-11-03). Se vuelve a la interfaz de 0.3.1 y se conserva solo la lectura de los poderes.
+- **Interfaz:** se quitan la escala adaptable, el modo compacto, los textos agrandados, las barras más bajas, el aviso para girar el teléfono y el zoom del mapa. Se mantienen del panel de región: acciones antes de las estadísticas, explicación bajo la acción con botón para ejecutarla en táctil, desplazamiento arrastrando y una barra de desplazamiento visible en táctil. Escritorio igual que en 0.3.1 salvo el orden del panel.
+- **Reglas y playtest:** sin cambios (`alignment-2`, `awakening-1`).
+- **Tests:** 39 tests Godot, incluido el flujo táctil de acciones. Capturas a 844×390 CSS con densidad 2 y a 1600×900.
+
 ### 0.3.3 — mapa más grande en teléfonos
 
 - **Motivo:** en la prueba en teléfono físico de 0.3.2 (2026-11-03) el texto ya se leía, pero el mapa quedaba muy pequeño, sobre todo con el panel de región abierto. Se buscó un equilibrio sin volver a achicar el texto.

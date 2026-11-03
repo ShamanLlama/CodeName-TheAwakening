@@ -21,7 +21,7 @@ static func box(fill: Color, edge := Color.TRANSPARENT, width := 0, pad := Vecto
 static func build() -> Theme:
 	var theme := Theme.new()
 	theme.default_font = P.font("body")
-	theme.default_font_size = Kit.fs(16)
+	theme.default_font_size = 16
 
 	theme.set_color("font_color", "Label", P.TEXT)
 
@@ -33,7 +33,7 @@ static func build() -> Theme:
 	theme.set_stylebox("disabled", "Button", box(Color(P.PAPER_SHADE, 0.45), Color(P.PAPER_EDGE, 0.4), 1, pad))
 	theme.set_stylebox("focus", "Button", box(Color.TRANSPARENT, P.CULT, 1))
 	theme.set_font("font", "Button", P.font("display_sc"))
-	theme.set_font_size("font_size", "Button", Kit.fs(19))
+	theme.set_font_size("font_size", "Button", 19)
 	theme.set_color("font_color", "Button", P.TEXT)
 	theme.set_color("font_hover_color", "Button", P.TEXT)
 	theme.set_color("font_pressed_color", "Button", P.CULT)
@@ -55,7 +55,7 @@ static func build() -> Theme:
 	theme.set_stylebox("panel", "TooltipPanel", box(P.PAPER_LIGHT, P.PAPER_EDGE, 1, Vector4(12, 9, 12, 9)))
 	theme.set_color("font_color", "TooltipLabel", P.TEXT)
 	theme.set_font("font", "TooltipLabel", P.font("body"))
-	theme.set_font_size("font_size", "TooltipLabel", Kit.fs(15))
+	theme.set_font_size("font_size", "TooltipLabel", 15)
 
 	theme.set_stylebox("background", "ProgressBar", box(Color(P.TEXT, 0.12), Color.TRANSPARENT, 0, Vector4.ZERO))
 	theme.set_stylebox("fill", "ProgressBar", box(P.CULT, Color.TRANSPARENT, 0, Vector4.ZERO))
@@ -65,11 +65,11 @@ static func build() -> Theme:
 	theme.set_stylebox("grabber_area", "HSlider", box(P.CULT, Color.TRANSPARENT, 0, Vector4(0, 2, 0, 2)))
 	theme.set_stylebox("grabber_area_highlight", "HSlider", box(P.CULT, Color.TRANSPARENT, 0, Vector4(0, 2, 0, 2)))
 
-	# A wider, darker bar on short screens shows there is more to read below.
-	var thumb := 6 if Kit.compact else 3
-	var scroll := box(Color(P.TEXT, 0.06) if Kit.compact else Color.TRANSPARENT, Color.TRANSPARENT, 0, Vector4(thumb, 0, thumb, 0))
+	# On touch screens a wider, darker bar shows there is more to read below.
+	var thumb := 6 if Kit.touch else 3
+	var scroll := box(Color(P.TEXT, 0.06) if Kit.touch else Color.TRANSPARENT, Color.TRANSPARENT, 0, Vector4(thumb, 0, thumb, 0))
 	theme.set_stylebox("scroll", "VScrollBar", scroll)
-	theme.set_stylebox("grabber", "VScrollBar", box(Color(P.TEXT, 0.4 if Kit.compact else 0.22), Color.TRANSPARENT, 0, Vector4(thumb, thumb, thumb, thumb)))
+	theme.set_stylebox("grabber", "VScrollBar", box(Color(P.TEXT, 0.4 if Kit.touch else 0.22), Color.TRANSPARENT, 0, Vector4(thumb, thumb, thumb, thumb)))
 	theme.set_stylebox("grabber_highlight", "VScrollBar", box(Color(P.TEXT, 0.5), Color.TRANSPARENT, 0, Vector4(thumb, thumb, thumb, thumb)))
 	theme.set_stylebox("grabber_pressed", "VScrollBar", box(Color(P.TEXT, 0.6), Color.TRANSPARENT, 0, Vector4(thumb, thumb, thumb, thumb)))
 	return theme

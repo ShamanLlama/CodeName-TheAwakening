@@ -50,17 +50,17 @@ func _ready() -> void:
 	anchor_bottom = 1.0
 	offset_left = -WIDTH - 14
 	offset_right = -14
-	offset_top = screen.TOP + (8 if Kit.compact else 14)
-	offset_bottom = -screen.BOTTOM - (8 if Kit.compact else 14)
+	offset_top = screen.TOP + 14
+	offset_bottom = -screen.BOTTOM - 14
 	_scroll = ScrollContainer.new()
 	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	add_child(_scroll)
 	var margin := MarginContainer.new()
 	margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	for side in ["left", "right", "top", "bottom"]:
-		margin.add_theme_constant_override("margin_" + side, 12 if Kit.compact else 18)
+		margin.add_theme_constant_override("margin_" + side, 18)
 	_scroll.add_child(margin)
-	_body = Kit.vbox(10 if Kit.compact else 14)
+	_body = Kit.vbox(14)
 	margin.add_child(_body)
 
 	var head := Kit.hbox(8)
@@ -117,7 +117,7 @@ func _ready() -> void:
 		tab.toggle_mode = true
 		tab.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		tab.add_theme_font_override("font", P.font("display_sc"))
-		tab.add_theme_font_size_override("font_size", Kit.fs(19))
+		tab.add_theme_font_size_override("font_size", 19)
 		tab.add_theme_stylebox_override("normal", behind)
 		tab.add_theme_stylebox_override("hover", behind)
 		tab.add_theme_stylebox_override("pressed", open)
@@ -189,7 +189,7 @@ func _build_rows() -> void:
 		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		button.custom_minimum_size = Vector2(0, 46 if Kit.touch else 40)
 		button.add_theme_font_override("font", P.font("body"))
-		button.add_theme_font_size_override("font_size", Kit.fs(18))
+		button.add_theme_font_size_override("font_size", 18)
 		for state in ["normal", "disabled"]:
 			button.add_theme_stylebox_override(state, row_style)
 		for state in ["hover", "pressed", "hover_pressed"]:
