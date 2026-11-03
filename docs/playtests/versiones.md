@@ -16,7 +16,8 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
 
 | Versión | Fecha | Commit | Ruleset | Adaptador | Ronda GTC | Estado |
 | --- | --- | --- | --- | --- | --- | --- |
-| 0.3.2 | 2026-11-02 | `cf9a755` | `alignment-2` | `awakening-1` | «0.3.2 playtest por invitación · decisiones económicas», abierta del 2026-11-03 al 2026-11-17 | En itch.io (Restricted con contraseña) |
+| 0.3.3 | 2026-11-03 | `0e54b73` | `alignment-2` | `awakening-1` | «0.3.3 playtest por invitación · decisiones económicas», abierta del 2026-11-03 al 2026-11-17 | En itch.io (Restricted con contraseña) |
+| 0.3.2 | 2026-11-02 | `cf9a755` | `alignment-2` | `awakening-1` | «0.3.2 playtest por invitación · decisiones económicas», cerrada el 2026-11-03 con 1 partida | Reemplazada por 0.3.3 |
 | 0.3.1 | 2026-11-02 | `2256c6c` | `alignment-2` | `awakening-1` | «0.3.1 playtest por invitación · decisiones económicas», cerrada el 2026-11-03 con 2 partidas | Reemplazada por 0.3.2 |
 | 0.3.0 | 2026-11-02 | `85f5905`; exportada desde `dbfb07f` | `alignment-2` | `awakening-1` | «0.3.0 playtest por invitación · decisiones económicas», cerrada el mismo día sin partidas | Reemplazada por 0.3.1 |
 | 0.2.0 | 2026-10-30 / 2026-10-31 | `ae38ec0`; adaptador E4–E6 en `6aa2419` | `alignment-1` | `awakening-1` | QA técnica E7 y «E7 piloto interno de gameplay» (abierta hasta 2026-11-09) | Reemplazada en itch.io por 0.3.0 el 2026-11-02 |
@@ -27,6 +28,8 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
 - **Interfaz:** en pantallas cortas la vista general recorta las latitudes polares (50° S–72° N) y la barra superior baja de 50 a 46. Al abrir una región, el mapa se amplía 1,7 veces sobre ella en la parte libre en lugar de encogerse al lado del panel (antes quedaba a unos dos tercios del ancho de la vista general). Escritorio sin cambios. Detalle en [Interfaz y accesibilidad](../gdd/07_UI_UX/Interfaz_y_accesibilidad.md).
 - **Reglas y playtest:** sin cambios (`alignment-2`, `awakening-1`).
 - **Tests:** 41 tests Godot, incluido uno que comprueba que cada región ampliada queda fuera del panel y dentro de la vista recortada. Capturas a 844×340 CSS con densidad 2 (teléfono con barras del navegador) y 1600×900.
+- **GTC (2026-11-03 UTC):** build «The Awakening 0.3.3 · alignment-2» (`0e54b73`) y ronda nueva, abierta en pausa, probada en el host y habilitada; cierra el 2026-11-17. La ronda 0.3.2 se cerró con 1 partida recibida, que se conserva aparte.
+- **Publicación:** upload `20247015` en itch.io como único archivo jugable; texto de página igual al de 0.3.2 con la versión actualizada. La build alojada coincide con el export (`index.pck` idéntico), arranca sin errores y no envía nada antes de responder. Sin probar todavía en teléfono físico.
 
 ### 0.3.2 — legible en teléfonos y pantallas cortas
 
