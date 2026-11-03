@@ -9,7 +9,7 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
 1. **Versión del juego** (`config/version` en `godot/project.godot`): sube en cada build distribuida. Cambio de reglas o balance → versión menor (0.3.0); solo UI, texto o correcciones → parche (0.2.1).
 2. **Ruleset** (hoy `alignment-1`): cambia con cualquier modificación de reglas o valores de balance. Se envía en `run_started`/`capture_started` y se guarda en los saves.
 3. **Adaptador** (hoy `awakening-1`): cambia si cambian acciones, regiones, doctrinas, eventos o sus campos. Requiere actualizar el contrato en `GTC-page/gtc-web/contracts/playtests/`.
-4. **GTC:** una build nueva exige build y ronda nuevas en el Lab. No se comparan rondas con reglas o política de reloj distintas sin decirlo.
+4. **GTC:** una build nueva exige build y ronda nuevas en el Lab. La build lleva en **cambios de esta build** un resumen de su entrada aquí (versión, fecha, commit, reglas, qué cambió y por qué) y el enlace a este registro; quienes revisan la ronda lo ven en GTC. No se comparan rondas con reglas o política de reloj distintas sin decirlo.
 5. **Entrada en este registro**, en la misma rama que el cambio: fecha, versión, commit, ruleset, adaptador, cambios, motivo y medición que lo respalda.
 
 ## Versiones
@@ -30,6 +30,7 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
 - **Reglas y playtest:** sin cambios (`alignment-2`, `awakening-1`).
 - **Tests:** 39 tests Godot, incluido el flujo táctil de acciones. Capturas a 844×390 CSS con densidad 2 y a 1600×900.
 - **GTC (2026-11-03 UTC):** build «The Awakening 0.3.4 · alignment-2» (`4c9cad6`) y ronda nueva, abierta en pausa, probada en el host y habilitada; cierra el 2026-11-17. La ronda 0.3.3 se cerró con 1 partida recibida, que se conserva aparte.
+- **Notas en GTC (2026-11-03):** desde `6c53954` cada build del Lab tiene el campo «cambios de esta build», visible en la ronda, en la lista del proyecto y en el export. Se completó para las siete builds de The Awakening (E7 QA y piloto, 0.3.0–0.3.4).
 - **Publicación:** upload `20247332` en itch.io como único archivo jugable. La página vuelve a recomendar computadora y avisa que en el teléfono el texto es pequeño ([itch-page.md](itch-page.md)). La build alojada coincide con el export (`index.pck` idéntico), arranca sin errores y no envía nada antes de responder.
 
 ### 0.3.3 — mapa más grande en teléfonos

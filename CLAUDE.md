@@ -7,6 +7,7 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio, se
 - Subir `config/version` en `godot/project.godot` (menor para reglas/balance, parche para UI/texto).
 - Cambio de reglas o balance → nuevo ruleset; cambio de acciones, regiones, doctrinas o eventos → nuevo adaptador y contrato GTC (`../../GTC-page/gtc-web/contracts/playtests/`).
 - Agregar la entrada con fecha, versión, commit, ruleset, adaptador, cambios, motivo y medición.
+- Al publicar, la build nueva en GTC Playtest Lab lleva un resumen de esa entrada en «cambios de esta build».
 
 ## Diseño
 
