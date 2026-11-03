@@ -1,14 +1,14 @@
 # Página de itch.io y mensaje para invitar
 
-Texto publicado el 2026-11-02 (0.3.0, actualizado para 0.3.1 el mismo día) en <https://shamanllamagames.itch.io/the-awakening-of-cthulhu> para el playtest por invitación de `alignment-2`. La página está en modo **Restricted** con contraseña: no aparece en búsquedas de itch.io y solo entra quien tiene enlace y contraseña. La contraseña se comparte con las invitaciones y no se guarda en este repositorio. Debe coincidir con el aviso de participación del juego (`godot/ui/playtest_panel.gd`). Si cambia lo que se recoge, actualizar ambos.
+Texto publicado el 2026-11-02 (0.3.0, actualizado para 0.3.1 y 0.3.2 el mismo día) en <https://shamanllamagames.itch.io/the-awakening-of-cthulhu> para el playtest por invitación de `alignment-2`. La página está en modo **Restricted** con contraseña: no aparece en búsquedas de itch.io y solo entra quien tiene enlace y contraseña. La contraseña se comparte con las invitaciones y no se guarda en este repositorio. Debe coincidir con el aviso de participación del juego (`godot/ui/playtest_panel.gd`). Si cambia lo que se recoge, actualizar ambos.
 
 ## Descripción corta
 
-Build hidden cults, prepare forbidden rites and awaken Cthulhu before the world finds out. Browser playtest 0.3.1.
+Build hidden cults, prepare forbidden rites and awaken Cthulhu before the world finds out. Browser playtest 0.3.2.
 
 ## Descripción de la página
 
-**Playtest 0.3.1 · navegador · 15–20 minutos**
+**Playtest 0.3.2 · navegador · 15–20 minutos**
 
 Dirige un culto secreto de Cthulhu entre 1908 y 1926. Gana seguidores en ocho regiones del mundo, conviértelos en Influence y Dread, prepara tres sitios rituales y completa el rito final cuando las estrellas se alineen, antes de que el mundo descubra lo que haces.
 
@@ -33,11 +33,11 @@ Al pulsar **Begin**, el juego te pregunta si quieres participar. Si eliges «Joi
 
 **Recomendaciones**
 
-Mejor en un navegador de escritorio (Chrome, Edge o Firefox). En teléfono funciona en horizontal y pantalla completa, pero la interfaz todavía está pensada para escritorio.
+Funciona en un navegador de computadora (Chrome, Edge o Firefox) y en el teléfono. En el teléfono, ponlo en horizontal y usa pantalla completa. Toca un poder para leer qué hace y usa el botón que aparece debajo para activarlo. Arrastra el panel para ver el resto.
 
 ---
 
-**Playtest 0.3.1 · browser · 15–20 minutes**
+**Playtest 0.3.2 · browser · 15–20 minutes**
 
 Lead a secret cult of Cthulhu from 1908 to 1926. Grow followers across eight world regions, turn them into Influence and Dread, prepare three ritual sites and complete the final rite when the stars align, before the world finds out what you are.
 
@@ -47,11 +47,13 @@ This is a test build by Lucid Labworks Studio.
 
 **Optional playtest participation:** when you press **Begin**, the game asks whether you want to join. If you choose "Join the playtest & play", it sends GTC Playtest Lab your choices (including difficulty and world seed), resource spending, progress and session times, under a random per-round ID with no name or email. Detailed records are kept for six months. Keep personal details out of the seed. If you choose "Play without sharing", you play normally and nothing is sent. Your answer is remembered on that device; change it any time from Menu → GTC Playtest Lab.
 
+**Phone:** turn it sideways and use full screen. Tap a power to read what it does, then use the button below it to perform it. Drag the panel to scroll.
+
 **Feedback:** did you have to choose where to spend Influence? Were threats and the finale announced in time? What confused you? If you participate, you can leave a comment at the end of a run; anyone can comment below.
 
 ## Mensaje para compartir
 
-> Estamos probando **The Awakening of Cthulhu**, un juego de estrategia en el navegador de Lucid Labworks Studio: diriges un culto secreto y tienes que despertar a Cthulhu antes de que el mundo te descubra. Una partida dura 15–20 minutos y funciona mejor en computadora. El juego está en inglés.
+> Estamos probando **The Awakening of Cthulhu**, un juego de estrategia en el navegador de Lucid Labworks Studio: diriges un culto secreto y tienes que despertar a Cthulhu antes de que el mundo te descubra. Una partida dura 15–20 minutos y se juega en computadora o en el teléfono en horizontal. El juego está en inglés.
 >
 > Al empezar, el juego te pregunta si quieres participar en el playtest. Si aceptas, nos envía tus decisiones y tiempos, sin tu nombre ni correo. Es opcional.
 >

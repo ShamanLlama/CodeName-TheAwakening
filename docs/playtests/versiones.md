@@ -16,7 +16,8 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
 
 | Versión | Fecha | Commit | Ruleset | Adaptador | Ronda GTC | Estado |
 | --- | --- | --- | --- | --- | --- | --- |
-| 0.3.1 | 2026-11-02 | `2256c6c` | `alignment-2` | `awakening-1` | «0.3.1 playtest por invitación · decisiones económicas», abierta del 2026-11-02 al 2026-11-16 | En itch.io (Restricted con contraseña) |
+| 0.3.2 | 2026-11-02 | `cf9a755` | `alignment-2` | `awakening-1` | «0.3.2 playtest por invitación · decisiones económicas», abierta del 2026-11-03 al 2026-11-17 | En itch.io (Restricted con contraseña) |
+| 0.3.1 | 2026-11-02 | `2256c6c` | `alignment-2` | `awakening-1` | «0.3.1 playtest por invitación · decisiones económicas», cerrada el 2026-11-03 con 2 partidas | Reemplazada por 0.3.2 |
 | 0.3.0 | 2026-11-02 | `85f5905`; exportada desde `dbfb07f` | `alignment-2` | `awakening-1` | «0.3.0 playtest por invitación · decisiones económicas», cerrada el mismo día sin partidas | Reemplazada por 0.3.1 |
 | 0.2.0 | 2026-10-30 / 2026-10-31 | `ae38ec0`; adaptador E4–E6 en `6aa2419` | `alignment-1` | `awakening-1` | QA técnica E7 y «E7 piloto interno de gameplay» (abierta hasta 2026-11-09) | Reemplazada en itch.io por 0.3.0 el 2026-11-02 |
 
@@ -26,6 +27,8 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
 - **Interfaz:** escala adaptable según la pantalla (mínimo 0,75 px CSS por unidad), modo compacto con textos más grandes, barras más bajas, inicio y diálogos con desplazamiento, aviso para girar el teléfono. En el panel de región las acciones van primero; en táctil, un toque explica la acción bajo ella con un botón para ejecutarla, y el panel se desplaza arrastrando. Detalle en [Interfaz y accesibilidad](../gdd/07_UI_UX/Interfaz_y_accesibilidad.md).
 - **Reglas y playtest:** sin cambios (`alignment-2`, `awakening-1`). Los eventos no registran qué explicaciones se abren.
 - **Tests:** 40 tests Godot, incluidos escala de texto compacta y flujo táctil de acciones. Capturas a 844×390 CSS con densidad 2 y a 1600×900; sin teléfono físico todavía.
+- **GTC (2026-11-03 UTC):** build «The Awakening 0.3.2 · alignment-2» (`cf9a755`) y ronda nueva con perfil «computadora o teléfono en horizontal», abierta en pausa, probada en el host y habilitada; cierra el 2026-11-17. La ronda 0.3.1 se cerró con 2 partidas recibidas, que se conservan aparte.
+- **Publicación:** upload `20246652` en itch.io como único archivo jugable; la página ahora recomienda computadora o teléfono en horizontal y explica el toque en los poderes ([itch-page.md](itch-page.md)). La build alojada coincide con el export (`index.pck` idéntico), arranca sin errores y no envía nada antes de responder. Sin probar todavía en teléfono físico.
 
 ### 0.3.1 — participación preguntada y recordada
 
