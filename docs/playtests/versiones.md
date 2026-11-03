@@ -21,6 +21,13 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
 | 0.3.0 | 2026-11-02 | `85f5905`; exportada desde `dbfb07f` | `alignment-2` | `awakening-1` | «0.3.0 playtest por invitación · decisiones económicas», cerrada el mismo día sin partidas | Reemplazada por 0.3.1 |
 | 0.2.0 | 2026-10-30 / 2026-10-31 | `ae38ec0`; adaptador E4–E6 en `6aa2419` | `alignment-1` | `awakening-1` | QA técnica E7 y «E7 piloto interno de gameplay» (abierta hasta 2026-11-09) | Reemplazada en itch.io por 0.3.0 el 2026-11-02 |
 
+### 0.3.3 — mapa más grande en teléfonos
+
+- **Motivo:** en la prueba en teléfono físico de 0.3.2 (2026-11-03) el texto ya se leía, pero el mapa quedaba muy pequeño, sobre todo con el panel de región abierto. Se buscó un equilibrio sin volver a achicar el texto.
+- **Interfaz:** en pantallas cortas la vista general recorta las latitudes polares (50° S–72° N) y la barra superior baja de 50 a 46. Al abrir una región, el mapa se amplía 1,7 veces sobre ella en la parte libre en lugar de encogerse al lado del panel (antes quedaba a unos dos tercios del ancho de la vista general). Escritorio sin cambios. Detalle en [Interfaz y accesibilidad](../gdd/07_UI_UX/Interfaz_y_accesibilidad.md).
+- **Reglas y playtest:** sin cambios (`alignment-2`, `awakening-1`).
+- **Tests:** 41 tests Godot, incluido uno que comprueba que cada región ampliada queda fuera del panel y dentro de la vista recortada. Capturas a 844×340 CSS con densidad 2 (teléfono con barras del navegador) y 1600×900.
+
 ### 0.3.2 — legible en teléfonos y pantallas cortas
 
 - **Motivo:** en el teléfono la interfaz era ilegible y las descripciones de los poderes quedaban fuera de la pantalla sin forma de leerlas (reporte del 2026-11-02).

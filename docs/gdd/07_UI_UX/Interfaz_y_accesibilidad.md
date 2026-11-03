@@ -1,6 +1,6 @@
 # Interfaz, aprendizaje y accesibilidad
 
-**Versión:** 0.2 · **Fecha:** 2026-11-02 · **Estado:** flujo Godot documentado; pantallas cortas y táctiles adaptadas en 0.3.2; usabilidad por validar.
+**Versión:** 0.3 · **Fecha:** 2026-11-03 · **Estado:** flujo Godot documentado; pantallas cortas y táctiles adaptadas en 0.3.2, mapa ampliado en 0.3.3; usabilidad por validar.
 
 ## Flujo implementado
 
@@ -32,7 +32,9 @@ para prepararlo y completar el rito, considerando las aceleraciones disponibles.
 
 El diseño base es 1600×900. Antes se reducía entero a cualquier pantalla: en un teléfono horizontal (~844×390 px CSS) un texto de 15 quedaba en unos 6,5 px. Ahora `main._fit_window()` reduce la altura base hasta 520 para que una unidad nunca mida menos de 0,75 px CSS, usando la densidad del navegador. Con menos de 760 de altura base se activa el modo compacto (`Kit.compact`): los textos de lectura crecen (`Kit.fs`, mínimo 15), las barras son más bajas, el teletipo inferior queda en una línea, el título de inicio se reduce, y el formulario de inicio y los diálogos se desplazan dentro de su hoja con barra visible. En vertical, un aviso pide girar el teléfono. Una ventana de escritorio normal no cambia.
 
-En el panel de región, las acciones y su explicación van antes de las estadísticas. Con ratón, pasar sobre una acción la explica y hacer clic la ejecuta. En pantallas táctiles (`Kit.touch`) un toque solo abre la explicación bajo esa acción, con un botón para ejecutarla; otro toque la cierra. El panel se desplaza arrastrando, y un arrastre no pulsa el botón bajo el dedo. No se ha probado todavía en un teléfono físico con esta versión.
+En el panel de región, las acciones y su explicación van antes de las estadísticas. Con ratón, pasar sobre una acción la explica y hacer clic la ejecuta. En pantallas táctiles (`Kit.touch`) un toque solo abre la explicación bajo esa acción, con un botón para ejecutarla; otro toque la cierra. El panel se desplaza arrastrando, y un arrastre no pulsa el botón bajo el dedo. Primera prueba en teléfono físico (0.3.2, 2026-11-03): el texto se lee, pero el mapa quedaba muy pequeño.
+
+Mapa en pantallas cortas (0.3.3): la vista general recorta las latitudes polares (se ven de 50° S a 72° N) y llena la altura disponible; la barra superior baja a 46. Al abrir una región, el mapa ya no se encoge al lado del panel: se amplía 1,7 veces sobre esa región, centrada en la parte que el panel no tapa, con una transición corta; al cerrar el panel vuelve a la vista general. Así el texto mantiene el tamaño de 0.3.2 y el mapa gana espacio. En escritorio el mapa sigue completo al lado del panel.
 
 ## Barreras por comprobar
 

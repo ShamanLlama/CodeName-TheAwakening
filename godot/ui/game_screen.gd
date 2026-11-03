@@ -10,8 +10,10 @@ const Dialogs = preload("res://ui/dialogs.gd")
 const Gauges = preload("res://ui/gauges.gd")
 const LAMP_SHADER = preload("res://ui/lamp.gdshader")
 # Bar heights; slimmer on short screens so the chart and the case file keep their room.
-var TOP := 50.0 if Kit.compact else 58.0
+var TOP := 46.0 if Kit.compact else 58.0
 var BOTTOM := 82.0 if Kit.compact else 104.0
+## How much a short screen magnifies the open region.
+const FOCUS_SCALE := 1.7
 
 var game
 var map: WorldMap
@@ -54,6 +56,7 @@ func _ready() -> void:
 	backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(backdrop)
 	map = WorldMap.new()
+	map.trim_poles = Kit.compact
 	map.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	map.offset_top = TOP + 8
 	map.offset_bottom = -BOTTOM - 8
@@ -87,8 +90,12 @@ func _ready() -> void:
 func select(id: String) -> void:
 	selected = id
 	panel.show_region(id)
-	# Keep the whole world visible beside the panel.
-	map.offset_right = -(panel.WIDTH + 28)
+	# Short screens magnify the region in the uncovered part of the map; tall ones keep the
+	# whole world visible beside the file.
+	if Kit.compact:
+		map.focus(id, panel.WIDTH + 22, FOCUS_SCALE)
+	else:
+		map.offset_right = -(panel.WIDTH + 28)
 	map.set_state(game.state, selected)
 
 
@@ -96,6 +103,7 @@ func deselect() -> void:
 	selected = ""
 	panel.show_region("")
 	map.offset_right = 0
+	map.focus("")
 	map.set_state(game.state, selected)
 
 
