@@ -16,7 +16,8 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
 
 | Versión | Fecha | Commit | Ruleset | Adaptador | Ronda GTC | Estado |
 | --- | --- | --- | --- | --- | --- | --- |
-| 0.3.3 | 2026-11-03 | `0e54b73` | `alignment-2` | `awakening-1` | «0.3.3 playtest por invitación · decisiones económicas», abierta del 2026-11-03 al 2026-11-17 | En itch.io (Restricted con contraseña) |
+| 0.3.4 | 2026-11-03 | `4c9cad6` | `alignment-2` | `awakening-1` | «0.3.4 playtest por invitación · decisiones económicas», abierta del 2026-11-03 al 2026-11-17 | En itch.io (Restricted con contraseña) |
+| 0.3.3 | 2026-11-03 | `0e54b73` | `alignment-2` | `awakening-1` | «0.3.3 playtest por invitación · decisiones económicas», cerrada el mismo día con 1 partida | Reemplazada por 0.3.4 |
 | 0.3.2 | 2026-11-02 | `cf9a755` | `alignment-2` | `awakening-1` | «0.3.2 playtest por invitación · decisiones económicas», cerrada el 2026-11-03 con 1 partida | Reemplazada por 0.3.3 |
 | 0.3.1 | 2026-11-02 | `2256c6c` | `alignment-2` | `awakening-1` | «0.3.1 playtest por invitación · decisiones económicas», cerrada el 2026-11-03 con 2 partidas | Reemplazada por 0.3.2 |
 | 0.3.0 | 2026-11-02 | `85f5905`; exportada desde `dbfb07f` | `alignment-2` | `awakening-1` | «0.3.0 playtest por invitación · decisiones económicas», cerrada el mismo día sin partidas | Reemplazada por 0.3.1 |
@@ -28,6 +29,8 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
 - **Interfaz:** se quitan la escala adaptable, el modo compacto, los textos agrandados, las barras más bajas, el aviso para girar el teléfono y el zoom del mapa. Se mantienen del panel de región: acciones antes de las estadísticas, explicación bajo la acción con botón para ejecutarla en táctil, desplazamiento arrastrando y una barra de desplazamiento visible en táctil. Escritorio igual que en 0.3.1 salvo el orden del panel.
 - **Reglas y playtest:** sin cambios (`alignment-2`, `awakening-1`).
 - **Tests:** 39 tests Godot, incluido el flujo táctil de acciones. Capturas a 844×390 CSS con densidad 2 y a 1600×900.
+- **GTC (2026-11-03 UTC):** build «The Awakening 0.3.4 · alignment-2» (`4c9cad6`) y ronda nueva, abierta en pausa, probada en el host y habilitada; cierra el 2026-11-17. La ronda 0.3.3 se cerró con 1 partida recibida, que se conserva aparte.
+- **Publicación:** upload `20247332` en itch.io como único archivo jugable. La página vuelve a recomendar computadora y avisa que en el teléfono el texto es pequeño ([itch-page.md](itch-page.md)). La build alojada coincide con el export (`index.pck` idéntico), arranca sin errores y no envía nada antes de responder.
 
 ### 0.3.3 — mapa más grande en teléfonos
 
