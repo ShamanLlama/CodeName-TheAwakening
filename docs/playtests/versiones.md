@@ -16,8 +16,8 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
 
 | Versión | Fecha | Commit | Ruleset | Adaptador | Ronda GTC | Estado |
 | --- | --- | --- | --- | --- | --- | --- |
-| 0.3.5 | 2026-11-06 | sin commit todavía | `alignment-2` | `awakening-1` | Sin ronda; requiere build y ronda nuevas antes de publicarse | Local, sin publicar |
-| 0.3.4 | 2026-11-03 | `4c9cad6` | `alignment-2` | `awakening-1` | «0.3.4 playtest por invitación · decisiones económicas», abierta del 2026-11-03 al 2026-11-17 | En itch.io (Restricted con contraseña) |
+| 0.3.5 | 2026-11-06 | `88e10fc` | `alignment-2` | `awakening-1` | «0.3.5 playtest por invitación · decisiones económicas», abierta del 2026-11-07 al 2026-11-21 (UTC) | En itch.io (Restricted con contraseña) |
+| 0.3.4 | 2026-11-03 | `4c9cad6` | `alignment-2` | `awakening-1` | «0.3.4 playtest por invitación · decisiones económicas», cerrada el 2026-11-07 con 4 partidas | Reemplazada por 0.3.5 |
 | 0.3.3 | 2026-11-03 | `0e54b73` | `alignment-2` | `awakening-1` | «0.3.3 playtest por invitación · decisiones económicas», cerrada el mismo día con 1 partida | Reemplazada por 0.3.4 |
 | 0.3.2 | 2026-11-02 | `cf9a755` | `alignment-2` | `awakening-1` | «0.3.2 playtest por invitación · decisiones económicas», cerrada el 2026-11-03 con 1 partida | Reemplazada por 0.3.3 |
 | 0.3.1 | 2026-11-02 | `2256c6c` | `alignment-2` | `awakening-1` | «0.3.1 playtest por invitación · decisiones económicas», cerrada el 2026-11-03 con 2 partidas | Reemplazada por 0.3.2 |
@@ -46,6 +46,9 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
   - En el layout compacto, el texto pequeño crece dos unidades y los iconos táctiles miden 52×50.
 - **Chequeo de layout:** `godot/dev/layout_check.gd` recorre cada región, pestaña, explicación de acción y diálogo, y falla si algo sale del lienzo o queda bajo el panel. Con `--crowd=1` agrega amenazas en todas las regiones con célula, una nota abierta y el mapa ampliado, y comprueba que ningún aviso tape a otro. Pasa en 84 combinaciones: 7 escenarios, normales y cargados, a 1600×900, 1280×720 al 130 %, 1600×900 al 160 % táctil y 844×390 CSS al 100, 160 y 200 %. Sobre la copia anterior a la segunda pasada detecta los desbordes que reportó Codex.
 - **Tests:** 49 tests Godot (10 nuevos: motivos de bloqueo, toque en fila bloqueada, final de partida, titular del pronóstico, notas, ajustes guardados, sitio inactivo, escenario del rito, tasas y contorno de regiones). Capturas a 1600×900, 1280×720, 1600×900 al 160 % y teléfono a 844×390 CSS con densidad 2 al 160 y 200 %, y en vertical. Export web probado en Chromium con emulación táctil a 844×390 ×3: arranca sin errores y el toque en 160 % reconstruye la interfaz. El pellizco y el arrastre no se probaron en un teléfono físico.
+
+- **GTC (2026-11-07 UTC):** build «The Awakening 0.3.5 · alignment-2» (`88e10fc`), con su resumen en «cambios de esta build», y ronda nueva, abierta en pausa, probada en el host y habilitada; cierra el 2026-11-21. La ronda 0.3.4 se cerró con 4 partidas recibidas, que se conservan aparte.
+- **Publicación:** upload `20335119` en itch.io como único archivo jugable (`the-awakening-0.3.5-pilot.zip`, exportado desde un checkout limpio de `88e10fc`). La página recomienda en el teléfono jugar en horizontal con un tamaño de interfaz de 160 % o 200 % y explica el pellizco ([itch-page.md](itch-page.md)). La build alojada coincide con el export (`index.pck` idéntico), arranca sin errores y no envía nada antes de responder.
 
 ### 0.3.4 — escala original con panel táctil
 
