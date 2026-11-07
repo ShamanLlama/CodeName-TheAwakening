@@ -49,6 +49,11 @@ var _touches: Dictionary = {}
 var _pinch_distance := 0.0
 var _gesture := false
 var _view_tween: Tween
+## Geometry shared by every chart (title screen and game): computed once per session, since
+## triangulating and tracing the coastlines is the slowest part of starting on a phone.
+static var _ring_cache: Dictionary = {}
+static var _dot_cache: Dictionary = {}
+static var _outline_cache: Dictionary = {}
 
 
 func _ready() -> void:
@@ -61,22 +66,18 @@ func _ready() -> void:
 	add_child(_land)
 	for id in GameData.REGION_IDS:
 		_polys[id] = []
-		for country in Geo.regions()[id]:
-			for ring in country.rings:
-				var poly := Polygon2D.new()
-				poly.polygon = ring
-				# A few rings (Sudan, Belgium) pinch at a vertex and fail to triangulate, which
-				# leaves a hole in the land. Growing them by a hair repairs the fill.
-				if Geometry2D.triangulate_polygon(ring).is_empty():
-					var repaired := Geometry2D.offset_polygon(ring, 0.02)
-					if repaired.size() == 1:
-						poly.polygon = repaired[0]
-				poly.color = P.LAND
-				poly.use_parent_material = true
-				_land.add_child(poly)
-				_polys[id].append(poly)
-		_dots[id] = Geo.scatter(id, MAX_DOTS)
-		_outlines[id] = _outline(id)
+		for ring in _land_rings(id):
+			var poly := Polygon2D.new()
+			poly.polygon = ring
+			poly.color = P.LAND
+			poly.use_parent_material = true
+			_land.add_child(poly)
+			_polys[id].append(poly)
+		if not _dot_cache.has(id):
+			_dot_cache[id] = Geo.scatter(id, MAX_DOTS)
+			_outline_cache[id] = _outline(id)
+		_dots[id] = _dot_cache[id]
+		_outlines[id] = _outline_cache[id]
 	_view_center = _world_rect.get_center()
 	_borders = _layer(_draw_borders)
 	_fx = _layer(_draw_fx)
@@ -105,6 +106,23 @@ func _process(delta: float) -> void:
 	if not Kit.reduced_motion:
 		_time += delta
 	_fx.queue_redraw()
+
+
+## The region's land rings, ready to fill. A few rings (Sudan, Belgium) pinch at a vertex and
+## fail to triangulate, which leaves a hole in the land; growing them by a hair repairs the fill.
+static func _land_rings(id: String) -> Array:
+	if not _ring_cache.has(id):
+		var rings: Array = []
+		for country in Geo.regions()[id]:
+			for ring in country.rings:
+				var fill: PackedVector2Array = ring
+				if Geometry2D.triangulate_polygon(ring).is_empty():
+					var repaired := Geometry2D.offset_polygon(ring, 0.02)
+					if repaired.size() == 1:
+						fill = repaired[0]
+				rings.append(fill)
+		_ring_cache[id] = rings
+	return _ring_cache[id]
 
 
 ## Segments that belong to exactly one country ring of the region: its outer edge.

@@ -16,6 +16,7 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
 
 | Versión | Fecha | Commit | Ruleset | Adaptador | Ronda GTC | Estado |
 | --- | --- | --- | --- | --- | --- | --- |
+| 0.3.6 | 2026-11-06 | sin commit todavía | `alignment-2` | `awakening-1` | Sin ronda; requiere build y ronda nuevas antes de publicarse | Local, sin publicar |
 | 0.3.5 | 2026-11-06 | `88e10fc` | `alignment-2` | `awakening-1` | «0.3.5 playtest por invitación · decisiones económicas», abierta del 2026-11-07 al 2026-11-21 (UTC) | En itch.io (Restricted con contraseña) |
 | 0.3.4 | 2026-11-03 | `4c9cad6` | `alignment-2` | `awakening-1` | «0.3.4 playtest por invitación · decisiones económicas», cerrada el 2026-11-07 con 4 partidas | Reemplazada por 0.3.5 |
 | 0.3.3 | 2026-11-03 | `0e54b73` | `alignment-2` | `awakening-1` | «0.3.3 playtest por invitación · decisiones económicas», cerrada el mismo día con 1 partida | Reemplazada por 0.3.4 |
@@ -23,6 +24,16 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
 | 0.3.1 | 2026-11-02 | `2256c6c` | `alignment-2` | `awakening-1` | «0.3.1 playtest por invitación · decisiones económicas», cerrada el 2026-11-03 con 2 partidas | Reemplazada por 0.3.2 |
 | 0.3.0 | 2026-11-02 | `85f5905`; exportada desde `dbfb07f` | `alignment-2` | `awakening-1` | «0.3.0 playtest por invitación · decisiones económicas», cerrada el mismo día sin partidas | Reemplazada por 0.3.1 |
 | 0.2.0 | 2026-10-30 / 2026-10-31 | `ae38ec0`; adaptador E4–E6 en `6aa2419` | `alignment-1` | `awakening-1` | QA técnica E7 y «E7 piloto interno de gameplay» (abierta hasta 2026-11-09) | Reemplazada en itch.io por 0.3.0 el 2026-11-02 |
+
+### 0.3.6 — carga más rápida
+
+- **Motivo:** en el teléfono la 0.3.5 tardaba mucho en abrir (reporte del 2026-11-06). La medición mostró que no era una regresión: la 0.3.4 tardaba lo mismo. Casi toda la descarga era el motor de Godot (10,6 MB comprimidos de 11,8), con 3D, física, navegación, XR, controles avanzados, SVG e importadores que el juego no usa.
+- **Motor:** plantilla web propia de Godot 4.7.2 (`scripts/build-web-template.sh`, Emscripten 4.0.11, `optimize=size`, LTO). Solo incluye GDScript, FreeType, RegEx, mbedtls y el servidor de texto avanzado sin Graphite. Se descartó el servidor de texto simplificado porque encimaba mayúsculas en las fuentes de época, y `optimize=size_extra` porque arrancaba más lento. Las casillas y el deslizador se dibujan en `UiTheme`, porque el motor ya no trae SVG. Escritorio nativo (Linux y Windows) sin cambios.
+- **Pantalla de carga:** `godot/web/shell.html` reemplaza el logo de Godot por la portada del juego, con una barra de latón y el porcentaje; al terminar la descarga dice «Unsealing the chart». Si tarda más de 8 s, explica que la primera visita descarga todo y las siguientes usan la caché. El fondo de arranque del motor es el del escritorio, sin imagen.
+- **Arranque:** la geometría del mapa (anillos, puntos y contornos) se calcula una vez por sesión y la comparten la portada y el juego.
+- **Medición (Chromium con GPU, teléfono emulado 844×390, CPU 4× más lenta, servidor con gzip como itch.io):** descarga de 11,8 a 6,6 MB. Hasta el juego listo, a 12 Mbps de 12,7 a 9,0 s y a 4 Mbps de 27,7 a 18,3 s (dos corridas por caso). No se midió en un teléfono físico.
+- **Reglas y playtest:** sin cambios (`alignment-2`, `awakening-1`).
+- **Tests:** 49 tests Godot. En el navegador, con la plantilla nueva, el juego arranca, coloca el culto, abre el expediente y el menú sin errores en consola; los textos se dibujan igual que con la plantilla oficial.
 
 ### 0.3.5 — revisión de UX/UI
 

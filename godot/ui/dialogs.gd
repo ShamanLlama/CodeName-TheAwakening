@@ -6,7 +6,7 @@ const P = preload("res://ui/palette.gd")
 const B = preload("res://core/balance.gd")
 const PlaytestPanel = preload("res://ui/playtest_panel.gd")
 const Notes = preload("res://ui/notes.gd")
-const KEYS := [["Space", "pause"], ["1  2", "speed"], ["Tab", "next region"], ["↑ ↓", "pick action"], ["Enter", "act"], ["← →", "file tab"],
+const KEYS := [["Space", "pause"], ["1  2", "speed"], ["Tab", "next region"], ["Up Down", "pick action"], ["Enter", "act"], ["Left Right", "file tab"],
 	["C", "chronicle"], ["D", "doctrine"], ["R", "whole world"], ["N", "close note"], ["Wheel", "zoom"], ["Esc", "menu"]]
 
 var game

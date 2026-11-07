@@ -77,6 +77,8 @@ godot --path godot --resolution 1688x780 --disable-vsync --script res://dev/layo
 
 ## Export
 
+The Web preset uses a smaller custom template built by `scripts/build-web-template.sh` (Godot 4.7.2 source, Emscripten 4.0.11, SCons; it drops 3D, physics, navigation, XR, advanced GUI, SVG and unused importers) and a custom loading screen in `web/shell.html`. Build the template once per machine before exporting; Linux and Windows still use the official templates.
+
 The export templates for 4.7.2 must be installed (Editor → Manage Export Templates, or into `~/.local/share/godot/export_templates/4.7.2.stable/`).
 
 ```bash

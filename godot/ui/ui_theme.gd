@@ -65,6 +65,23 @@ static func build() -> Theme:
 	theme.set_stylebox("grabber_area", "HSlider", box(P.CULT, Color.TRANSPARENT, 0, Vector4(0, 2, 0, 2)))
 	theme.set_stylebox("grabber_area_highlight", "HSlider", box(P.CULT, Color.TRANSPARENT, 0, Vector4(0, 2, 0, 2)))
 
+	# Check boxes and the slider grabber are drawn here, in ink on paper, instead of using the
+	# engine's SVG icons: the web build ships without the SVG module to download faster.
+	var box := 22 if Kit.touch else 18
+	theme.set_icon("unchecked", "CheckBox", _check_icon(box, false, P.TEXT))
+	theme.set_icon("checked", "CheckBox", _check_icon(box, true, P.CULT))
+	theme.set_icon("unchecked_disabled", "CheckBox", _check_icon(box, false, P.FAINT))
+	theme.set_icon("checked_disabled", "CheckBox", _check_icon(box, true, P.FAINT))
+	theme.set_color("font_color", "CheckBox", P.TEXT)
+	theme.set_color("font_hover_color", "CheckBox", P.TEXT)
+	theme.set_color("font_pressed_color", "CheckBox", P.TEXT)
+	theme.set_color("font_hover_pressed_color", "CheckBox", P.TEXT)
+	theme.set_color("font_disabled_color", "CheckBox", P.FAINT)
+	var grab := 22 if Kit.touch else 16
+	theme.set_icon("grabber", "HSlider", _dot_icon(grab, P.CULT))
+	theme.set_icon("grabber_highlight", "HSlider", _dot_icon(grab, P.CULT.lightened(0.15)))
+	theme.set_icon("grabber_disabled", "HSlider", _dot_icon(grab, P.FAINT))
+
 	# On touch screens a wider, darker bar shows there is more to read below.
 	var thumb := 6 if Kit.touch else 3
 	var scroll := box(Color(P.TEXT, 0.06) if Kit.touch else Color.TRANSPARENT, Color.TRANSPARENT, 0, Vector4(thumb, 0, thumb, 0))
@@ -73,3 +90,32 @@ static func build() -> Theme:
 	theme.set_stylebox("grabber_highlight", "VScrollBar", box(Color(P.TEXT, 0.5), Color.TRANSPARENT, 0, Vector4(thumb, thumb, thumb, thumb)))
 	theme.set_stylebox("grabber_pressed", "VScrollBar", box(Color(P.TEXT, 0.6), Color.TRANSPARENT, 0, Vector4(thumb, thumb, thumb, thumb)))
 	return theme
+
+
+## A ruled square, filled with a smaller inked square when checked.
+static func _check_icon(side: int, checked: bool, ink: Color) -> ImageTexture:
+	var image := Image.create_empty(side, side, false, Image.FORMAT_RGBA8)
+	image.fill(Color(P.PAPER_LIGHT, 1.0))
+	for i in side:
+		for edge in [0, 1, side - 2, side - 1]:
+			image.set_pixel(i, edge, ink)
+			image.set_pixel(edge, i, ink)
+	if checked:
+		var inset := int(side * 0.28)
+		image.fill_rect(Rect2i(inset, inset, side - inset * 2, side - inset * 2), ink)
+	return ImageTexture.create_from_image(image)
+
+
+## A filled disc with a paper rim, for slider grabbers.
+static func _dot_icon(side: int, ink: Color) -> ImageTexture:
+	var image := Image.create_empty(side, side, false, Image.FORMAT_RGBA8)
+	var center := Vector2(side, side) * 0.5
+	for y in side:
+		for x in side:
+			var d := Vector2(x + 0.5, y + 0.5).distance_to(center)
+			var r := side * 0.5
+			if d <= r - 1.0:
+				image.set_pixel(x, y, ink if d <= r - 3.0 else P.PAPER_LIGHT)
+			elif d <= r:
+				image.set_pixel(x, y, Color(ink, r - d))
+	return ImageTexture.create_from_image(image)
