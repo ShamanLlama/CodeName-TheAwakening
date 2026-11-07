@@ -11,7 +11,7 @@ godot --path godot            # play
 godot --editor --path godot   # open the editor
 ```
 
-Keys: Space pauses, 1 and 2 set the speed, and Esc closes the region panel or opens the menu. Debug builds add playtest controls to the menu: advance 1, 12 or 120 months.
+Keys: Space pauses, 1 and 2 set the speed, Tab picks the next region, ↑ ↓ choose an action in the open file, Enter performs it, ← → change its tab, C opens the chronicle, D the doctrines, H the guide, R shows the whole map, and Esc closes the region panel or opens the menu. The wheel or a pinch zooms the map and a drag pans it. The menu sets the interface size (100–200 %) and reduced motion. Debug builds add playtest controls to the menu: advance 1, 12 or 120 months.
 
 ## Test
 
@@ -67,7 +67,13 @@ Debug builds have a screenshot harness that builds a realistic state with the sc
 godot --path godot --resolution 1600x900 -- --shot=/tmp/mid.png --scenario=mid --select=africa
 ```
 
-Scenarios: `start`, `placing`, `guide`, `early`, `mid`, `late`, `alignment`, `awakening`, `won`, `lost`. Optional flags: `--select=<region_id>`, `--dialog=menu|doctrine|chronicle|guide`.
+Scenarios: `start`, `placing`, `guide`, `early`, `mid`, `late`, `alignment`, `awakening`, `won`, `lost`. Optional flags: `--select=<region_id>`, `--choose=<action_id>`, `--dialog=menu|doctrine|chronicle|guide`, `--scale=1.6` (interface size), `--touch=1`, `--motion=reduced`, `--hints=1` (show first-time notes).
+
+Layout check (needs a window): stages a scenario, walks every region, tab, action explanation and dialog, and exits 1 if anything leaves the canvas, hides under the region file, or two overlays (timetable, threat clippings, note, whole-world button) cover each other. `--crowd=1` adds a threat to every held region, an open note and a zoomed chart. Pass `--disable-vsync`, or an unfocused window throttles it.
+
+```bash
+godot --path godot --resolution 1688x780 --disable-vsync --script res://dev/layout_check.gd -- --shot=/tmp/unused.png --wait=300 --scenario=late --touch=1 --scale=2
+```
 
 ## Export
 

@@ -34,7 +34,26 @@ static func _one_of(v, choices: Array) -> bool:
 
 
 static func _settings(v) -> bool:
-	return _record(v) and typeof(v.get("muted")) == TYPE_BOOL and _number(v.get("volume"), 100)
+	if not _record(v) or typeof(v.get("muted")) != TYPE_BOOL or not _number(v.get("volume"), 100):
+		return false
+	# Interface preferences added in 0.3.5; older saves simply lack them.
+	if v.has("uiScale") and not _number(v.uiScale, 4):
+		return false
+	if v.has("reducedMotion") and typeof(v.reducedMotion) != TYPE_BOOL:
+		return false
+	if v.has("hints") and (typeof(v.hints) != TYPE_ARRAY or v.hints.any(func(h) -> bool: return typeof(h) != TYPE_STRING)):
+		return false
+	return true
+
+
+## Fills the interface preferences an older save does not carry.
+static func with_default_settings(v: Dictionary) -> Dictionary:
+	var settings := v.duplicate(true)
+	settings.uiScale = float(settings.get("uiScale", 1.0))
+	settings.reducedMotion = bool(settings.get("reducedMotion", false))
+	var hints: Array = settings.get("hints", [])
+	settings.hints = hints.duplicate()
+	return settings
 
 
 static func is_game_state(v) -> bool:

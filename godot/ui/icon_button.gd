@@ -18,7 +18,9 @@ static func make(kind: String, hint: String, on_press: Callable, paper := false)
 	node.glyph = kind
 	node.on_paper = paper
 	node.tooltip_text = hint
-	node.custom_minimum_size = Vector2(40, 36)
+	# Screen readers get the hint without its key; touch targets stay near 44 CSS pixels.
+	node.accessibility_name = hint.split("  (")[0]
+	node.custom_minimum_size = Vector2(52, 50) if Kit.touch and Kit.compact else Vector2(48, 44) if Kit.touch else Vector2(40, 36)
 	node.flat = true
 	node.focus_mode = Control.FOCUS_NONE
 	node.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND

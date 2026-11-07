@@ -7,12 +7,13 @@ extends PanelContainer
 
 const P = preload("res://ui/palette.gd")
 const B = preload("res://core/balance.gd")
+const Notes = preload("res://ui/notes.gd")
 const GROUPS := {
 	"CULT": ["recruit", "expand", "reveal", "hide", "conceal", "counter"],
 	"RITES": ["sacrifice", "manifest", "prepare"],
 	"OMENS": ["exploit", "convert", "reveal_figure"],
 }
-const WIDTH := 392.0
+var WIDTH := 372.0 if Kit.compact else 392.0
 
 var game
 var screen
@@ -48,17 +49,18 @@ func _ready() -> void:
 	anchor_left = 1.0
 	anchor_right = 1.0
 	anchor_bottom = 1.0
-	offset_left = -WIDTH - 14
-	offset_right = -14
-	offset_top = screen.TOP + 14
-	offset_bottom = -screen.BOTTOM - 14
+	var gap := 10 if Kit.compact else 14
+	offset_left = -WIDTH - gap
+	offset_right = -gap
+	offset_top = screen.TOP + gap
+	offset_bottom = -screen.BOTTOM - gap
 	_scroll = ScrollContainer.new()
 	_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	add_child(_scroll)
 	var margin := MarginContainer.new()
 	margin.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	for side in ["left", "right", "top", "bottom"]:
-		margin.add_theme_constant_override("margin_" + side, 18)
+		margin.add_theme_constant_override("margin_" + side, 14 if Kit.compact else 18)
 	_scroll.add_child(margin)
 	_body = Kit.vbox(14)
 	margin.add_child(_body)
@@ -67,7 +69,7 @@ func _ready() -> void:
 	var titles := Kit.vbox(0)
 	titles.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_file = Kit.caption("", P.FAINT)
-	_name = Kit.label("", 36, P.TEXT, "display")
+	_name = Kit.label("", 32 if Kit.compact else 36, P.TEXT, "display")
 	_stance = Kit.caption("")
 	titles.add_child(_file)
 	titles.add_child(_name)
@@ -132,7 +134,12 @@ func _ready() -> void:
 	_body.add_child(_actions)
 	_detail = Kit.vbox(6)
 	_body.add_child(_detail)
-	# Actions and their explanation come first; statistics follow.
+	# Actions and their explanation come first; statistics follow. On short screens the
+	# cards (threat, omen, figure, site) also wait below the actions, so a larger interface
+	# never pushes what the player can do out of view.
+	if Kit.compact:
+		for node in [_cards, _profile]:
+			_body.move_child(node, -1)
 	for node in [_stats, people]:
 		_body.move_child(node, -1)
 	visible = false
@@ -186,30 +193,36 @@ func _build_rows() -> void:
 		var button := Kit.button("")
 		_tap(button, (func() -> void: _choose(id)) if Kit.touch else (func() -> void: game.act(id, region)))
 		button.toggle_mode = Kit.touch
-		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		button.custom_minimum_size = Vector2(0, 46 if Kit.touch else 40)
-		button.add_theme_font_override("font", P.font("body"))
-		button.add_theme_font_size_override("font_size", 18)
+		button.custom_minimum_size = Vector2(0, 52 if Kit.touch else 40)
 		for state in ["normal", "disabled"]:
 			button.add_theme_stylebox_override(state, row_style)
 		for state in ["hover", "pressed", "hover_pressed"]:
 			button.add_theme_stylebox_override(state, row_hover)
-		button.add_theme_color_override("font_pressed_color", P.TEXT)
-		button.add_theme_color_override("font_hover_pressed_color", P.TEXT)
+		# Name on the left, price or the reason it is unavailable on the right.
+		var line := Kit.hbox(10)
+		line.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		line.offset_left = 10
+		line.offset_right = -10
+		line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var title := Kit.label("", 18, P.TEXT, "body")
+		title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		title.clip_text = true
+		title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		title.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var cost := Kit.label("", 14, P.MUTED, "type_bold")
-		cost.set_anchors_preset(Control.PRESET_RIGHT_WIDE)
-		cost.offset_left = -170
-		cost.offset_right = -12
 		cost.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		cost.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		cost.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		button.add_child(cost)
+		line.add_child(title)
+		line.add_child(cost)
+		button.add_child(line)
 		if not Kit.touch:
 			button.mouse_entered.connect(func() -> void:
 				_detail_id = id
 				_refresh_detail())
 		_actions.add_child(button)
-		_rows[id] = { "button": button, "cost": cost }
+		_rows[id] = { "button": button, "title": title, "cost": cost, "styles": [row_style, row_hover] }
 
 
 func refresh() -> void:
@@ -246,12 +259,22 @@ func refresh() -> void:
 		var row: Dictionary = _rows[id]
 		var preview := GameEngine.preview_action(s, id, region)
 		var button: Button = row.button
-		button.text = GameData.ACTIONS[id].name
-		button.disabled = not preview.ok
-		var hidden: bool = id == "reveal" and r.public or id == "hide" and not r.public
+		# On touch a blocked row still opens its explanation; only the perform button is off.
+		button.disabled = not preview.ok and not Kit.touch
+		# Rows that can never apply here are left out: worship already in its state, or a cell
+		# that already exists.
+		var hidden: bool = id == "reveal" and r.public or id == "hide" and not r.public or id == "expand" and r.population.followers > 0
 		button.visible = not hidden
-		row.cost.text = _cost_text(preview)
-		row.cost.add_theme_color_override("font_color", P.FAINT if not preview.ok else P.OMEN if preview.dread > 0 else P.TEXT)
+		var blocked := Notes.blocker(s, id, region, preview)
+		button.tooltip_text = blocked.long
+		# Available: ink and price. Unavailable: muted italic, and the reason in place of the price.
+		var title: Label = row.title
+		title.text = GameData.ACTIONS[id].name
+		title.add_theme_font_override("font", P.font("body" if preview.ok else "italic"))
+		title.add_theme_color_override("font_color", P.TEXT if preview.ok else P.MUTED)
+		row.cost.text = _cost_text(preview) if preview.ok else blocked.short
+		button.accessibility_name = title.text + ", " + (_cost_text(preview).to_lower() if preview.ok else "unavailable: " + blocked.long)
+		row.cost.add_theme_color_override("font_color", P.WARN if not preview.ok else P.OMEN if preview.dread > 0 else P.TEXT)
 	_refresh_detail()
 
 
@@ -322,7 +345,7 @@ func _fill_cards(s: Dictionary, r: Dictionary) -> void:
 		_tap(counter, func() -> void: game.act("counter", region))
 		counter.disabled = not preview.ok
 		counter.tooltip_text = preview.reason
-		box.add_child(counter)
+		box.add_child(_with_reason(counter, Notes.blocker(s, "counter", region, preview).short))
 	if r.opportunity != null:
 		var omen: Dictionary = r.opportunity
 		var box := _card(P.OMEN)
@@ -339,7 +362,7 @@ func _fill_cards(s: Dictionary, r: Dictionary) -> void:
 		button.disabled = not preview.ok
 		button.tooltip_text = preview.effect + ("\n" + preview.reason if not preview.ok else "")
 		box.add_child(Kit.body(preview.effect, 15, P.TEXT, "italic"))
-		box.add_child(button)
+		box.add_child(_with_reason(button, Notes.blocker(s, action, region, preview).short))
 	if r.figure != null:
 		var box := _card(P.OMEN)
 		var who := "celebrity" if r.figure.kind == "celebrity" else "politician"
@@ -349,9 +372,8 @@ func _fill_cards(s: Dictionary, r: Dictionary) -> void:
 			box.add_child(Kit.label("Secret " + who, 20, P.OMEN, "display_sc"))
 			box.add_child(Kit.body("+0.6 Influence each month." if who == "celebrity" else "New threats here arrive 2 months later.", 15, P.TEXT, "italic"))
 	if r.site.invested:
-		var ready: bool = r.site.progress >= B.SITE_MONTHS
-		var supported := Derived.supported(r)
-		var accent := P.DANGER if not supported else P.CULT if ready else P.OMEN
+		var state := Notes.site_state(r)
+		var accent: Color = { "dormant": P.DANGER, "unsupported": P.DANGER, "ready": P.CULT, "preparing": P.OMEN }[state]
 		var box := _card(accent)
 		var head := Kit.hbox(8)
 		var title := Kit.label("Ritual Site", 21, accent, "display_sc")
@@ -366,8 +388,25 @@ func _fill_cards(s: Dictionary, r: Dictionary) -> void:
 		bar.custom_minimum_size = Vector2(0, 6)
 		bar.add_theme_stylebox_override("fill", UiTheme.box(accent, Color.TRANSPARENT, 0, Vector4.ZERO))
 		box.add_child(bar)
-		if not supported:
+		if state == "dormant":
+			box.add_child(Kit.body("Dormant. Upkeep of %s Influence a month is unpaid; it does not count for the rite." % Js.num(B.SITE_UPKEEP), 15, P.DANGER, "italic"))
+		elif state == "unsupported":
 			box.add_child(Kit.body("Stalled. Needs %s followers here." % Format.count(Derived.site_requirement(r)), 15, P.DANGER, "italic"))
+		elif state == "ready":
+			box.add_child(Kit.body("Ready for the final rite.", 15, P.CULT, "italic"))
+
+
+## A stamp, with the short reason it is unavailable underneath.
+func _with_reason(stamp: Button, reason: String) -> Control:
+	stamp.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	if Kit.touch:
+		stamp.custom_minimum_size = Vector2(0, 40)
+	if reason == "":
+		return stamp
+	var column := Kit.vbox(4)
+	column.add_child(stamp)
+	column.add_child(Kit.label(reason, 12, P.WARN, "type_bold"))
+	return column
 
 
 func _fill_profile(s: Dictionary, r: Dictionary) -> void:
@@ -395,9 +434,22 @@ func _fill_profile(s: Dictionary, r: Dictionary) -> void:
 		borders.append(GameData.REGIONS[other].name)
 	_profile.add_child(Kit.body("Spreads to " + ", ".join(borders) + ".", 16, P.MUTED, "italic"))
 	var start := Kit.primary("Begin Here")
+	start.tooltip_text = "Enter"
 	_tap(start, func() -> void: game.place(region))
 	start.disabled = s.status != "placing"
 	_profile.add_child(start)
+
+
+## Every resource an action takes: "40 INF · 60 DREAD", or "" when it is free.
+func _price_text(preview: Dictionary) -> String:
+	var parts: Array[String] = []
+	if preview.influence > 0:
+		parts.append("%d INF" % preview.influence)
+	if preview.dread > 0:
+		parts.append("%d DREAD" % preview.dread)
+	if preview.followers > 0:
+		parts.append("%d FOLLOWERS" % preview.followers)
+	return " · ".join(parts)
 
 
 func _cost_text(preview: Dictionary) -> String:
@@ -432,9 +484,46 @@ func _scroll_to(row: Control) -> void:
 	_scroll.scroll_vertical = maxi(0, int(row.global_position.y - content.global_position.y) - 6)
 
 
+## Keyboard control of the open file: Up and Down pick an action, Enter performs it, Left and
+## Right change the tab. While placing, Enter begins the cult here. Returns true if handled.
+func handle_key(event: InputEventKey) -> bool:
+	if not visible or game.state == null:
+		return false
+	if game.state.status == "placing":
+		if event.keycode in [KEY_ENTER, KEY_KP_ENTER]:
+			game.place(region)
+			return true
+		return false
+	var names: Array = GROUPS.keys()
+	match event.keycode:
+		KEY_UP, KEY_DOWN:
+			var ids: Array = GROUPS[group].filter(func(id: String) -> bool: return _rows.has(id) and _rows[id].button.visible)
+			if ids.is_empty():
+				return true
+			var at := ids.find(_detail_id)
+			var step := 1 if event.keycode == KEY_DOWN else -1
+			_detail_id = ids[posmod(at + step, ids.size())] if at >= 0 else ids[0 if step > 0 else -1]
+			_refresh_detail()
+			_scroll_to(_rows[_detail_id].button)
+			return true
+		KEY_LEFT, KEY_RIGHT:
+			var next: String = names[posmod(names.find(group) + (1 if event.keycode == KEY_RIGHT else -1), names.size())]
+			_set_group(next)
+			return true
+		KEY_ENTER, KEY_KP_ENTER:
+			if _detail_id and _rows.has(_detail_id):
+				game.act(_detail_id, region)
+			return true
+	return false
+
+
 func _refresh_detail() -> void:
 	for id in _rows:
 		_rows[id].button.set_pressed_no_signal(Kit.touch and id == _detail_id)
+		# The explained row stays marked, whether it was reached by mouse or keyboard.
+		var marked: bool = id == _detail_id and not Kit.touch
+		for state in ["normal", "disabled"]:
+			_rows[id].button.add_theme_stylebox_override(state, _rows[id].styles[1 if marked else 0])
 	var preview := GameEngine.preview_action(game.state, _detail_id, region) if _detail_id and game.state != null and _rows.has(_detail_id) else {}
 	# The clock refreshes the file every month; rebuilding an unchanged explanation would
 	# swallow a tap that lands between frames.
@@ -452,18 +541,25 @@ func _refresh_detail() -> void:
 	else:
 		_detail.add_child(Kit.rule())
 		_detail.add_child(Kit.label(GameData.ACTIONS[_detail_id].name, 21, P.TEXT, "display_sc"))
+	# The full price stays in view even when something else blocks the action.
+	var price := _price_text(preview)
+	if price:
+		_detail.add_child(Kit.label("COST  " + price, 13, P.OMEN if preview.dread > 0 else P.TEXT, "type_bold"))
 	_detail.add_child(Kit.body(preview.effect, 15, P.TEXT))
 	if preview.risk:
 		_detail.add_child(Kit.body(preview.risk, 15, P.DANGER, "italic"))
 	if not preview.ok:
-		_detail.add_child(Kit.body(preview.reason, 15, P.WARN, "body_bold"))
+		_detail.add_child(Kit.body(Notes.blocker(game.state, _detail_id, region, preview).long, 15, P.WARN, "body_bold"))
 	if Kit.touch:
 		var id := _detail_id
 		var cost := _cost_text(preview) if preview.ok else ""
-		var perform := Kit.primary(GameData.ACTIONS[id].name + (" · " + cost if cost else ""))
+		# The perform button names the price, never the long action name, so it fits the file.
+		var perform := Kit.primary(("Perform · " + cost.to_lower()) if cost else "Perform")
+		perform.add_theme_font_size_override("font_size", 19)
+		perform.clip_text = true
 		_tap(perform, func() -> void: game.act(id, region))
 		perform.disabled = not preview.ok
-		perform.custom_minimum_size = Vector2(0, 46)
+		perform.custom_minimum_size = Vector2(0, 52)
 		_detail.add_child(perform)
 		var spacer := Control.new()
 		spacer.custom_minimum_size = Vector2(0, 6)

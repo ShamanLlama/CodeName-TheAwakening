@@ -11,6 +11,9 @@ var _difficulty := "normal"
 var _difficulty_buttons: Dictionary = {}
 var _seed: LineEdit
 var _ask: Control
+var resume_button: Button
+var _begin_button: Button
+var _form: Control
 
 
 func _init(owner_game) -> void:
@@ -49,47 +52,54 @@ func _ready() -> void:
 	var margin := MarginContainer.new()
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	for side in ["left", "right"]:
-		margin.add_theme_constant_override("margin_" + side, 96)
+		margin.add_theme_constant_override("margin_" + side, 36 if Kit.compact else 96)
 	for side in ["top", "bottom"]:
-		margin.add_theme_constant_override("margin_" + side, 72)
+		margin.add_theme_constant_override("margin_" + side, 18 if Kit.compact else 72)
 	add_child(margin)
-	var row := Kit.hbox(64)
+	var row := Kit.hbox(28 if Kit.compact else 64)
 	margin.add_child(row)
 
 	var title := Kit.vbox(0)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	title.alignment = BoxContainer.ALIGNMENT_CENTER
 	title.add_child(Kit.label("BEING A CHRONICLE OF THE YEARS 1908 – 1926", 14, P.BRASS, "type_bold"))
-	var name_lines := Kit.vbox(-30)
-	name_lines.add_child(Kit.label("The Awakening", 112, P.LAMP, "display"))
-	var of := Kit.label("of Cthulhu", 92, P.BRASS, "display_italic")
+	var name_lines := Kit.vbox(-16 if Kit.compact else -30)
+	name_lines.add_child(Kit.label("The Awakening", 64 if Kit.compact else 112, P.LAMP, "display"))
+	var of := Kit.label("of Cthulhu", 54 if Kit.compact else 92, P.BRASS, "display_italic")
 	name_lines.add_child(of)
 	title.add_child(name_lines)
 	var gap := Control.new()
 	gap.custom_minimum_size = Vector2(0, 14)
 	title.add_child(gap)
 	var rule := Kit.rule(Color(P.BRASS, 0.7))
-	rule.custom_minimum_size = Vector2(420, 5)
+	rule.custom_minimum_size = Vector2(300 if Kit.compact else 420, 5)
 	rule.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	title.add_child(rule)
 	var gap2 := Control.new()
 	gap2.custom_minimum_size = Vector2(0, 14)
 	title.add_child(gap2)
-	title.add_child(Kit.label("Build the cult. Feed the rite. Wake the god.", 26, P.LAMP_DIM, "display_italic"))
+	title.add_child(Kit.label("Build the cult. Feed the rite. Wake the god.", 21 if Kit.compact else 26, P.LAMP_DIM, "display_italic"))
 	var gap3 := Control.new()
 	gap3.custom_minimum_size = Vector2(0, 22)
 	title.add_child(gap3)
 	title.add_child(Kit.caption("%d months to prepare  ·  3 ritual sites  ·  1 sleeping god" % B.PREPARATION_MONTHS, P.LAMP_DIM))
 	row.add_child(title)
 
-	var setup := Kit.panel(P.PAPER, P.DESK_EDGE, Vector4(32, 30, 32, 30))
+	var pad := 22 if Kit.compact else 32
+	var setup := Kit.panel(P.PAPER, P.DESK_EDGE, Vector4(pad, pad, pad, pad))
 	setup.material = P.paper(0.16)
 	Kit.frame(setup)
-	setup.custom_minimum_size = Vector2(430, 0)
+	setup.custom_minimum_size = Vector2(420 if Kit.compact else 430, 0)
 	setup.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	var form := Kit.vbox(14)
-	setup.add_child(form)
+	# The form scrolls inside its sheet when the screen is short.
+	var form_scroll := ScrollContainer.new()
+	form_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	setup.add_child(form_scroll)
+	var form := Kit.vbox(10 if Kit.compact else 14)
+	form.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	form_scroll.add_child(form)
 	row.add_child(setup)
+	_fit_form.call_deferred(form_scroll, form, setup)
 
 	if game.storage_notice:
 		form.add_child(Kit.body(game.storage_notice, 15, P.WARN, "body_bold"))
@@ -98,6 +108,7 @@ func _ready() -> void:
 		form.add_child(Kit.caption("Run in progress"))
 		form.add_child(Kit.label("%s  ·  %s" % [Format.date(saved.elapsedMonths), GameData.DIFFICULTIES[saved.difficulty].name], 22, P.TEXT, "display"))
 		var resume := Kit.primary("Continue", func() -> void: game.show_game())
+		resume_button = resume
 		resume.custom_minimum_size = Vector2(0, 50)
 		form.add_child(resume)
 		form.add_child(Kit.rule())
@@ -122,22 +133,86 @@ func _ready() -> void:
 	if game.lab.configured() or game.lab.corrupt or game.lab.pending_events() > 0:
 		form.add_child(PlaytestPanel.new(game, true))
 	var begin := Kit.primary("Begin", _begin)
+	_begin_button = begin
 	begin.custom_minimum_size = Vector2(0, 50)
 	form.add_child(begin)
 	_seed.text_submitted.connect(func(_text: String) -> void: _begin())
 	if saved != null and not GameEngine.is_over(saved):
 		form.add_child(Kit.body("Beginning anew replaces the run in progress.", 15, P.MUTED, "italic"))
+	if Kit.touch:
+		form.add_child(_size_picker())
 	if game.last_result != null:
 		var result: Dictionary = game.last_result
 		form.add_child(Kit.body("Last run: %s in %s · seed %s" % ["awakened" if result.won else "failed", Format.date(result.month), result.seed], 15, P.MUTED, "italic"))
 	_pick(_difficulty)
+	# The whole form works from the keyboard: Tab moves, Enter or Space presses.
+	_form = form
+	_enable_focus(form)
+	_focus_form.call_deferred()
 
+	if Kit.compact:
+		return
 	var credit := Kit.label("Map: Natural Earth, public domain  ·  v" + str(ProjectSettings.get_setting("application/config/version")), 12, Color(P.LAMP_DIM, 0.6), "type")
 	credit.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
 	credit.position = Vector2(96, -40)
 	credit.offset_top = -40
 	credit.offset_bottom = -20
 	add_child(credit)
+
+
+## Sizes the form's scroll area to its content, up to the screen's height.
+func _fit_form(scroll: ScrollContainer, form: Control, sheet: PanelContainer) -> void:
+	await get_tree().process_frame
+	if not is_inside_tree():
+		return
+	var pad: float = sheet.get_theme_stylebox("panel").get_minimum_size().y
+	scroll.custom_minimum_size.y = minf(form.get_combined_minimum_size().y, get_viewport_rect().size.y - pad - 40)
+
+
+## Phones start small; the size is offered before the first run, not hidden in the menu.
+func _size_picker() -> Control:
+	var box := Kit.vbox(6)
+	box.add_child(Kit.caption("Interface size"))
+	var row := Kit.hbox(0)
+	var available: Array[float] = game.available_ui_scales()
+	for scale in game.UI_SCALES:
+		var option := Kit.button("%d%%" % roundi(scale * 100), func() -> void: game.set_ui_scale(scale))
+		option.toggle_mode = true
+		option.button_pressed = is_equal_approx(float(game.settings.uiScale), scale)
+		option.disabled = not available.has(scale)
+		option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		option.custom_minimum_size = Vector2(0, 44)
+		row.add_child(option)
+	box.add_child(row)
+	return box
+
+
+## Takes the start form out of the focus order while a sheet covers it, and back afterwards.
+func _set_form_focus(enabled: bool) -> void:
+	_set_focus(_form, enabled)
+	if enabled:
+		_focus_form.call_deferred()
+
+
+## Focuses Continue or Begin, unless a sheet over the form has taken the focus order.
+func _focus_form() -> void:
+	var target: Button = resume_button if resume_button != null else _begin_button
+	if target != null and target.focus_mode != Control.FOCUS_NONE and _ask == null:
+		target.grab_focus()
+
+
+func _set_focus(node: Node, enabled: bool) -> void:
+	for child in node.get_children():
+		if child is BaseButton or child is LineEdit:
+			child.focus_mode = Control.FOCUS_ALL if enabled else Control.FOCUS_NONE
+		_set_focus(child, enabled)
+
+
+func _enable_focus(node: Node) -> void:
+	for child in node.get_children():
+		if child is BaseButton:
+			child.focus_mode = Control.FOCUS_ALL
+		_enable_focus(child)
 
 
 func _begin() -> void:
@@ -183,6 +258,19 @@ func _ask_participation() -> void:
 		row.add_child(button)
 	content.add_child(row)
 	add_child(_ask)
+	# The sheet is modal: the form behind it leaves the focus order until the sheet closes.
+	_set_form_focus(false)
+	for button in [join, skip]:
+		button.focus_mode = Control.FOCUS_ALL
+	join.focus_neighbor_left = skip.get_path()
+	join.focus_neighbor_right = skip.get_path()
+	join.focus_previous = skip.get_path()
+	join.focus_next = skip.get_path()
+	skip.focus_neighbor_left = join.get_path()
+	skip.focus_neighbor_right = join.get_path()
+	skip.focus_previous = join.get_path()
+	skip.focus_next = join.get_path()
+	join.grab_focus.call_deferred()
 
 
 func _answer(join: bool) -> void:
@@ -199,6 +287,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if _ask != null and event is InputEventKey and event.pressed and event.keycode == KEY_ESCAPE:
 		_ask.queue_free()
 		_ask = null
+		_set_form_focus(true)
 		get_viewport().set_input_as_handled()
 
 

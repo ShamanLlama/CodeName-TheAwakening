@@ -6,9 +6,17 @@ const P = preload("res://ui/palette.gd")
 ## Touch devices pick an action first and confirm it, because a tap is also a hover. Set by
 ## main before the theme and the first screen are built.
 static var touch := false
+## True when the interface size leaves a short or narrow canvas (a larger interface, a phone).
+## Set by main before a screen is built; screens slim their bars and let long sheets scroll.
+static var compact := false
+## The player asked for less motion: no pulsing markers, flickering dots or sliding sheets.
+static var reduced_motion := false
 
 
 static func label(text: String, size := 16, color := P.TEXT, weight := "body") -> Label:
+	# The compact layout runs on few, small pixels; small reading type grows by two units.
+	if compact and size < 17:
+		size += 2
 	var node := Label.new()
 	node.text = text
 	node.add_theme_font_override("font", P.font(weight))
@@ -48,8 +56,29 @@ static func primary(text: String, on_press: Callable = Callable(), accent := P.C
 	node.add_theme_stylebox_override("disabled", UiTheme.box(Color(P.PAPER_SHADE, 0.5), Color(P.PAPER_EDGE, 0.5), 1, pad))
 	for state in ["font_color", "font_hover_color", "font_pressed_color", "font_focus_color"]:
 		node.add_theme_color_override(state, P.PAPER_LIGHT)
+	node.add_theme_color_override("font_disabled_color", P.MUTED)
 	node.add_theme_font_override("font", P.font("display_sc"))
 	node.add_theme_font_size_override("font_size", 21)
+	return node
+
+
+## A quiet text link in typed capitals, for secondary destinations such as playtest status.
+static func link(text: String, on_press: Callable) -> Button:
+	var node := button(text, on_press)
+	node.flat = true
+	var pad := Vector4(0, 2, 0, 2)
+	for state in ["normal", "hover", "pressed", "hover_pressed"]:
+		node.add_theme_stylebox_override(state, UiTheme.box(Color.TRANSPARENT, Color.TRANSPARENT, 0, pad))
+	# Keyboard focus underlines the link in verdigris.
+	var focus := UiTheme.box(Color.TRANSPARENT, P.CULT, 0, pad)
+	focus.border_width_bottom = 2
+	node.add_theme_stylebox_override("focus", focus)
+	node.add_theme_font_override("font", P.font("type_bold"))
+	node.add_theme_font_size_override("font_size", 13)
+	node.add_theme_color_override("font_color", P.MUTED)
+	node.add_theme_color_override("font_hover_color", P.TEXT)
+	node.add_theme_color_override("font_pressed_color", P.TEXT)
+	node.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	return node
 
 
@@ -60,13 +89,16 @@ static func stamp(text: String, on_press: Callable, accent: Color) -> Button:
 	node.add_theme_stylebox_override("normal", UiTheme.box(Color(accent, 0.04), accent, 2, pad))
 	node.add_theme_stylebox_override("hover", UiTheme.box(Color(accent, 0.16), accent, 2, pad))
 	node.add_theme_stylebox_override("pressed", UiTheme.box(Color(accent, 0.28), accent, 2, pad))
-	node.add_theme_stylebox_override("disabled", UiTheme.box(Color.TRANSPARENT, Color(accent, 0.3), 2, pad))
+	var off := UiTheme.box(Color.TRANSPARENT, Color(accent, 0.45), 2, pad)
+	off.border_width_left = 1
+	off.border_width_right = 1
+	node.add_theme_stylebox_override("disabled", off)
 	node.add_theme_font_override("font", P.font("type_bold"))
 	node.add_theme_font_size_override("font_size", 14)
 	node.add_theme_color_override("font_color", accent)
 	node.add_theme_color_override("font_hover_color", accent.darkened(0.2))
 	node.add_theme_color_override("font_pressed_color", accent.darkened(0.3))
-	node.add_theme_color_override("font_disabled_color", Color(accent, 0.4))
+	node.add_theme_color_override("font_disabled_color", Color(accent, 0.7))
 	return node
 
 

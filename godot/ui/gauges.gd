@@ -3,6 +3,7 @@ extends RefCounted
 
 const P = preload("res://ui/palette.gd")
 const B = preload("res://core/balance.gd")
+const Notes = preload("res://ui/notes.gd")
 
 
 ## A brass dial with a needle. Past 60% it reads in the red; at 100 the run is lost.
@@ -63,7 +64,12 @@ class Sites extends Control:
 			for id in GameData.REGION_IDS:
 				if state.regions[id].site.invested:
 					sites.append(state.regions[id])
-		sites.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return a.site.progress > b.site.progress)
+		# Ready seals first, then by preparation; the order matches the "n / 3" caption.
+		var rank := { "ready": 3, "preparing": 2, "unsupported": 1, "dormant": 0 }
+		sites.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+			var ra: int = rank[Notes.site_state(a)]
+			var rb: int = rank[Notes.site_state(b)]
+			return ra > rb if ra != rb else a.site.progress > b.site.progress)
 		for i in B.REQUIRED_SITES:
 			var c := Vector2(16 + i * 38, size.y * 0.5)
 			var seal := _seal(c, 12.0)
@@ -74,8 +80,9 @@ class Sites extends Control:
 					draw_line(outline[k], outline[k + 1], P.FAINT, 1.2, true)
 				continue
 			var r: Dictionary = sites[i]
-			var ready: bool = r.site.progress >= B.SITE_MONTHS
-			var color := P.DANGER if not Derived.supported(r) else P.CULT if ready else P.OMEN
+			var state := Notes.site_state(r)
+			var ready := state == "ready"
+			var color: Color = { "dormant": P.DANGER, "unsupported": P.DANGER, "ready": P.CULT, "preparing": P.OMEN }[state]
 			if ready:
 				draw_colored_polygon(seal, color)
 				_star(c, 7.0, P.PAPER_LIGHT)
@@ -87,3 +94,7 @@ class Sites extends Control:
 					draw_colored_polygon(part, Color(color, 0.6))
 				draw_polyline(outline, color, 1.4, true)
 				_star(c, 7.0, Color(color, 0.8))
+			if state in ["dormant", "unsupported"]:
+				# Struck through: stalled, readable without the colour.
+				draw_line(c + Vector2(-11, 11), c + Vector2(11, -11), P.PAPER_LIGHT, 4.0, true)
+				draw_line(c + Vector2(-11, 11), c + Vector2(11, -11), P.DANGER, 2.2, true)

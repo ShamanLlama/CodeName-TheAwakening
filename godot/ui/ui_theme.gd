@@ -31,7 +31,7 @@ static func build() -> Theme:
 	theme.set_stylebox("pressed", "Button", box(P.CULT_WASH, P.CULT, 1, pad))
 	theme.set_stylebox("hover_pressed", "Button", box(P.CULT_WASH, P.CULT, 1, pad))
 	theme.set_stylebox("disabled", "Button", box(Color(P.PAPER_SHADE, 0.45), Color(P.PAPER_EDGE, 0.4), 1, pad))
-	theme.set_stylebox("focus", "Button", box(Color.TRANSPARENT, P.CULT, 1))
+	theme.set_stylebox("focus", "Button", box(Color.TRANSPARENT, P.CULT, 2))
 	theme.set_font("font", "Button", P.font("display_sc"))
 	theme.set_font_size("font_size", "Button", 19)
 	theme.set_color("font_color", "Button", P.TEXT)

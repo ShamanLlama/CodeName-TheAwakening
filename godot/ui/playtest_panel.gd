@@ -31,8 +31,8 @@ func _ready() -> void:
 	_status = Kit.body(game.playtest_status(), 13 if compact else 15, P.MUTED)
 	add_child(_status)
 	if not compact or game.lab.corrupt:
-		add_child(Kit.button("EXPORT LOCAL SAVE & PLAYTEST RECORD", game.export_playtest_record))
-		add_child(Kit.button("STOP & CLEAR UNSENT RECORDS", func() -> void:
+		add_child(Kit.button("Export Local Save & Playtest Record", game.export_playtest_record))
+		add_child(Kit.button("Stop & Clear Unsent Records", func() -> void:
 			game.set_participation(false)
 			choice.set_pressed_no_signal(false)
 			_refresh()))

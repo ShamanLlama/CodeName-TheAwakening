@@ -16,12 +16,36 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
 
 | Versión | Fecha | Commit | Ruleset | Adaptador | Ronda GTC | Estado |
 | --- | --- | --- | --- | --- | --- | --- |
+| 0.3.5 | 2026-11-06 | sin commit todavía | `alignment-2` | `awakening-1` | Sin ronda; requiere build y ronda nuevas antes de publicarse | Local, sin publicar |
 | 0.3.4 | 2026-11-03 | `4c9cad6` | `alignment-2` | `awakening-1` | «0.3.4 playtest por invitación · decisiones económicas», abierta del 2026-11-03 al 2026-11-17 | En itch.io (Restricted con contraseña) |
 | 0.3.3 | 2026-11-03 | `0e54b73` | `alignment-2` | `awakening-1` | «0.3.3 playtest por invitación · decisiones económicas», cerrada el mismo día con 1 partida | Reemplazada por 0.3.4 |
 | 0.3.2 | 2026-11-02 | `cf9a755` | `alignment-2` | `awakening-1` | «0.3.2 playtest por invitación · decisiones económicas», cerrada el 2026-11-03 con 1 partida | Reemplazada por 0.3.3 |
 | 0.3.1 | 2026-11-02 | `2256c6c` | `alignment-2` | `awakening-1` | «0.3.1 playtest por invitación · decisiones económicas», cerrada el 2026-11-03 con 2 partidas | Reemplazada por 0.3.2 |
 | 0.3.0 | 2026-11-02 | `85f5905`; exportada desde `dbfb07f` | `alignment-2` | `awakening-1` | «0.3.0 playtest por invitación · decisiones económicas», cerrada el mismo día sin partidas | Reemplazada por 0.3.1 |
 | 0.2.0 | 2026-10-30 / 2026-10-31 | `ae38ec0`; adaptador E4–E6 en `6aa2419` | `alignment-1` | `awakening-1` | QA técnica E7 y «E7 piloto interno de gameplay» (abierta hasta 2026-11-09) | Reemplazada en itch.io por 0.3.0 el 2026-11-02 |
+
+### 0.3.5 — revisión de UX/UI
+
+- **Motivo:** evaluación de UX/UI del 2026-11-06 (6,5/10 en conjunto). Lo más bajo: teléfono (3), accesibilidad (4), claridad de acciones (6), onboarding (6) y momentos clave (6). Las acciones no disponibles se leían a 2,4:1 y su motivo solo aparecía al pasar el ratón.
+- **Acciones:** las filas no disponibles van en cursiva con tinta legible (5,2:1). En lugar del precio muestran el obstáculo real en pocas palabras («NO CELL HERE», «NO THREAT», «NEED 30 INF», «IN 4 MO»); un obstáculo estructural se antepone al precio. Se oculta «Establish a cell» donde ya hay célula. Los sellos (Obstruct, omens) llevan el motivo debajo. ↑ ↓ eligen acción, Enter la ejecuta y ← → cambian de pestaña.
+- **Doctrina y rito:** el botón de doctrina indica cuánta Influence falta y el diálogo lo repite. Durante la alineación el botón del rito dice «not ready» si aún no se puede.
+- **Final de partida:** la derrota nombra la causa, muestra la lista de sitios y el rito, y da uno o dos consejos para la próxima partida. La victoria tiene hoja propia con fondo violeta, el dístico del Necronomicon y entrada animada. El estado de GTC y el export pasan a enlaces secundarios.
+- **Mapa:** se entinta el contorno de cada región en vez de todas sus fronteras internas, las etiquetas llevan halo de papel y se apartan para no taparse, y los sitios estancados se tachan además de ir en rojo. Rueda o pellizco para acercar, arrastre para desplazar, «Whole world» o R para volver.
+- **Pronóstico y amenazas:** el aviso del calendario ritual tiene un titular («Sites will finish 10 months too late», «1 site lost support»). Los recortes de amenaza dicen sus efectos en palabras («Kills 19 followers», «Site loses 6 months»).
+- **Onboarding:** guía más corta y notas de una frase la primera vez que aparece cada situación (célula, amenaza, omen, sitios, awareness, sitio sin apoyo, doctrina). Se guardan por dispositivo.
+- **Teléfono y tamaño:** tamaño de interfaz de 100, 130, 160 o 200 % en el menú y, en pantallas táctiles, en el inicio. Por defecto sigue en 100 %, como en 0.3.4. Con tamaños grandes se activa un layout compacto: barras más bajas, sin crónica en la barra, recortes de amenaza reducidos, pronóstico plegable y hojas con desplazamiento. En vertical, un aviso pide girar el teléfono.
+- **Accesibilidad:** opción de movimiento reducido, foco de teclado en los diálogos, tabla de atajos (Tab, C, D, H, R), WARN y FAINT con más contraste, estado de los sitios distinguible sin color y tasas con un decimal.
+- **Reglas y playtest:** sin cambios (`alignment-2`, `awakening-1`). Los ajustes nuevos (`uiScale`, `reducedMotion`, `hints`) son opcionales en el guardado y los saves de 0.3.4 cargan igual. El arnés de capturas ya no invierte `won` y `lost`.
+- **Segunda pasada (revisión independiente de Codex, 6,5/10):** el panel ya no se ensancha con explicaciones largas: el botón táctil dice «Perform · coste». La barra inferior compacta cabe al 200 % y el botón del rito queda en «Final Rite». El pronóstico se centra en la parte visible del mapa y, durante el rito, muestra una barra de progreso que no se oculta. En táctil, una fila bloqueada abre su explicación con el botón desactivado. Un sitio con mantenimiento impago se ve igual en tarjeta, mapa, sellos y listas: tachado y «Dormant». Las etiquetas del mapa esquivan sitios, omens y cuentas atrás. Foco de teclado en el inicio y en la hoja de participación, y N cierra las notas. Una nota abierta más de 12 s cede su lugar a la siguiente. En pantallas cortas las tarjetas del panel van después de las acciones y las filas táctiles miden 52. El plazo cambia a ámbar en los últimos 36 meses. FAINT pasa a 4,7:1. El escenario `awakening` del arnés ya muestra el rito en curso.
+- **Tercera pasada (segunda revisión de Codex, 7,5/10):**
+  - Los avisos se reparten el mapa visible sin taparse: el pronóstico se aparta a la derecha de las amenazas, la columna de amenazas se desplaza y se detiene encima del pronóstico, «Whole world» va arriba a la derecha y una nota sin hueco libre espera sin darse por leída.
+  - Las notas ya no se apilan: se registran como vistas solo cuando se muestran, sin reentrar en el refresco.
+  - El detalle de cada acción muestra el precio completo («COST 40 INF · 60 DREAD») aunque otra cosa la bloquee.
+  - La hoja de participación encierra el foco y lo devuelve al formulario al cerrarse; los enlaces muestran foco.
+  - Botones de icono y filas de acción tienen `accessibility_name` para lectores de pantalla (escritorio nativo).
+  - En el layout compacto, el texto pequeño crece dos unidades y los iconos táctiles miden 52×50.
+- **Chequeo de layout:** `godot/dev/layout_check.gd` recorre cada región, pestaña, explicación de acción y diálogo, y falla si algo sale del lienzo o queda bajo el panel. Con `--crowd=1` agrega amenazas en todas las regiones con célula, una nota abierta y el mapa ampliado, y comprueba que ningún aviso tape a otro. Pasa en 84 combinaciones: 7 escenarios, normales y cargados, a 1600×900, 1280×720 al 130 %, 1600×900 al 160 % táctil y 844×390 CSS al 100, 160 y 200 %. Sobre la copia anterior a la segunda pasada detecta los desbordes que reportó Codex.
+- **Tests:** 49 tests Godot (10 nuevos: motivos de bloqueo, toque en fila bloqueada, final de partida, titular del pronóstico, notas, ajustes guardados, sitio inactivo, escenario del rito, tasas y contorno de regiones). Capturas a 1600×900, 1280×720, 1600×900 al 160 % y teléfono a 844×390 CSS con densidad 2 al 160 y 200 %, y en vertical. Export web probado en Chromium con emulación táctil a 844×390 ×3: arranca sin errores y el toque en 160 % reconstruye la interfaz. El pellizco y el arrastre no se probaron en un teléfono físico.
 
 ### 0.3.4 — escala original con panel táctil
 

@@ -15,8 +15,10 @@ static func count(value: float) -> String:
 	return ("-" if negative else "") + digits + grouped
 
 
+## Monthly rates read to one decimal: +4.1. Two decimals suggested a precision nobody plans with.
 static func rate(value: float) -> String:
-	return ("+" if value >= 0 else "") + "%.2f" % value
+	var rounded := snappedf(value, 0.1)
+	return ("+" if rounded >= 0 else "−") + "%.1f" % absf(rounded)
 
 
 static func months(value: int) -> String:

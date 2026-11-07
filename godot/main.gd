@@ -8,9 +8,17 @@ signal events(entries: Array)
 const B = preload("res://core/balance.gd")
 const StartScreen = preload("res://ui/start_screen.gd")
 const GameScreen = preload("res://ui/game_screen.gd")
+const P = preload("res://ui/palette.gd")
+## Interface sizes the player can pick. The canvas is designed at 1600x900; a larger size shows
+## the same layout over fewer, bigger units.
+const UI_SCALES: Array[float] = [1.0, 1.3, 1.6, 2.0]
+## A layout narrower or shorter than this, in canvas units, switches to the compact layout.
+const COMPACT_SIZE := Vector2(1240, 700)
+## The smallest canvas the compact layout fits.
+const MIN_CANVAS_HEIGHT := 430.0
 
 var state = null
-var settings := { "muted": false, "volume": 40.0 }
+var settings := { "muted": false, "volume": 40.0, "uiScale": 1.0, "reducedMotion": false, "hints": [] }
 var tutorial_complete := false
 var last_result = null
 var blocked := false
@@ -32,6 +40,7 @@ var _elapsed := 0.0
 var _holds := 0
 var _screen: Control
 var _shot := {}
+var _rotate: Control
 
 
 func _ready() -> void:
@@ -39,6 +48,7 @@ func _ready() -> void:
 	Kit.touch = DisplayServer.is_touchscreen_available() or _shot.has("touch")
 	theme = UiTheme.build()
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	get_window().size_changed.connect(_on_window_resized)
 	sfx = Sfx.new()
 	add_child(sfx)
 	if _shot:
@@ -52,7 +62,7 @@ func _ready() -> void:
 		var loaded := lab_platform.load_save()
 		var save: Dictionary = loaded.save
 		state = save.state
-		settings = save.settings
+		settings = SaveData.with_default_settings(save.settings)
 		tutorial_complete = save.tutorialComplete
 		last_result = save.lastResult
 		blocked = loaded.blocked
@@ -72,6 +82,12 @@ func _ready() -> void:
 		lab_client.setup(lab, lab_platform, _commit)
 		add_child(lab_client)
 	_apply_audio()
+	if _shot.has("scale"):
+		settings.uiScale = float(_shot.scale)
+	if _shot.has("motion"):
+		settings.reducedMotion = _shot.motion == "reduced"
+	Kit.reduced_motion = settings.reducedMotion
+	_fit_window()
 	if _shot:
 		_stage_shot.call_deferred()
 	else:
@@ -151,6 +167,139 @@ func _swap(screen: Control) -> void:
 		_screen.queue_free()
 	_screen = screen
 	add_child(screen)
+	if _rotate != null and _rotate.visible:
+		move_child(_rotate, -1)
+
+
+# --- Interface size and orientation ------------------------------------------------------
+
+## Applies the chosen interface size and decides whether the canvas needs the compact layout.
+## Returns true when the layout changed, so the caller can rebuild the screen.
+func _fit_window() -> bool:
+	var window := get_window()
+	var scale := clampf(float(settings.get("uiScale", 1.0)), 1.0, UI_SCALES[-1])
+	# Never shrink the canvas below what the compact layout fits.
+	scale = minf(scale, maxf(1.0, _canvas_at(1.0).y / MIN_CANVAS_HEIGHT))
+	window.content_scale_factor = scale
+	var canvas := _canvas_at(scale)
+	var was := Kit.compact
+	Kit.compact = canvas.x < COMPACT_SIZE.x or canvas.y < COMPACT_SIZE.y
+	_show_rotate_hint()
+	return was != Kit.compact
+
+
+## The canvas size, in layout units, that [param scale] gives in the current window.
+func _canvas_at(scale: float) -> Vector2:
+	var window := get_window()
+	var base := Vector2(window.content_scale_size)
+	if base.x <= 0 or base.y <= 0:
+		base = Vector2(1600, 900)
+	var pixels := Vector2(window.size)
+	if pixels.x <= 0 or pixels.y <= 0:
+		return base / scale
+	# canvas_items with "expand": the base fits the window, then the longer side grows.
+	var fit := minf(pixels.x / base.x, pixels.y / base.y) * scale
+	return pixels / fit
+
+
+## The interface sizes that still leave room for the compact layout in this window.
+func available_ui_scales() -> Array[float]:
+	var largest := maxf(1.0, _canvas_at(1.0).y / MIN_CANVAS_HEIGHT)
+	return UI_SCALES.filter(func(value: float) -> bool: return value <= largest + 0.001)
+
+
+func set_ui_scale(scale: float) -> void:
+	settings.uiScale = scale
+	_fit_window()
+	_commit()
+	_rebuild_screen()
+
+
+func set_reduced_motion(reduced: bool) -> void:
+	settings.reducedMotion = reduced
+	Kit.reduced_motion = reduced
+	_commit()
+
+
+func _on_window_resized() -> void:
+	if _fit_window():
+		_rebuild_screen()
+
+
+## Sizes are fixed when a screen is built, so a new layout rebuilds the current screen.
+func _rebuild_screen() -> void:
+	if _screen == null:
+		return
+	theme = UiTheme.build()
+	if _screen is GameScreen:
+		var region: String = _screen.selected
+		var dialog: String = _screen.dialogs.kind
+		_holds = 0
+		_swap(GameScreen.new(self))
+		if region:
+			_screen.select.call_deferred(region)
+		if dialog:
+			_screen.open_dialog.call_deferred(dialog)
+	else:
+		show_start()
+
+
+## A phone held upright cannot show the chart at a readable size; ask for landscape.
+## The upright canvas is very tall, so the hint is sized to the real screen width.
+func _show_rotate_hint() -> void:
+	var size := Vector2(get_window().size)
+	var upright := Kit.touch and size.x < size.y
+	if not upright:
+		if _rotate != null:
+			_rotate.visible = false
+		return
+	if _rotate == null:
+		_rotate = ColorRect.new()
+		_rotate.color = P.DESK
+		_rotate.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		_rotate.mouse_filter = Control.MOUSE_FILTER_STOP
+		add_child(_rotate)
+	Kit.clear(_rotate)
+	var factor := maxf(1.0, _canvas_at(get_window().content_scale_factor).x / 480.0)
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var column := Kit.vbox(roundi(18 * factor))
+	var glyph := RotateGlyph.new()
+	glyph.custom_minimum_size = Vector2(120, 120) * factor
+	glyph.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	column.add_child(glyph)
+	var text := Kit.label("Turn your phone sideways", roundi(34 * factor), P.LAMP, "display")
+	text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	column.add_child(text)
+	var sub := Kit.label("The chart needs the long side of the screen.", roundi(19 * factor), P.LAMP_DIM, "display_italic")
+	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	column.add_child(sub)
+	center.add_child(column)
+	_rotate.add_child(center)
+	_rotate.visible = true
+	move_child(_rotate, -1)
+	if state != null and GameEngine.is_active(state) and state.speed != 0:
+		set_speed(0)
+
+
+## A phone outline turning a quarter.
+class RotateGlyph extends Control:
+	func _init() -> void:
+		custom_minimum_size = Vector2(120, 120)
+
+	func _draw() -> void:
+		var k := size.x / 120.0
+		var c := size * 0.5
+		var ink := Color("bf9a55")
+		draw_set_transform(c, 0.0, Vector2(k, k))
+		draw_rect(Rect2(Vector2(-22, -38), Vector2(44, 76)), Color(ink, 0.35), false, 2.0)
+		draw_set_transform(c, PI / 2, Vector2(k, k))
+		draw_rect(Rect2(Vector2(-22, -38), Vector2(44, 76)), ink, false, 2.5)
+		draw_set_transform(c, 0.0, Vector2(k, k))
+		draw_arc(Vector2.ZERO, 54, -PI * 0.85, -PI * 0.6, 16, ink, 2.0, true)
+		var tip := Vector2.from_angle(-PI * 0.6) * 54
+		draw_line(tip, tip + Vector2(-9, -2), ink, 2.0, true)
+		draw_line(tip, tip + Vector2(-2, 9), ink, 2.0, true)
 
 
 ## Dialogs and the guide hold the clock while open.
@@ -274,9 +423,21 @@ func _apply(result: Dictionary, kind := "", payload := {}) -> void:
 
 
 func set_audio(muted: bool, volume: float) -> void:
-	settings = { "muted": muted, "volume": volume }
+	settings.muted = muted
+	settings.volume = volume
 	_apply_audio()
 	_commit()
+
+
+## Contextual tips are shown once per device.
+func hint_seen(id: String) -> bool:
+	return settings.hints.has(id)
+
+
+func mark_hint(id: String) -> void:
+	if not settings.hints.has(id):
+		settings.hints.append(id)
+		_commit()
 
 
 func complete_tutorial() -> void:
@@ -475,6 +636,7 @@ func _shot_args() -> Dictionary:
 func _stage_shot() -> void:
 	var scenario: String = _shot.get("scenario", "start")
 	tutorial_complete = scenario != "guide"
+	settings.hints = [] if _shot.has("hints") else ["first_cell", "spread", "threat", "omen", "sites", "doctrine", "awareness", "unsupported", "sacrifice"]
 	match scenario:
 		"start":
 			show_start()
@@ -495,18 +657,27 @@ func _stage_shot() -> void:
 			state = GameEngine.advance_simulation(state, 14)
 			show_game()
 		"awakening":
-			state = Playthrough.play("early", "rlyeh", 206)
+			# This seed's run reaches the final rite; month 206 is six months into it.
+			state = Playthrough.play("early", "resume", 206)
 			show_game()
 		_:
 			var months := { "mid": 96, "late": 170, "alignment": 200, "won": B.DEADLINE, "lost": B.DEADLINE }
-			state = Playthrough.play("early", "resume" if scenario == "lost" else "rlyeh", months.get(scenario, 96))
+			# With this strategy the "resume" seed awakens Cthulhu and "rlyeh" runs out of time.
+			state = Playthrough.play("early", "resume" if scenario == "won" else "rlyeh", months.get(scenario, 96))
 			show_game()
 	if _shot.has("select") and _screen is GameScreen:
 		_screen.select(_shot.select)
 		if _shot.has("choose"):
+			for group in _screen.panel.GROUPS:
+				if _screen.panel.GROUPS[group].has(_shot.choose):
+					_screen.panel._set_group(group)
 			_screen.panel._choose(_shot.choose)
 	if _shot.has("dialog") and _screen is GameScreen:
-		_screen.open_dialog(_shot.dialog)
+		# --dialog=none shows the screen without the dialog a phase opens by itself.
+		if _shot.dialog == "none":
+			_screen.dialogs.close()
+		else:
+			_screen.open_dialog(_shot.dialog)
 	for _frame in 20:
 		await get_tree().process_frame
 	await get_tree().create_timer(float(_shot.get("wait", "0.6"))).timeout
