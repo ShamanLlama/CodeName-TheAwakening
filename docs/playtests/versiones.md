@@ -7,8 +7,8 @@ Cada build que pueda llegar a un playtest, con o sin GTC Playtest Lab, tiene una
 Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
 
 1. **Versión del juego** (`config/version` en `godot/project.godot`): sube en cada build distribuida. Cambio de reglas o balance → versión menor (0.3.0); solo UI, texto o correcciones → parche (0.2.1).
-2. **Ruleset** (hoy `alignment-1`): cambia con cualquier modificación de reglas o valores de balance. Se envía en `run_started`/`capture_started` y se guarda en los saves.
-3. **Adaptador** (hoy `awakening-1`): cambia si cambian acciones, regiones, doctrinas, eventos o sus campos. Requiere actualizar el contrato en `GTC-page/gtc-web/contracts/playtests/`.
+2. **Ruleset** (hoy `alignment-3`): cambia con cualquier modificación de reglas o valores de balance. Se envía en `run_started`/`capture_started` y se guarda en los saves.
+3. **Adaptador** (hoy `awakening-2`): cambia si cambian acciones, regiones, doctrinas, eventos o sus campos. Requiere actualizar el contrato en `GTC-page/gtc-web/contracts/playtests/`.
 4. **GTC:** una build nueva exige build y ronda nuevas en el Lab. La build lleva en **cambios de esta build** un resumen de su entrada aquí (versión, fecha, commit, reglas, qué cambió y por qué) y el enlace a este registro; quienes revisan la ronda lo ven en GTC. No se comparan rondas con reglas o política de reloj distintas sin decirlo.
 5. **Entrada en este registro**, en la misma rama que el cambio: fecha, versión, commit, ruleset, adaptador, cambios, motivo y medición que lo respalda.
 
@@ -16,6 +16,7 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
 
 | Versión | Fecha | Commit | Ruleset | Adaptador | Ronda GTC | Estado |
 | --- | --- | --- | --- | --- | --- | --- |
+| 0.4.0 | 2026-11-12 | sin commit todavía | `alignment-3` | `awakening-2` | Ninguna: no está publicada ni tiene build en el Lab | En el árbol de trabajo, sin publicar |
 | 0.3.6 | 2026-11-06 | `fdb4576` | `alignment-2` | `awakening-1` | «0.3.6 playtest por invitación · decisiones económicas», abierta del 2026-11-07 al 2026-11-21 (UTC) | En itch.io (Restricted con contraseña) |
 | 0.3.5 | 2026-11-06 | `88e10fc` | `alignment-2` | `awakening-1` | «0.3.5 playtest por invitación · decisiones económicas», cerrada el 2026-11-07 con 1 partida | Reemplazada por 0.3.6 |
 | 0.3.4 | 2026-11-03 | `4c9cad6` | `alignment-2` | `awakening-1` | «0.3.4 playtest por invitación · decisiones económicas», cerrada el 2026-11-07 con 4 partidas | Reemplazada por 0.3.5 |
@@ -24,6 +25,22 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
 | 0.3.1 | 2026-11-02 | `2256c6c` | `alignment-2` | `awakening-1` | «0.3.1 playtest por invitación · decisiones económicas», cerrada el 2026-11-03 con 2 partidas | Reemplazada por 0.3.2 |
 | 0.3.0 | 2026-11-02 | `85f5905`; exportada desde `dbfb07f` | `alignment-2` | `awakening-1` | «0.3.0 playtest por invitación · decisiones económicas», cerrada el mismo día sin partidas | Reemplazada por 0.3.1 |
 | 0.2.0 | 2026-10-30 / 2026-10-31 | `ae38ec0`; adaptador E4–E6 en `6aa2419` | `alignment-1` | `awakening-1` | QA técnica E7 y «E7 piloto interno de gameplay» (abierta hasta 2026-11-09) | Reemplazada en itch.io por 0.3.0 el 2026-11-02 |
+
+### 0.4.0 — `alignment-3`: tres respuestas a cada amenaza
+
+- **Motivo:** revisión de diseño del 2026-11-12 sobre las partidas humanas de 0.3.x (foto del Lab del 2026-11-12: 2 testers externos, 7 partidas jugadas, 2 victorias). El medio juego era mantenimiento: 96 de 131 y 68 de 96 acciones de las dos victorias fueron `recruit`, `counter` y `conceal`. Tres de las cuatro derrotas de 0.3.4 fueron por awareness que salió sobre todo de `manifest` y `reveal`, cuyo coste solo estaba en el texto de riesgo. Diseño y medición completos en [Experiencia y loops](../gdd/02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-3--2026-11-12); decisión D11.
+- **Reglas:**
+  - Una amenaza tiene tres respuestas. `counter` (obstruir) no cambia. `scatter` (dispersar) es gratis: la célula pasa 8 meses oculta, sin reclutar ni ingresar; su sitio no avanza ni cuenta para el rito; deja de ser pública, baja 10 de exposición y no atrae amenazas nuevas; 24 meses de cooldown. `silence` (silenciar) cuesta 20 de Dread por severidad (13 con Harbinger), suma 3 de awareness por severidad y 6 de exposición; 12 meses de cooldown.
+  - `reveal` suma +5 de awareness solo la primera vez que una región se hace pública.
+  - Toda acción informa en su vista previa la awareness que suma, y se cobra exactamente eso.
+  - Descartado: posturas por célula con reclutamiento automático (quitan acciones al jugador) y amenazas cada 3 meses (el bot bajó de 103 a 59 victorias en 144).
+- **Interfaz:** tres sellos por amenaza en el recorte del mapa y en el expediente, cada uno con su precio y lo que cuesta además; línea roja «+N AWARENESS» bajo el precio de las acciones que la suman; estado «SCATTERED · N MO» en el expediente y en la ficha del sitio; guía, notas y consejos de derrota actualizados. La pantalla final cuenta «Threats answered».
+- **Guardados:** una partida `alignment-2` sin terminar no continúa; se conservan ajustes, tutorial y registros de playtest, y el jugador ve el aviso. El estado de cada región agrega `revealed`, `scattered` y `scatteredUntil`.
+- **Playtest:** adaptador nuevo `awakening-2`, porque cambia la lista de acciones (14, con `scatter` y `silence`). Los registros en cola de builds anteriores conservan `awakening-1`. En GTC (árbol de trabajo de `gtc-web`, **sin commit ni despliegue**): contrato y fixture en `contracts/playtests/awakening-2/`, registro de adaptadores, etiquetas del informe y migración `0009_awakening_2_alignment_3`. `awakening-1` sigue aceptando solo sus 12 acciones. Antes de publicar hace falta desplegar GTC y crear build y ronda nuevas.
+- **Medición (2026-11-12, bot, Normal, `dev/measure.gd`):** con 24 seeds por estrategia, 49/72 → 48/72 victorias; con 48 seeds, 95/144 → 103/144 (early 17 → 21, late 43 → 48, hub 35 → 34). Influence final mediana (48 seeds) late 184 → 52 y hub 69 → 41. Las derrotas de hub pasan de 13 por calendario a 13 por awareness. Respuestas por partida: 6,5–16 obstrucciones, 3 dispersiones, 2–4 silencios. La mejor línea del bot (late) ya no pierde; Easy y Hard no se midieron. No hay partidas humanas con estas reglas.
+- **Tests:** 57 tests Godot (8 nuevos: dispersar, sitio disperso, célula dispersa sin amenazas, silenciar, `reveal` una vez, awareness como precio, tres sellos, awareness junto al precio); trazas de `tests/golden/` regeneradas para `alignment-3`. 121 tests del Lab de GTC (SQLite, 9 omitidos que requieren PostgreSQL), con uno nuevo para `awakening-2`. Los 13 lotes que emite el juego en `test_game_commands_emit_actual_costs…` validan contra el esquema `awakening-2`.
+- **Chequeo de layout:** `dev/layout_check.gd` pasa en 60 combinaciones: 5 escenarios (early, mid, late, alignment, awakening), normales y cargados, en los 6 perfiles de 0.3.5. Una corrida falló al arrancar mientras otro proceso de Godot reimportaba el proyecto y pasó dos veces al repetirla sola. No se probó en un teléfono físico ni en el export web.
+- **Prueba local (2026-11-13, diseñador, escritorio, sin Lab):** victoria en el mes 212 en Normal con Harbinger; 14 obstruir, 12 silenciar, 3 dispersar y 46 `conceal`; 0 seguidores perdidos por amenazas, 860 de Influence sin gastar y awareness final 11. Sin errores. El precio en awareness de silenciar no pesó porque `conceal` lo borra; queda como candidato para `alignment-4` (véase [07 — Balance](../gdd/07-balance.md)).
 
 ### 0.3.6 — carga más rápida
 

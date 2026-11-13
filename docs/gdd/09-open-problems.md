@@ -1,5 +1,7 @@
 # 09 — Open problems
 
+> **`alignment-3` (2026-11-12):** El problema 1 ya no describe lo observado: en las partidas humanas de 0.3.x se usaron `exploit` y `convert` entre 2 y 5 veces por partida. Una amenaza tiene ahora tres respuestas (obstruir, dispersar, silenciar), `reveal` suma awareness una sola vez por región y cada acción muestra la awareness que suma. Los problemas 2 (doctrinas) y 5 (dificultades) siguen sin medirse.
+>
 > **`alignment-2` (2026-11-02):** El problema 3 (Influence poco restringida) se abordó con mantenimiento, ocultamiento según awareness y caza de sitios; falta confirmarlo con jugadores. Véase [Experiencia y loops](02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-2--2026-11-02). El resto de este capítulo describe `alignment-1`.
 
 Design debt that is **measured but not fixed**. Each entry states the evidence, so the next

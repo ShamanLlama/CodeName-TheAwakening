@@ -13,6 +13,9 @@ final rite inside the alignment window — before the world works out what you a
    large enough to be noticed. Every follower you hold pushes world awareness up.
 2. **You cannot defend everywhere.** Obstructing a threat burns a region's connections for
    a year. Triage is the core tactical decision.
+   *`alignment-3` (2026-11-12):* each threat has three answers, each paid in a different
+   currency: obstruct (Influence and a year of cooldown), scatter (eight months of a silent
+   cell) or silence (Dread and world awareness). See [Experiencia y loops](02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-3--2026-11-12).
 3. **Placement is strategy.** A ritual site must be carried by a share of its region's
    population, so populous regions recruit well and host rituals badly.
 4. **Every clock is visible.** The alignment date, awareness, site preparation, and threat

@@ -35,8 +35,9 @@ static func site_requirement(r: Dictionary) -> float:
 	return maxf(B.SITE_FOLLOWERS, Js.round_half_up(capacity(r) * B.SITE_SUPPORT_SHARE))
 
 
+## A scattered flock cannot carry a ritual site, however many it numbers.
 static func supported(r: Dictionary) -> bool:
-	return r.population.followers >= site_requirement(r)
+	return not r.scattered and r.population.followers >= site_requirement(r)
 
 
 static func cult_share(state: Dictionary) -> float:
@@ -62,7 +63,7 @@ static func calendar(month: int) -> String:
 
 
 static func region_income(r: Dictionary) -> float:
-	if r.population.followers <= 0:
+	if r.population.followers <= 0 or r.scattered:
 		return 0.0
 	var celebrity: float = 0.6 if r.figure != null and r.figure.kind == "celebrity" and not r.figure.revealed else 0.0
 	return r.population.followers * B.INFLUENCE_PER_FOLLOWER + celebrity
@@ -76,7 +77,7 @@ static func influence_per_month(state: Dictionary) -> float:
 
 
 static func recruitment_per_month(state: Dictionary, r: Dictionary) -> float:
-	if r.population.followers <= 0:
+	if r.population.followers <= 0 or r.scattered:
 		return 0.0
 	return minf(recruitable(r), (B.RECRUITMENT_BASE + r.population.followers * B.RECRUITMENT_RATE)
 		* (B.PUBLIC_RECRUITMENT if r.public else 1.0)
@@ -104,6 +105,8 @@ static func site_label(r: Dictionary) -> String:
 		return "No ritual site"
 	if r.site.dormant:
 		return "Dormant · upkeep unpaid"
+	if r.scattered:
+		return "Stalled · the flock is scattered"
 	if not supported(r):
 		return "Interrupted · needs " + Js.num(site_requirement(r)) + " followers"
 	return "Ritual prepared" if r.site.progress >= B.SITE_MONTHS else "Preparing · %d/%d months" % [r.site.progress, B.SITE_MONTHS]
@@ -134,5 +137,7 @@ static func lose_followers(r: Dictionary, amount: float) -> float:
 	p.losses += removed
 	if p.followers <= 0:
 		r.public = false
+		r.scattered = false
+		r.scatteredUntil = 0
 		r.site = { "invested": false, "progress": 0, "dormant": false }
 	return removed

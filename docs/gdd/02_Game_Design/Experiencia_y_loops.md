@@ -1,13 +1,14 @@
 # Experiencia, loops y sistemas
 
-**Versión:** 0.3 · **Fecha:** 2026-11-02 · **Estado:** síntesis de `alignment-2` (juego 0.3.0); pilares sin cambios.
+**Versión:** 0.4 · **Fecha:** 2026-11-12 · **Estado:** síntesis de `alignment-3` (juego 0.4.0); pilares sin cambios.
 
 ## Pilares de la base actual
 
 1. **Crecer tiene consecuencias.** Los seguidores sostienen ingresos y rituales,
    pero elevan el conocimiento global del culto.
-2. **Defender exige elegir.** Obstruir una amenaza siempre funciona si la acción es
-   legal, pero bloquea temporalmente otra obstrucción en esa región.
+2. **Defender exige elegir.** Toda amenaza tiene tres respuestas que siempre funcionan
+   si son legales, y cada una se paga en una moneda distinta: Influence y un año sin
+   obstruir en esa región, meses de la célula, o Dread y awareness.
 3. **La ubicación cambia el plan.** La población y las instituciones locales modifican
    reclutamiento, oposición y coste de apoyo ritual.
 4. **El jugador necesita leer los plazos.** Alineación, preparación y amenazas deben
@@ -37,7 +38,7 @@ en pausa.
 | Crecimiento | Reclutar en secreto o hacer público el culto | Más seguidores frente a evidencia y oposición |
 | Expansión | Abrir una célula en una región conectada | Nuevo potencial económico y ritual; más frentes |
 | Sacrificio | Consumir seguidores y elegir dónde hacerlo | Dread inmediato; menos ingreso y posible pérdida de apoyo |
-| Contención | Ocultar evidencia u obstruir una amenaza | Menor presión, awareness o daño evitado; gasto creciente con la awareness y cooldown |
+| Contención | Ocultar evidencia; ante cada amenaza, obstruir, dispersar, silenciar o aceptar el golpe | Menor presión, awareness o daño evitado, a cambio de Influence, meses de la célula, Dread y awareness, o seguidores |
 | Creencia | Manifestar lo imposible | Más población reclutable; mayor atención y resistencia |
 | Oportunidades | Aprovechar un presagio o convertir una figura | Dread, aceleración o beneficio secreto; coste y plazo |
 | Mantenimiento | Cuándo financiar cada sitio y cuánta Influence reservar | Margen de calendario frente a 1 Influence/mes por sitio durante toda la partida |
@@ -92,15 +93,72 @@ como en `alignment-1`. Easy y Hard no se han vuelto a medir.
 si la caza de sitios se anunció a tiempo. El Lab registra gastos por acción, región y
 mes; con eso se ve si la Influence se gasta en ocultar, obstruir o crecer, y cuándo.
 
+## Cambios de `alignment-3` — 2026-11-12
+
+**Problema.** En las partidas humanas de 0.3.x el medio juego era mantenimiento: en las dos
+victorias registradas, 96 de 131 y 68 de 96 acciones fueron `recruit`, `counter` y `conceal`
+al salir del cooldown. Una amenaza tenía una sola respuesta, así que obstruir (20–24 veces
+por partida) no era una decisión. Además, tres de las cuatro derrotas de 0.3.4 fueron por
+awareness, y entre 86 y 121 de esos puntos salieron de `manifest` y `reveal`: el coste estaba
+en el texto de riesgo y no en el precio. Alternar `reveal`/`hide` cobraba +5 cada vez.
+Son 2 testers externos; se tratan como hipótesis fuertes.
+
+**Objetivo.** Más decisiones por minuto sin automatizar acciones del jugador ni alargar el
+calendario. Dirección descartó las posturas por célula (reclutamiento automático) el
+2026-11-12: quitan acciones al jugador. Reclutar sigue siendo manual.
+
+| Cambio | Regla | Pilar que refuerza | Condición de legibilidad |
+| --- | --- | --- | --- |
+| Tres respuestas a una amenaza | **Obstruir** (`counter`): como antes, 30 de Influence por severidad y 12 meses sin obstruir ahí. **Dispersar** (`scatter`): gratis; la célula pasa 8 meses oculta, sin reclutar ni ingresar, su sitio no avanza ni cuenta para el rito, deja de ser pública, baja 10 de exposición y no atrae amenazas nuevas; 24 meses de cooldown. **Silenciar** (`silence`): 20 de Dread por severidad (13 con Harbinger), +3 de awareness por severidad, +6 de exposición; 12 meses de cooldown | 2: elegir entre monedas, no solo entre regiones | Los tres sellos aparecen en el recorte de la amenaza y en el expediente, cada uno con su precio y, debajo, lo que cuesta además |
+| Awareness como precio | Toda acción informa la awareness que suma (`preview.awareness`) y se cobra exactamente eso | 4: el reloj que mata se ve antes de pulsar | Línea roja «+8 AWARENESS» bajo el precio de la acción y en su explicación |
+| `reveal` sin trampa | Hacer público un culto suma +5 de awareness solo la primera vez en cada región; la exposición y el backlash se aplican siempre | 1: el coste global se paga por lo que el mundo aprende, no por cada clic | La línea de awareness desaparece del precio cuando la región ya fue pública |
+
+Se probó que las amenazas se tiraran cada 3 meses en lugar de 4 para compensar las opciones
+nuevas: el bot bajó de 103 a 59 victorias en 144 partidas. Se descartó; la cadencia no cambia.
+
+**Medición (bot, no humanos).** `godot --headless --path godot -s res://dev/measure.gd`,
+Normal, misma semilla por partida. La política usa las respuestas nuevas así: obstruye en
+regiones con sitio; si no puede, silencia cuando hay un sitio o la célula en peligro y sobra
+Dread; dispersa células sin sitio cuando el golpe cuesta más que los meses ocultos.
+
+| Estrategia | Victorias (24 seeds) | Victorias (48 seeds) | Influence final (mediana, 48) | Awareness final (48) | Respuestas por partida (48) |
+| --- | --- | --- | --- | --- | --- |
+| Early public | 9 → 9 | 17 → 21 | 35 → 36 | 47 → 59 | 6,5 obstruir · 3 dispersar · 2 silenciar |
+| Late public | 22 → 24 | 43 → 48 | 184 → 52 | 49 → 64 | 16 · 3 · 2 |
+| Hub | 18 → 15 | 35 → 34 | 69 → 41 | 57 → 90 | 13 · 3 · 4 |
+| Total | 49/72 → 48/72 | 95/144 → 103/144 | | | |
+
+Las derrotas de la estrategia hub cambian de causa: de 13 por calendario a 13 por awareness
+y 1 por calendario (48 seeds). La política silencia sin pesar la awareness que suma.
+
+**Riesgos.** La mejor línea del bot (late public con Hidden hand) ya no pierde: 48/48. Con
+tres respuestas el juego es algo más fácil para quien ya lo domina; si los jugadores lo
+confirman, subir la presión en `alignment-4` junto con el árbol. Dispersar puede resultar
+gratis en una región que ya no crece; el coste real ahí es solo el ingreso de 8 meses.
+Easy y Hard siguen sin medirse.
+
+**Primera partida humana (2026-11-13, diseñador, Normal, Harbinger, local).** Ganó en el mes
+212 con 0 seguidores perdidos por amenazas, 860 de Influence sin gastar, 229 de Dread y
+awareness final 11. Respuestas: 14 obstruir, 12 silenciar, 3 dispersar; además 46 `conceal`.
+Las tres respuestas se usaron, pero el precio en awareness de silenciar no pesó: cada
+`conceal` quita 3 de awareness global y la Influence sobraba para pagarlo. Es una partida de
+quien mejor conoce el juego; no dice nada de un jugador nuevo. Candidato para `alignment-4`:
+enfriamiento mundial para el efecto global de `conceal`.
+
+**Comprobación con jugadores.** Mirar en el Lab la mezcla de `counter`, `scatter` y `silence`
+por partida: si una respuesta pasa del 80 % o no llega al 5 %, no hay decisión. Preguntar si
+entendieron por qué subió la awareness antes de perder.
+
 ## Acciones y progresión actuales
 
-El conjunto actual tiene doce acciones: `recruit`, `expand`, `sacrifice`, `reveal`,
-`hide`, `conceal`, `manifest`, `prepare`, `counter`, `exploit`, `convert` y
-`reveal_figure`. Sus condiciones y costes están en los datos y en `previewAction`;
+El conjunto actual tiene catorce acciones: `recruit`, `expand`, `sacrifice`, `reveal`,
+`hide`, `conceal`, `manifest`, `prepare`, `counter`, `scatter`, `silence`, `exploit`,
+`convert` y `reveal_figure`. Sus condiciones y costes están en los datos y en `previewAction`;
 las referencias detalladas del índice explican cada sistema.
 
 Una doctrina por partida especializa reclutamiento (**Congregation**), infiltración
-(**Hidden hand**) o terror ritual (**Harbinger**). La progresión consiste en ampliar
+(**Hidden hand**, obstruir cuesta un tercio menos) o terror ritual (**Harbinger**,
+silenciar cuesta un tercio menos). La progresión consiste en ampliar
 la red, financiar sitios y alcanzar el final; no se documenta un sistema actual de
 desbloqueos permanentes entre partidas.
 

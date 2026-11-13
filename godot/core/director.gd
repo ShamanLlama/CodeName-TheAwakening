@@ -1,5 +1,6 @@
 class_name Director
-## World response: threats and opportunities. alignment-1 mirrored src/game/director.ts. Mutates only an
+## World response: threats and opportunities. alignment-1 mirrored src/game/director.ts; since
+## alignment-3 a scattered cell draws no new threat. Mutates only an
 ## engine-owned copy. A threat is separate from the opportunity slot.
 
 const B = preload("res://core/balance.gd")
@@ -59,10 +60,11 @@ static func tick(state: Dictionary) -> void:
 	if state.elapsedMonths == B.PREPARATION_MONTHS - B.FINALE_WARNING_MONTHS:
 		Derived.add_log(state, "The world senses the coming alignment. In %d months threats against ritual sites will intensify; keep Influence in reserve." % B.FINALE_WARNING_MONTHS)
 	var hunt := site_hunt(state)
-	if state.elapsedMonths % 4 == 0:
+	if state.elapsedMonths % B.THREAT_ROLL_MONTHS == 0:
 		for id in GameData.REGION_IDS:
 			var r: Dictionary = state.regions[id]
-			if r.population.followers <= 0 or r.threat != null:
+			# Nobody hunts a cell that has gone to ground.
+			if r.population.followers <= 0 or r.threat != null or r.scattered:
 				continue
 			var believers: float = r.population.believers / maxf(1.0, Derived.live_population(r))
 			var pressure: float = (0.02 + r.exposure / 500.0 + (0.1 if r.public else 0.0) + (0.12 if r.site.invested else 0.0) + (B.FINALE_SITE_PRESSURE if hunt and r.site.invested else 0.0)

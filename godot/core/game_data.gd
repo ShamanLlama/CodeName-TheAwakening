@@ -2,7 +2,7 @@ class_name GameData
 ## Static game definitions. Mirrors src/data/{regions,abilities,difficulties,events}.ts and src/game/types.ts.
 
 const REGION_IDS: Array[String] = ["north_america", "latin_america", "europe", "africa", "middle_east", "south_asia", "east_asia", "oceania"]
-const ACTION_IDS: Array[String] = ["recruit", "expand", "sacrifice", "reveal", "hide", "conceal", "manifest", "prepare", "counter", "exploit", "convert", "reveal_figure"]
+const ACTION_IDS: Array[String] = ["recruit", "expand", "sacrifice", "reveal", "hide", "conceal", "manifest", "prepare", "counter", "scatter", "silence", "exploit", "convert", "reveal_figure"]
 const STATUSES: Array[String] = ["placing", "playing", "alignment", "awakening", "won", "lost"]
 const DIFFICULTY_IDS: Array[String] = ["easy", "normal", "hard"]
 const SPECIALIZATION_IDS: Array[String] = ["recruitment", "infiltration", "terror"]
@@ -26,12 +26,14 @@ const ACTIONS := {
 	"recruit": { "name": "Secret gathering", "description": "Recruit up to 35 unaware people or believers.", "influence": 18, "dread": 0, "followers": 0, "cooldown": 12 },
 	"expand": { "name": "Establish a cell", "description": "Send the dream to an adjacent region. Rebuild anywhere if all cells are lost.", "influence": 30, "dread": 0, "followers": 0, "cooldown": 0 },
 	"sacrifice": { "name": "Sacrifice followers", "description": "Consume 40 followers for 25 Dread. Their future income is lost.", "influence": 0, "dread": 0, "followers": Balance.SACRIFICE_FOLLOWERS, "cooldown": 6 },
-	"reveal": { "name": "Begin public worship", "description": "Double ongoing recruitment. Invite scrutiny and backlash.", "influence": 10, "dread": 0, "followers": 0, "cooldown": 6 },
+	"reveal": { "name": "Begin public worship", "description": "Double ongoing recruitment. Invite scrutiny and backlash. The world notices the first time.", "influence": 10, "dread": 0, "followers": 0, "cooldown": 6 },
 	"hide": { "name": "Return underground", "description": "End public recruitment. Existing evidence and rituals remain visible.", "influence": 0, "dread": 0, "followers": 0, "cooldown": 6 },
 	"conceal": { "name": "Conceal the evidence", "description": "Remove up to 25 Exposure and 3 world awareness. Costs 20 Influence plus half the world awareness.", "influence": 20, "dread": 0, "followers": 0, "cooldown": 12 },
 	"manifest": { "name": "Impossible manifestation", "description": "Turn deniers and unaware people into believers. Belief also fuels resistance.", "influence": 0, "dread": 20, "followers": 0, "cooldown": 18 },
 	"prepare": { "name": "Prepare a ritual site", "description": "Commit Dread and 40 Influence, then pay 1 Influence/month and keep local support for 24 months. Each further site costs more.", "influence": 40, "dread": 60, "followers": 0, "cooldown": 0 },
 	"counter": { "name": "Obstruct the investigation", "description": "Burn your local connections to neutralize this region's threat. They take 12 months to rebuild.", "influence": 30, "dread": 0, "followers": 0, "cooldown": 12 },
+	"scatter": { "name": "Scatter the flock", "description": "The cell goes to ground and the threat finds nobody. For 8 months it neither recruits nor earns, and cannot carry a ritual site.", "influence": 0, "dread": 0, "followers": 0, "cooldown": 24 },
+	"silence": { "name": "Silence the witnesses", "description": "Spend Dread to end this region's threat. The disappearances are noticed.", "influence": 0, "dread": Balance.SILENCE_SEVERITY_DREAD, "followers": 0, "cooldown": 12 },
 	"exploit": { "name": "Exploit the omen", "description": "Claim a shared nightmare's Dread or accelerate a ritual during an eclipse.", "influence": 10, "dread": 0, "followers": 0, "cooldown": 0 },
 	"convert": { "name": "Convert a prominent figure", "description": "A hidden celebrity earns Influence; a politician slows investigations.", "influence": 45, "dread": 0, "followers": 0, "cooldown": 0 },
 	"reveal_figure": { "name": "Reveal their allegiance", "description": "Recruit up to 60 people and advance the local site by 8 months once. Ends the secret benefit.", "influence": 0, "dread": 0, "followers": 0, "cooldown": 0 },
@@ -40,7 +42,7 @@ const ACTIONS := {
 const SPECIALIZATIONS := {
 	"recruitment": { "name": "Congregation", "description": "+35% automatic recruitment. Build a broad following." },
 	"infiltration": { "name": "Hidden hand", "description": "Threats arrive 2 months later; obstructing them costs a third less." },
-	"terror": { "name": "Harbinger", "description": "Sacrifices yield 35 Dread; manifestations cost 15 Dread." },
+	"terror": { "name": "Harbinger", "description": "Sacrifices yield 35 Dread; manifestations cost 15 Dread; silencing witnesses costs a third less." },
 }
 const SPECIALIZATION_COST := 40
 

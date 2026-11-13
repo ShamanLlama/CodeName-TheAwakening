@@ -179,3 +179,121 @@ func test_alignment_hunt_is_announced_in_advance() -> void:
 
 func test_new_state_records_the_current_ruleset() -> void:
 	check_eq(start().ruleset, B.RULESET)
+
+
+# --- alignment-3 ------------------------------------------------------------------------
+
+## A 400-strong hidden cell in Africa with a threat five months out.
+static func threatened(severity := 1) -> Dictionary:
+	var s := start()
+	s.elapsedMonths = 20
+	Derived.recruit(s.regions.africa, 300)
+	s.influence = 100.0
+	s.dread = 100.0
+	s.regions.africa.threat = { "kind": "investigation", "dueMonth": 25, "severity": severity }
+	return s
+
+
+func test_scatter_ends_the_threat_and_costs_the_cell_its_months() -> void:
+	var s := threatened()
+	s.regions.africa.public = true
+	s.regions.africa.exposure = 30.0
+	var preview := GameEngine.preview_action(s, "scatter", "africa")
+	check(preview.ok, "a threatened cell can scatter")
+	check_eq([preview.influence, preview.dread, preview.followers, preview.awareness], [0, 0, 0, 0.0], "scattering is paid in time")
+	var hidden: Dictionary = GameEngine.perform_action(s, "scatter", "africa").state
+	var cell: Dictionary = hidden.regions.africa
+	check(cell.threat == null, "the threat finds nobody")
+	check(cell.scattered and not cell.public, "the cell is in hiding and worship is no longer public")
+	check_eq(cell.exposure, 20.0, "exposure falls")
+	check_eq(Derived.influence_per_month(hidden), 0.0, "a scattered cell earns nothing")
+	check_eq(Derived.recruitment_per_month(hidden, cell), 0.0, "and recruits nobody")
+	check_eq(GameEngine.preview_action(hidden, "recruit", "africa").reason, "The flock is scattered for %d more months." % B.SCATTER_MONTHS)
+	check(SaveData.is_game_state(hidden), "a scattered cell saves and reloads")
+	var later := GameEngine.advance_simulation(hidden, B.SCATTER_MONTHS - 1)
+	check(later.regions.africa.scattered, "still hidden a month before the end")
+	check_eq(later.regions.africa.population.followers, 400.0, "nobody joined and nobody was taken")
+	var back := GameEngine.advance_simulation(later, 1)
+	check(not back.regions.africa.scattered, "the flock gathers again")
+	check(Derived.influence_per_month(back) > 0, "and earns again")
+	back.regions.africa.threat = { "kind": "investigation", "dueMonth": back.elapsedMonths + 5, "severity": 1 }
+	check(GameEngine.preview_action(back, "scatter", "africa").reason.begins_with("Available in"), "it cannot scatter again so soon")
+	check(not GameEngine.preview_action(start(), "scatter", "africa").ok, "nothing to hide from without a threat")
+
+
+func test_nobody_hunts_a_scattered_cell() -> void:
+	var s := threatened()
+	s.regions.africa.threat = null
+	s.regions.africa.exposure = 100.0
+	s.awareness = 90.0
+	s.regions.africa.scattered = true
+	s.regions.africa.scatteredUntil = s.elapsedMonths + B.SCATTER_MONTHS
+	for attempt in 40:
+		s.rngState = Rng.seed_to_state("hunt-%d" % attempt)
+		Director.tick(s)
+		check(s.regions.africa.threat == null, "no threat is scheduled while scattered")
+	s.regions.africa.scattered = false
+	var found := false
+	for attempt in 40:
+		s.rngState = Rng.seed_to_state("hunt-%d" % attempt)
+		Director.tick(s)
+		found = found or s.regions.africa.threat != null
+	check(found, "the same cell is hunted once it gathers")
+
+
+func test_a_scattered_site_stalls_and_cannot_carry_the_rite() -> void:
+	var s := ready()
+	s.regions.europe.threat = { "kind": "occult", "dueMonth": s.elapsedMonths + 3, "severity": 1 }
+	check_eq(Derived.ready_sites(s), 3)
+	var hidden: Dictionary = GameEngine.perform_action(s, "scatter", "europe").state
+	check_eq(Derived.ready_sites(hidden), 2, "a scattered flock carries no site")
+	check(GameEngine.awakening_reason(hidden) != "", "so the rite cannot begin")
+	check_eq(Derived.site_label(hidden.regions.europe), "Stalled · the flock is scattered")
+	check_eq(hidden.regions.europe.exposure, 40.0, "a ritual site stays visible")
+
+
+func test_silence_spends_dread_by_severity_and_the_world_notices() -> void:
+	var s := threatened(2)
+	var preview := GameEngine.preview_action(s, "silence", "africa")
+	check_eq(preview.dread, 2 * B.SILENCE_SEVERITY_DREAD)
+	check_eq(preview.awareness, 2 * B.SILENCE_SEVERITY_AWARENESS)
+	var done: Dictionary = GameEngine.perform_action(s, "silence", "africa").state
+	check(done.regions.africa.threat == null, "the threat ends")
+	check_eq(done.dread, 100.0 - 2 * B.SILENCE_SEVERITY_DREAD)
+	check_eq(done.awareness, 2 * B.SILENCE_SEVERITY_AWARENESS, "awareness is part of the price")
+	check_eq(done.telemetry.dreadSpent, float(2 * B.SILENCE_SEVERITY_DREAD))
+	check_eq(done.regions.africa.population.followers, 400.0, "nobody in the cell is lost")
+	done.regions.africa.threat = { "kind": "investigation", "dueMonth": 30, "severity": 1 }
+	check(GameEngine.preview_action(done, "silence", "africa").reason.begins_with("Available in"), "one silencing per region a year")
+	check(GameEngine.preview_action(done, "counter", "africa").ok, "obstruction is a separate favour")
+	var harbinger := threatened(2)
+	harbinger.specialization = "terror"
+	check_eq(GameEngine.preview_action(harbinger, "silence", "africa").dread, 2 * B.SILENCE_SEVERITY_DREAD_TERROR, "Harbinger silences for a third less")
+	check(not GameEngine.preview_action(start(), "silence", "africa").ok, "nobody to silence without a threat")
+
+
+func test_going_public_alarms_the_world_only_the_first_time() -> void:
+	var s := threatened()
+	s.regions.africa.threat = null
+	check_eq(GameEngine.preview_action(s, "reveal", "africa").awareness, B.REVEAL_AWARENESS)
+	var public: Dictionary = GameEngine.perform_action(s, "reveal", "africa").state
+	check_eq(public.awareness, B.REVEAL_AWARENESS)
+	var hidden: Dictionary = GameEngine.perform_action(public, "hide", "africa").state
+	hidden.elapsedMonths += 6
+	var again := GameEngine.preview_action(hidden, "reveal", "africa")
+	check(again.ok, "worship can go public again")
+	check_eq(again.awareness, 0.0, "the world already knows this congregation")
+	check(not again.risk.contains("awareness"), "and the risk text no longer promises awareness")
+	check_eq(GameEngine.perform_action(hidden, "reveal", "africa").state.awareness, B.REVEAL_AWARENESS, "no second charge")
+
+
+func test_every_conspicuous_action_states_its_awareness_price() -> void:
+	var s := threatened()
+	s.regions.africa.threat = null
+	s.dread = 200.0
+	check_eq(GameEngine.preview_action(s, "manifest", "africa").awareness, B.MANIFEST_AWARENESS)
+	check_eq(GameEngine.preview_action(s, "prepare", "africa").awareness, B.SITE_AWARENESS)
+	for id in ["recruit", "sacrifice", "conceal", "counter", "scatter"]:
+		check_eq(GameEngine.preview_action(s, id, "africa").awareness, 0.0, id + " does not alarm the world")
+	check_eq(GameEngine.perform_action(s, "manifest", "africa").state.awareness, B.MANIFEST_AWARENESS, "the stated price is what is charged")
+	check_eq(GameEngine.perform_action(s, "prepare", "africa").state.awareness, B.SITE_AWARENESS)

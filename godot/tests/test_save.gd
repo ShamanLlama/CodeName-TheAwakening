@@ -79,6 +79,10 @@ func test_retired_ruleset_run_is_dropped_but_the_save_is_kept() -> void:
 	var notice := SaveData.take_retired_notice(decoded)
 	check(notice.contains("alignment-1") and notice.contains(Balance.RULESET), notice)
 	check(not decoded.has("retiredRuleset"), "marker removed before saving")
+	s.ruleset = "alignment-2"
+	var previous = SaveData.decode_save(JSON.stringify(save))
+	check(previous != null and previous.state == null, "a 0.3 run cannot continue under the new threat rules")
+	check(SaveData.take_retired_notice(previous).contains("alignment-2"), "and the player is told which rules it used")
 	s.ruleset = "unknown-9"
 	save.state = s
 	check(SaveData.decode_save(JSON.stringify(save)) == null, "unknown rulesets stay unreadable")

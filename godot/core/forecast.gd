@@ -10,7 +10,7 @@ static func ritual(state: Dictionary) -> Dictionary:
 	var result := _ritual(state)
 	var hunt_in: int = B.PREPARATION_MONTHS - state.elapsedMonths
 	if hunt_in <= 0:
-		result.message += " The world hunts ritual sites; keep Influence for obstruction."
+		result.message += " The world hunts ritual sites; keep Influence and Dread to answer it."
 	elif hunt_in <= B.FINALE_WARNING_MONTHS:
 		result.message += " Threats against ritual sites intensify in %d months." % hunt_in
 	if Derived.net_influence_per_month(state) < 0:

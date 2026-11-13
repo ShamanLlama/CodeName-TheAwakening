@@ -24,7 +24,10 @@ func test_touch_tap_explains_an_action_before_performing_it() -> void:
 	check_eq(buttons.size(), 1, "the explanation offers one perform button")
 	row.pressed.emit()
 	check_eq(panel._detail.get_child_count(), 0, "tapping again closes it")
-	var blocked: Button = panel._rows["counter"].button
+	check(not panel._rows["counter"].button.visible, "answers to a threat are left out while there is none")
+	game.state.influence = 0.0
+	panel.refresh()
+	var blocked: Button = panel._rows["conceal"].button
 	check(not blocked.disabled, "a blocked row still answers a tap on touch screens")
 	blocked.pressed.emit()
 	var perform: Array = panel._detail.get_children().filter(func(node: Node) -> bool: return node is Button)
@@ -47,6 +50,8 @@ func test_blocker_names_the_real_obstacle_before_the_price() -> void:
 	check_eq(Notes.blocker(s, "conceal", "europe", conceal).short, "NO CELL HERE", "no cell beats the price")
 	var counter := GameEngine.preview_action(s, "counter", "africa")
 	check_eq(Notes.blocker(s, "counter", "africa", counter).short, "NO THREAT", "nothing to obstruct")
+	for id in ["scatter", "silence"]:
+		check_eq(Notes.blocker(s, id, "africa", GameEngine.preview_action(s, id, "africa")).short, "NO THREAT", id + " needs a threat too")
 	var expand := GameEngine.preview_action(s, "expand", "europe")
 	check_eq(Notes.blocker(s, "expand", "europe", expand).short, "NEED 30 INF", "a neighbour waits only on Influence")
 	var far := GameEngine.preview_action(s, "expand", "north_america")
@@ -59,6 +64,7 @@ func test_short_reasons_cover_cooldowns_and_costs() -> void:
 	check_eq(Notes.short_reason({ "reason": "Available in 5 months." }), "IN 5 MO")
 	check_eq(Notes.short_reason({ "reason": "Need 90 Influence." }), "NEED 90 INF")
 	check_eq(Notes.short_reason({ "reason": "Need 100 Dread." }), "NEED 100 DREAD")
+	check_eq(Notes.short_reason({ "reason": "The flock is scattered for 5 more months." }), "SCATTERED 5 MO")
 	check_eq(Notes.short_reason({ "reason": "Something new." }), "UNAVAILABLE")
 
 
@@ -155,3 +161,53 @@ class FakeScreen extends Node:
 	func deselect() -> void:
 		pass
 
+
+
+func test_a_threat_offers_three_answers_with_their_prices() -> void:
+	var game = load("res://main.gd").new()
+	var s: Dictionary = GameEngine.place_starting_foothold(GameEngine.create_game_state("normal", "answers"), "africa").state
+	s.influence = 100.0
+	s.dread = 10.0
+	s.regions.africa.threat = { "kind": "investigation", "dueMonth": 5, "severity": 1 }
+	game.state = s
+	var screen := FakeScreen.new()
+	var panel = load("res://ui/region_panel.gd").new(game, screen)
+	panel._ready()
+	panel.show_region("africa")
+	for id in Notes.RESPONSES:
+		check(panel._rows[id].button.visible, id + " is listed while a threat approaches")
+	var stamps: Array = panel._cards.find_children("*", "Button", true, false)
+	check_eq(stamps.map(func(b: Button) -> String: return b.text), ["OBSTRUCT · 30 INF", "SCATTER · %d MO" % B.SCATTER_MONTHS, "SILENCE · %d DREAD" % B.SILENCE_SEVERITY_DREAD], "one stamp per answer, each with its currency")
+	check_eq(stamps.map(func(b: Button) -> bool: return b.disabled), [false, false, true], "an answer the cult cannot pay is offered but off")
+	# Performing through the game would write the player's save, so the engine answers here.
+	game.state = GameEngine.perform_action(s, "scatter", "africa").state
+	panel.refresh()
+	check_eq(panel._stance.text, "SCATTERED  ·  %d MO" % B.SCATTER_MONTHS, "the file says the cell is in hiding")
+	check_eq(panel._cards.find_children("*", "Button", true, false).size(), 0, "and the threat's clipping is gone")
+	check_eq(panel._rows["recruit"].cost.text, "SCATTERED %d MO" % B.SCATTER_MONTHS, "recruiting waits for the flock to gather")
+	panel.free()
+	screen.free()
+	game.free()
+
+
+func test_an_action_lists_the_awareness_it_adds_beside_its_price() -> void:
+	var game = load("res://main.gd").new()
+	var s: Dictionary = GameEngine.place_starting_foothold(GameEngine.create_game_state("normal", "price"), "africa").state
+	game.state = s
+	var screen := FakeScreen.new()
+	var panel = load("res://ui/region_panel.gd").new(game, screen)
+	panel._ready()
+	panel.show_region("africa")
+	var reveal: Dictionary = panel._rows["reveal"]
+	check(reveal.aware.visible, "going public shows its awareness")
+	check_eq(reveal.aware.text, "+5 AWARENESS")
+	check(not panel._rows["recruit"].aware.visible, "a quiet action shows none")
+	panel._set_group("RITES")
+	check_eq(panel._rows["manifest"].aware.text, "+8 AWARENESS")
+	panel._detail_id = "manifest"
+	panel._refresh_detail()
+	var lines: Array = panel._detail.get_children().filter(func(node: Node) -> bool: return node is Label).map(func(label: Label) -> String: return label.text)
+	check(lines.has("COST  20 DREAD") and lines.has("+8 WORLD AWARENESS"), "the explanation repeats the full price: %s" % [lines])
+	panel.free()
+	screen.free()
+	game.free()

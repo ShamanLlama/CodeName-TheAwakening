@@ -587,7 +587,7 @@ func _rebuild_threats(s: Dictionary) -> void:
 		_threats.add_child(_threat_card(s, id))
 
 
-## A press clipping: the headline names the threat, the stamp obstructs it.
+## A press clipping: the headline names the threat, the stamps answer it.
 func _threat_card(s: Dictionary, id: String) -> Control:
 	var r: Dictionary = s.regions[id]
 	var threat: Dictionary = r.threat
@@ -601,8 +601,12 @@ func _threat_card(s: Dictionary, id: String) -> Control:
 	card.gui_input.connect(func(event: InputEvent) -> void:
 		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 			select(id))
+	var column := Kit.vbox(6)
+	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	card.add_child(column)
 	var row := Kit.hbox(10)
-	card.add_child(row)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.add_child(row)
 	var text := Kit.vbox(3)
 	text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	text.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -625,19 +629,22 @@ func _threat_card(s: Dictionary, id: String) -> Control:
 	unit.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	right.add_child(unit)
 	row.add_child(right)
-	var preview := GameEngine.preview_action(s, "counter", id)
-	var stamp_row := Kit.hbox(8)
-	var counter := Kit.stamp("OBSTRUCT · %d" % preview.influence, func() -> void: game.act("counter", id), P.DANGER)
-	counter.disabled = not preview.ok
-	counter.tooltip_text = preview.reason if not preview.ok else "Burn local connections to stop it. They take 12 months to rebuild."
-	if Kit.touch:
-		counter.custom_minimum_size = Vector2(0, 40)
-	stamp_row.add_child(counter)
-	if not preview.ok:
-		var why := Kit.label(Notes.short_reason(preview), 12, P.WARN, "type_bold")
-		why.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		stamp_row.add_child(why)
-	text.add_child(stamp_row)
+	# Three answers, each paid in a different currency. The region's file says what else each costs.
+	var stamps := HFlowContainer.new()
+	stamps.add_theme_constant_override("h_separation", 6)
+	stamps.add_theme_constant_override("v_separation", 6)
+	stamps.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for action in Notes.RESPONSES:
+		var preview := GameEngine.preview_action(s, action, id)
+		var stamp := Kit.stamp(Notes.response_stamp(preview, action), func() -> void: game.act(action, id), P.DANGER)
+		stamp.add_theme_font_size_override("font_size", 13)
+		stamp.disabled = not preview.ok
+		stamp.tooltip_text = (GameData.ACTIONS[action].name + ". " + Notes.response_note(r, preview, action) + ".") if preview.ok else preview.reason
+		stamp.accessibility_name = GameData.ACTIONS[action].name + ", " + GameData.REGIONS[id].name + ", " + (Notes.response_stamp(preview, action).to_lower() if preview.ok else "unavailable: " + preview.reason)
+		if Kit.touch:
+			stamp.custom_minimum_size = Vector2(0, 40)
+		stamps.add_child(stamp)
+	column.add_child(stamps)
 	return card
 
 

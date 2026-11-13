@@ -43,6 +43,24 @@ static func conceal_need(state: Dictionary, r: Dictionary) -> String:
 	return ""
 
 
+## alignment-3: one answer per threat. Site regions are obstructed as before. When that is on
+## cooldown or unaffordable, a site or cell in danger is saved with Dread the rite does not need;
+## a cell with no site goes to ground when the strike would cost more than the months in hiding.
+static func respond(state: Dictionary, id: String) -> Dictionary:
+	var r: Dictionary = state.regions[id]
+	if TARGETS.has(id) and GameEngine.preview_action(state, "counter", id).ok:
+		return GameEngine.perform_action(state, "counter", id).state
+	var c := Threats.consequences(r)
+	var silence := GameEngine.preview_action(state, "silence", id)
+	var owed := 0 if state.status == "awakening" else dread_owed(state)
+	if silence.ok and state.dread - silence.dread >= owed and (c.destroysCell or r.site.invested and (c.interruptsSite or c.preparationLost > 0)):
+		return GameEngine.perform_action(state, "silence", id).state
+	var hiding_cost: float = B.SCATTER_MONTHS * Derived.recruitment_per_month(state, r)
+	if not r.site.invested and not r.public and c.followers > hiding_cost and GameEngine.preview_action(state, "scatter", id).ok:
+		return GameEngine.perform_action(state, "scatter", id).state
+	return state
+
+
 ## strategy: "early", "late" or "hub". Regions captured before an action keep their pre-action
 ## values, exactly as the TypeScript policy's object references do.
 static func play(strategy: String, seed: String, stop_month := B.DEADLINE) -> Dictionary:
@@ -57,10 +75,11 @@ static func play(strategy: String, seed: String, stop_month := B.DEADLINE) -> Di
 	for _step in stop_month:
 		if GameEngine.is_over(run.s):
 			break
+		for id in GameData.REGION_IDS:
+			if run.s.regions[id].threat != null:
+				run.s = respond(run.s, id)
 		for id in TARGETS:
 			var r: Dictionary = run.s.regions[id]
-			if r.threat != null:
-				act.call("counter", id)
 			if r.opportunity != null and (r.opportunity.kind == "nightmare" or r.opportunity.kind == "eclipse" and r.site.invested):
 				act.call("exploit", id)
 		for id in TARGETS:

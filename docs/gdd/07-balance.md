@@ -21,6 +21,33 @@ alone silently changes difficulty:
 | `raidLossShare` / `threatLossShare` | `raidLossFloor` / `threatLossFloor` | A high flat floor makes small regions disproportionately fragile |
 | `awarenessPerCapita` | `concealAwareness` and the conceal cooldown | Together they set the maximum sustainable cult size |
 
+## Snapshot — 2026-11-12 (`alignment-3`, Godot, game 0.4.0)
+
+Source of truth: `godot/core/balance.gd`. Only the values added or changed since
+`alignment-2` are listed. Reproduce the bot measurement with
+`godot --headless --path godot -s res://dev/measure.gd -- --seeds=48`.
+
+| Constant | Value | Controls |
+| --- | --- | --- |
+| `RULESET` | `alignment-3` | Ruleset recorded in saves and playtest events |
+| `SCATTER_MONTHS` | 8 | Months a scattered cell stays silent (no recruiting, income, site progress or new threats) |
+| `SCATTER_EXPOSURE` | 10.0 | Exposure removed by scattering, down to the evidence floor |
+| `SILENCE_SEVERITY_DREAD` / `_TERROR` | 20 / 13 | Dread per threat severity to silence it (Harbinger pays a third less) |
+| `SILENCE_SEVERITY_AWARENESS` | 3.0 | World awareness per severity when silencing |
+| `SILENCE_EXPOSURE` | 6.0 | Regional exposure added by silencing |
+| `REVEAL_AWARENESS` | 5.0 | Awareness the first time a region goes public; later reveals are free |
+| `MANIFEST_AWARENESS` / `SITE_AWARENESS` / `FIGURE_AWARENESS` | 8.0 each | Awareness shown as part of the price of manifest, prepare and reveal figure |
+| `THREAT_ROLL_MONTHS` | 4 | Months between threat rolls (3 was measured: bot wins 103 → 59 of 144) |
+
+Coupling: `SILENCE_SEVERITY_AWARENESS` with `CONCEAL_AWARENESS` — conceal removes 3
+awareness per use, so a player with spare Influence can erase the price of silencing.
+The designer's first human run (2026-11-13, Normal, Harbinger) won with 12 silences, 46
+conceals and final awareness 11; candidate fix for `alignment-4`: a world cooldown on
+conceal's global effect.
+
+Bot measurement (Normal, 48 seeds per strategy): 95/144 → 103/144 wins against
+`alignment-2` (early 17 → 21, late 43 → 48, hub 35 → 34).
+
 ## Snapshot — 2026-11-02 (`alignment-2`, Godot)
 
 Source of truth: `godot/core/balance.gd`. Only the values that changed or were added since

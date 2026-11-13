@@ -9,7 +9,7 @@ const P = preload("res://ui/palette.gd")
 const B = preload("res://core/balance.gd")
 const Notes = preload("res://ui/notes.gd")
 const GROUPS := {
-	"CULT": ["recruit", "expand", "reveal", "hide", "conceal", "counter"],
+	"CULT": ["recruit", "expand", "reveal", "hide", "conceal", "counter", "scatter", "silence"],
 	"RITES": ["sacrifice", "manifest", "prepare"],
 	"OMENS": ["exploit", "convert", "reveal_figure"],
 }
@@ -210,19 +210,27 @@ func _build_rows() -> void:
 		title.clip_text = true
 		title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		title.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		# The price, and under it the world awareness the action adds: that is a price too.
+		var price := Kit.vbox(0)
+		price.alignment = BoxContainer.ALIGNMENT_CENTER
+		price.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var cost := Kit.label("", 14, P.MUTED, "type_bold")
 		cost.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		cost.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		cost.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var aware := Kit.label("", 12, P.DANGER, "type_bold")
+		aware.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		aware.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		price.add_child(cost)
+		price.add_child(aware)
 		line.add_child(title)
-		line.add_child(cost)
+		line.add_child(price)
 		button.add_child(line)
 		if not Kit.touch:
 			button.mouse_entered.connect(func() -> void:
 				_detail_id = id
 				_refresh_detail())
 		_actions.add_child(button)
-		_rows[id] = { "button": button, "title": title, "cost": cost, "styles": [row_style, row_hover] }
+		_rows[id] = { "button": button, "title": title, "cost": cost, "aware": aware, "styles": [row_style, row_hover] }
 
 
 func refresh() -> void:
@@ -238,6 +246,9 @@ func refresh() -> void:
 	if r.population.followers > 0:
 		stance = "PUBLIC CONGREGATION" if r.public else "HIDDEN CELL"
 		stance_color = P.CULT
+	if r.scattered:
+		stance = "SCATTERED  ·  %d MO" % (r.scatteredUntil - s.elapsedMonths)
+		stance_color = P.WARN
 	if r.backlashUntil > s.elapsedMonths:
 		stance += "  ·  BACKLASH %d MO" % (r.backlashUntil - s.elapsedMonths)
 	_stance.text = stance
@@ -261,9 +272,10 @@ func refresh() -> void:
 		var button: Button = row.button
 		# On touch a blocked row still opens its explanation; only the perform button is off.
 		button.disabled = not preview.ok and not Kit.touch
-		# Rows that can never apply here are left out: worship already in its state, or a cell
-		# that already exists.
-		var hidden: bool = id == "reveal" and r.public or id == "hide" and not r.public or id == "expand" and r.population.followers > 0
+		# Rows that can never apply here are left out: worship already in its state, a cell
+		# that already exists, or an answer to a threat when there is none.
+		var hidden: bool = id == "reveal" and r.public or id == "hide" and not r.public or id == "expand" and r.population.followers > 0 \
+			or Notes.RESPONSES.has(id) and r.threat == null
 		button.visible = not hidden
 		var blocked := Notes.blocker(s, id, region, preview)
 		button.tooltip_text = blocked.long
@@ -273,7 +285,9 @@ func refresh() -> void:
 		title.add_theme_font_override("font", P.font("body" if preview.ok else "italic"))
 		title.add_theme_color_override("font_color", P.TEXT if preview.ok else P.MUTED)
 		row.cost.text = _cost_text(preview) if preview.ok else blocked.short
-		button.accessibility_name = title.text + ", " + (_cost_text(preview).to_lower() if preview.ok else "unavailable: " + blocked.long)
+		row.aware.text = _awareness_text(preview)
+		row.aware.visible = preview.ok and preview.awareness > 0
+		button.accessibility_name = title.text + ", " + (_cost_text(preview).to_lower() + (", " + _awareness_text(preview).to_lower() if preview.awareness > 0 else "") if preview.ok else "unavailable: " + blocked.long)
 		row.cost.add_theme_color_override("font_color", P.WARN if not preview.ok else P.OMEN if preview.dread > 0 else P.TEXT)
 	_refresh_detail()
 
@@ -340,12 +354,8 @@ func _fill_cards(s: Dictionary, r: Dictionary) -> void:
 		head.add_child(Kit.label(Format.months(threat.dueMonth - s.elapsedMonths), 15, P.DANGER, "type_bold"))
 		box.add_child(head)
 		box.add_child(Kit.body("If ignored: " + Threats.describe(r), 15, P.TEXT, "italic"))
-		var preview := GameEngine.preview_action(s, "counter", region)
-		var counter := Kit.stamp("OBSTRUCT · %d INFLUENCE" % preview.influence, Callable(), P.DANGER)
-		_tap(counter, func() -> void: game.act("counter", region))
-		counter.disabled = not preview.ok
-		counter.tooltip_text = preview.reason
-		box.add_child(_with_reason(counter, Notes.blocker(s, "counter", region, preview).short))
+		for id in Notes.RESPONSES:
+			box.add_child(_response(s, r, id))
 	if r.opportunity != null:
 		var omen: Dictionary = r.opportunity
 		var box := _card(P.OMEN)
@@ -390,10 +400,33 @@ func _fill_cards(s: Dictionary, r: Dictionary) -> void:
 		box.add_child(bar)
 		if state == "dormant":
 			box.add_child(Kit.body("Dormant. Upkeep of %s Influence a month is unpaid; it does not count for the rite." % Js.num(B.SITE_UPKEEP), 15, P.DANGER, "italic"))
+		elif r.scattered:
+			box.add_child(Kit.body("Stalled. The flock is scattered for %d more months." % (r.scatteredUntil - s.elapsedMonths), 15, P.DANGER, "italic"))
 		elif state == "unsupported":
 			box.add_child(Kit.body("Stalled. Needs %s followers here." % Format.count(Derived.site_requirement(r)), 15, P.DANGER, "italic"))
 		elif state == "ready":
 			box.add_child(Kit.body("Ready for the final rite.", 15, P.CULT, "italic"))
+
+
+## One answer to this region's threat: its stamp, and under it what it costs besides the
+## price, or why it cannot be used now.
+func _response(s: Dictionary, r: Dictionary, id: String) -> Control:
+	var preview := GameEngine.preview_action(s, id, region)
+	var stamp := Kit.stamp(Notes.response_stamp(preview, id), Callable(), P.DANGER)
+	_tap(stamp, func() -> void: game.act(id, region))
+	stamp.disabled = not preview.ok
+	stamp.tooltip_text = preview.reason if not preview.ok else preview.effect + "\n" + preview.risk
+	stamp.accessibility_name = GameData.ACTIONS[id].name + ", " + (Notes.response_stamp(preview, id).to_lower() if preview.ok else "unavailable: " + preview.reason)
+	stamp.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	if Kit.touch:
+		stamp.custom_minimum_size = Vector2(0, 40)
+	var column := Kit.vbox(2)
+	column.add_child(stamp)
+	if preview.ok:
+		column.add_child(Kit.body(Notes.response_note(r, preview, id), 13, P.MUTED, "italic"))
+	else:
+		column.add_child(Kit.label(Notes.blocker(s, id, region, preview).short, 12, P.WARN, "type_bold"))
+	return column
 
 
 ## A stamp, with the short reason it is unavailable underneath.
@@ -450,6 +483,10 @@ func _price_text(preview: Dictionary) -> String:
 	if preview.followers > 0:
 		parts.append("%d FOLLOWERS" % preview.followers)
 	return " · ".join(parts)
+
+
+func _awareness_text(preview: Dictionary) -> String:
+	return "+%s AWARENESS" % Js.num(preview.awareness)
 
 
 func _cost_text(preview: Dictionary) -> String:
@@ -545,6 +582,9 @@ func _refresh_detail() -> void:
 	var price := _price_text(preview)
 	if price:
 		_detail.add_child(Kit.label("COST  " + price, 13, P.OMEN if preview.dread > 0 else P.TEXT, "type_bold"))
+	# World awareness is a price too; it gets its own line so a long price never widens the file.
+	if preview.awareness > 0:
+		_detail.add_child(Kit.label(_awareness_text(preview).replace("AWARENESS", "WORLD AWARENESS"), 13, P.DANGER, "type_bold"))
 	_detail.add_child(Kit.body(preview.effect, 15, P.TEXT))
 	if preview.risk:
 		_detail.add_child(Kit.body(preview.risk, 15, P.DANGER, "italic"))

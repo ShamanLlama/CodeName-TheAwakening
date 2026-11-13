@@ -8,12 +8,12 @@ const B = preload("res://core/balance.gd")
 ## id: [title, one sentence]. Each appears once per device, the first time it applies.
 const HINTS := {
 	"first_cell": ["Your cell is growing", "It recruits by itself and earns Influence. Open a neighbouring region and choose Establish a cell to spread. Every action also works while paused."],
-	"threat": ["A threat is coming", "The clipping on the left counts down to a strike. Obstruct it with Influence, or accept the losses."],
+	"threat": ["A threat is coming", "The clipping on the left counts down to a strike. Obstruct it with Influence, scatter the cell for a few months, silence the witnesses with Dread, or accept the losses."],
 	"omen": ["An omen appeared", "The violet eye marks a short-lived opportunity. Open that region to use it before it fades."],
 	"doctrine": ["You can afford a doctrine", "One permanent bonus for this run, from the Doctrine button in the ledger."],
 	"sacrifice": ["Ritual sites take two years", "Sacrifice followers in the Rites tab for Dread, then Prepare a site in a region you hold firmly."],
 	"awareness": ["The world is noticing", "World awareness slows you and ends the run at 100%. Conceal the evidence lowers it."],
-	"unsupported": ["A site stopped counting", "A struck seal stalls: its region needs more followers, or its upkeep went unpaid. Open the region to see which."],
+	"unsupported": ["A site stopped counting", "A struck seal stalls: its region needs more followers, its flock is scattered, or its upkeep went unpaid. Open the region to see which."],
 }
 
 
@@ -72,6 +72,30 @@ static func forecast_headline(s: Dictionary) -> String:
 	return "Fund %d more site%s soon" % [missing, "" if missing == 1 else "s"]
 
 
+## The three answers to a threat, in the order they are offered.
+const RESPONSES: Array[String] = ["counter", "scatter", "silence"]
+
+
+## The stamp for one answer: the verb and what it is paid in.
+static func response_stamp(preview: Dictionary, id: String) -> String:
+	match id:
+		"counter":
+			return "OBSTRUCT · %d INF" % preview.influence
+		"scatter":
+			return "SCATTER · %d MO" % B.SCATTER_MONTHS
+	return "SILENCE · %d DREAD" % preview.dread
+
+
+## What that answer costs besides its price, in a few words.
+static func response_note(r: Dictionary, preview: Dictionary, id: String) -> String:
+	match id:
+		"counter":
+			return "No obstruction here for %d months" % GameData.ACTIONS.counter.cooldown
+		"scatter":
+			return "No growth or income" + ("; the site stalls" if r.site.invested else "") + ("; worship goes underground" if r.public else "")
+	return "+%s world awareness" % Js.num(preview.awareness)
+
+
 ## What a threat does if it lands, one plain phrase per line.
 static func threat_effects(r: Dictionary) -> Array[String]:
 	var c := Threats.consequences(r)
@@ -103,7 +127,7 @@ static func blocker(s: Dictionary, id: String, region_id: String, preview: Dicti
 					found = ["ALREADY HELD", "This region already has a cell."]
 				elif Derived.total_followers(s) > 0 and not GameData.REGIONS[region_id].adjacent.any(func(o: String) -> bool: return s.regions[o].population.followers > 0):
 					found = ["NOT NEXT TO A CELL", "Requires a cult in an adjacent region."]
-			"counter":
+			"counter", "scatter", "silence":
 				if r.threat == null:
 					found = ["NO THREAT", "No approaching threat in this region."]
 			"exploit":
@@ -144,6 +168,8 @@ static func short_reason(preview: Dictionary) -> String:
 		return "NEED " + reason.trim_prefix("Need ").trim_suffix(" Dread.") + " DREAD"
 	if reason.begins_with("Need ") and reason.ends_with(" local followers."):
 		return "NEED " + reason.trim_prefix("Need ").trim_suffix(" local followers.") + " HERE"
+	if reason.begins_with("The flock is scattered for "):
+		return "SCATTERED " + reason.trim_prefix("The flock is scattered for ").trim_suffix(" more months.") + " MO"
 	if reason.begins_with("Maintain at least"):
 		return "NEED " + reason.trim_prefix("Maintain at least ").trim_suffix(" local followers.") + " HERE"
 	for entry in [
@@ -187,7 +213,7 @@ static func ending(s: Dictionary) -> Dictionary:
 	var issues: Array = []
 	if started:
 		issues.append(["The rite began but lost a supported site before its 12 months were done.",
-			"During the rite the world hunts your sites. Keep Influence to obstruct every threat against them."])
+			"During the rite the world hunts your sites. Keep Influence to obstruct and Dread to silence the threats against them."])
 	if sites.size() < B.REQUIRED_SITES:
 		var next_cost: int = B.SITE_DREAD_COSTS[mini(sites.size(), B.SITE_DREAD_COSTS.size() - 1)]
 		issues.append(["Only %d of 3 ritual sites were funded." % sites.size(),

@@ -1,6 +1,6 @@
 # Decisiones pendientes
 
-**Versión:** 0.3 · **Fecha:** 2026-11-02 · **Estado:** D01–D03, D09 y D10 confirmadas; D04–D08 pendientes.
+**Versión:** 0.4 · **Fecha:** 2026-11-12 · **Estado:** D01–D03 y D08–D11 confirmadas; D04 y D05 con respuesta parcial; D06 y D07 pendientes.
 
 Este registro distingue las decisiones confirmadas de las preguntas abiertas.
 La primera etapa del GDD documenta la implementación; los objetivos futuros
@@ -31,9 +31,8 @@ se registran sin presentarlos como características ya disponibles.
   temporal? ¿Queremos música, ilustraciones o una representación del despertar?
 - **Público, idiomas y dispositivos.** ¿A quién queremos llegar primero, en qué
   idioma y con qué equipo? Hoy el flujo está orientado a ratón/teclado y textos en inglés.
-- **Objetivo de entrega.** ¿Juego breve publicable, demo de algo mayor o producto
-  comercial? Confirmar plataformas prioritarias, modelo de distribución, equipo,
-  disponibilidad y restricciones antes de estimar fechas o presupuesto.
+- **Objetivo de entrega.** Respondido en D08: juego gratuito, corto y completo. Quedan
+  plataformas prioritarias, equipo, disponibilidad y fechas.
 
 ## Registro de respuestas
 
@@ -42,13 +41,15 @@ se registran sin presentarlos como características ya disponibles.
 | D01 | Relación con el prototipo | Confirmada | Documentar primero lo implementado — 2026-10-28 | Visión, loops y alcance |
 | D02 | Duración objetivo | Confirmada; medición por precisar | 15–30 minutos por partida — 2026-10-28 | Mapa y ritmo, balance y playtesting |
 | D03 | Experiencia buscada | Confirmada | Mezcla de estrategia, narrativa y horror — 2026-10-28 | Pilares, narrativa, arte y audio |
-| D04 | Identidad y tono | Pendiente | — | Visión y narrativa |
-| D05 | Progresión entre partidas | Pendiente | — | Game Design y alcance |
+| D04 | Identidad y tono | Parcial | Se admiten sucesos escritos además de la crónica sistémica — 2026-11-12. Quién dirige el culto y el registro del horror siguen pendientes | Visión y narrativa |
+| D05 | Progresión entre partidas | Parcial | Dirección quiere un árbol de talentos que dé opciones y estrategias distintas, con puntos que el jugador gasta — 2026-11-12. Falta decidir si vive dentro de la partida o persiste entre partidas | Game Design y alcance |
 | D06 | Presentación final | Pendiente | — | Arte, audio y producción |
 | D07 | Público, idiomas y dispositivos | Pendiente | — | Público, UX y plataforma |
-| D08 | Entrega y recursos | Pendiente | — | Producción y negocio |
+| D08 | Entrega y recursos | Confirmada | Juego gratuito, corto y completo; no una demo ni un producto de pago — 2026-11-12. Fechas y plataformas prioritarias por definir | Producción y negocio |
 | D09 | Época y estética de interfaz | Confirmada | Archivo del culto en un escritorio de noche, 1908–1926, con calendario real; tono de época solo en el marco, sin renombrar mecánicas — 2026-10-30 | Arte, UI/UX y narrativa |
 | D10 | Decisiones económicas y registro de versiones | Confirmada | Mejorar las decisiones sin tocar los pilares: mantenimiento de sitios, ocultamiento según awareness y caza de sitios (`alignment-2`, juego 0.3.0). Todo cambio se refleja en el sistema de playtest y en el [registro de versiones](../../playtests/versiones.md) — 2026-11-02 | Game Design, balance y playtesting |
+
+| D11 | Reestructura del minuto a minuto | Confirmada | Se pueden reestructurar verbos y agregar mecánicas para mejorar el game feel, sin automatizar acciones del jugador: se descartan las posturas por célula y reclutar sigue siendo manual. La primera partida no tiene que poder ganarse; el juego debe oponer resistencia. Primer paso: `alignment-3` (juego 0.4.0) — 2026-11-12 | Game Design, balance, UI/UX y playtesting |
 
 No convertir preguntas pendientes en funcionalidades comprometidas. Los problemas
 observados del prototipo siguen en [Open problems](../09-open-problems.md).

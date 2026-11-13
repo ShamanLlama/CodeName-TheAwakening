@@ -6,6 +6,11 @@ const MAX_EVENTS := 5000
 const MAX_BYTES := 8388608
 const TTL := 604800
 const CLOCK_KEYS := ["elapsed_ms", "simulation_ms", "planning_ms", "background_ms", "excluded_ms"]
+## The GTC contract this build's events follow. It changes with the action list, regions,
+## doctrines or event fields; see docs/playtests/versiones.md.
+const ADAPTER := "awakening-2"
+## Records queued by an earlier build keep the adapter they were written under.
+const STORED_ADAPTERS := ["awakening-1", "awakening-2"]
 var config := {}
 var data := fresh()
 # Consent is an explicit choice per round, remembered on this device until the player stops.
@@ -124,7 +129,7 @@ func start_run(state: Dictionary, from_start := true) -> void:
 		warning = "This seed is too long for playtest capture. Gameplay is available."
 		return
 	var id := identifier()
-	var context := {"schema_version": "1.0", "adapter": "awakening-1", "collection_id": config.collection_id,
+	var context := {"schema_version": "1.0", "adapter": ADAPTER, "collection_id": config.collection_id,
 		"build_id": config.build_id, "round_id": config.round_id, "tester_id": data.testers[config.round_id],
 		"run_id": id, "participation_version": "playtests-v1", "coverage": "from_start" if from_start else "partial"}
 	data.runs[id] = {"context": context, "endpoint": config.endpoint, "sequence": 0, "session_id": identifier(),
@@ -357,7 +362,7 @@ static func _valid_store(value) -> bool:
 		if typeof(run.get("last_session_id")) != TYPE_STRING or not valid_endpoint(run.get("endpoint")): return false
 		for key in ["collection_id", "build_id", "round_id", "tester_id", "run_id"]:
 			if not valid_id(run.context.get(key)): return false
-		if run.context.get("run_id") != id or run.context.get("schema_version") != "1.0" or run.context.get("adapter") != "awakening-1" or run.context.get("participation_version") != "playtests-v1" or not run.context.get("coverage") in ["from_start", "partial"]: return false
+		if run.context.get("run_id") != id or run.context.get("schema_version") != "1.0" or not STORED_ADAPTERS.has(run.context.get("adapter")) or run.context.get("participation_version") != "playtests-v1" or not run.context.get("coverage") in ["from_start", "partial"]: return false
 		if not run.last_event.is_empty() and not _valid_event(run.last_event): return false
 		if run.closed and (not valid_id(run.last_session_id) or run.last_event.get("type") not in ["run_finished", "run_abandoned"]): return false
 		var sum := 0

@@ -9,7 +9,7 @@ const RECOVERY_PATH := "user://save-v2-recovery.json"
 const SAVE_VERSION := 2
 ## Runs saved under these rules cannot continue; the rest of the save (settings, playtest
 ## records) is kept and the player starts a new run.
-const RETIRED_RULESETS: Array[String] = ["alignment-1"]
+const RETIRED_RULESETS: Array[String] = ["alignment-1", "alignment-2"]
 const RETIRED_NOTICE := "Your unfinished run used older rules (%s) and cannot continue under %s. Settings and playtest records are kept; start a new run."
 
 
@@ -78,6 +78,8 @@ static func is_game_state(v) -> bool:
 	for id in GameData.REGION_IDS:
 		var r = v.regions.get(id)
 		if not _record(r) or not _record(r.get("population")) or typeof(r.get("public")) != TYPE_BOOL or not _number(r.get("exposure"), 100) \
+			or typeof(r.get("revealed")) != TYPE_BOOL or typeof(r.get("scattered")) != TYPE_BOOL or not _integer(r.get("scatteredUntil"), B.DEADLINE + B.SCATTER_MONTHS) \
+			or r.scattered != (month < r.scatteredUntil) \
 			or not _number(r.get("madness"), 100) or not _integer(r.get("backlashUntil")) or not _record(r.get("cooldowns")) or not _record(r.get("site")) \
 			or typeof(r.site.get("invested")) != TYPE_BOOL or not _integer(r.site.get("progress"), B.SITE_MONTHS) \
 			or typeof(r.site.get("dormant")) != TYPE_BOOL or not r.site.invested and (r.site.progress != 0 or r.site.dormant):
@@ -137,6 +139,7 @@ static func normalize_state(v: Dictionary) -> Dictionary:
 	for id in GameData.REGION_IDS:
 		var r: Dictionary = v.regions[id]
 		r.backlashUntil = int(r.backlashUntil)
+		r.scatteredUntil = int(r.scatteredUntil)
 		r.site.progress = int(r.site.progress)
 		r.exposure = float(r.exposure)
 		r.madness = float(r.madness)

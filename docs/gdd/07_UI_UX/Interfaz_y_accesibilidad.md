@@ -71,4 +71,18 @@ Repetir las tareas críticas con sonido desactivado y revisar dependencia del co
 Fuentes: [pantalla](../../../godot/ui/game_screen.gd), [panel regional](../../../godot/ui/region_panel.gd),
 [diálogos](../../../godot/ui/dialogs.gd) y [controles](../../../README.md).
 
+## `alignment-3` — 2026-11-12
+
+- **Respuestas a una amenaza.** El recorte del mapa y la ficha de amenaza del expediente
+  muestran tres sellos: «OBSTRUCT · 30 INF», «SCATTER · 8 MO» y «SILENCE · 20 DREAD». En el
+  expediente cada sello lleva debajo lo que cuesta además del precio, o el motivo por el que
+  no está disponible. Las tres filas aparecen en la pestaña Cult solo mientras hay amenaza.
+- **Awareness como precio.** La fila de una acción que suma awareness la muestra en rojo
+  bajo el precio («+8 AWARENESS») y la explicación la repite en su propia línea.
+- **Célula dispersa.** El expediente dice «SCATTERED · N MO»; reclutar y hacerse público
+  muestran «SCATTERED N MO»; la ficha del sitio explica que está detenido por eso.
+
+Comprobado con `dev/layout_check.gd` en los perfiles de 0.3.5; véase el
+[registro de versiones](../../playtests/versiones.md).
+
 [Volver al índice](../README.md)

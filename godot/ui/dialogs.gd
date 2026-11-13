@@ -188,7 +188,7 @@ func _guide() -> void:
 		["Grow", "Cells recruit and earn Influence. Spread to neighbouring regions."],
 		["Sacrifice", "Followers become Dread, which pays for the rites."],
 		["Build three sites", "Each takes 24 months and needs a quarter of its region as followers."],
-		["Stay hidden", "Obstruct threats and conceal evidence. At 100% world awareness the run is lost."],
+		["Stay hidden", "Answer each threat: obstruct it, scatter the cell or silence the witnesses. Conceal evidence. At 100% world awareness the run is lost."],
 		["Awaken", "From September 1924, spend 100 Dread and hold three sites for 12 months."],
 	]
 	for i in steps.size():
@@ -474,7 +474,7 @@ func _end() -> void:
 	grid.add_theme_constant_override("v_separation", 10)
 	var t: Dictionary = s.telemetry
 	for item in [["Months", str(s.elapsedMonths)], ["Followers", Format.count(Derived.total_followers(s))], ["Sites held", "%d / 3" % Derived.ready_sites(s)],
-		["Sacrificed", Format.count(t.sacrificed)], ["Lost to threats", Format.count(t.raidLosses)], ["Obstructed", str(t.threatsCountered)]]:
+		["Sacrificed", Format.count(t.sacrificed)], ["Lost to threats", Format.count(t.raidLosses)], ["Threats answered", str(Notes.RESPONSES.reduce(func(sum: int, id: String) -> int: return sum + int(t.actions.get(id, 0)), 0))]]:
 		var cell := Kit.vbox(0)
 		cell.add_child(Kit.caption(item[0]))
 		cell.add_child(Kit.label(item[1], 22, P.TEXT, "body_bold"))

@@ -19,6 +19,8 @@ Keys: Space pauses, 1 and 2 set the speed, Tab picks the next region, ↑ ↓ ch
 npm run godot:test            # import, then every tests/test_*.gd
 godot --headless --path godot -s res://tests/run_tests.gd -- save   # filter by file or test name
 godot --headless --path godot -s res://dev/check_scripts.gd         # parse-check every script
+godot --headless --path godot -s res://dev/measure.gd -- --seeds=24 # scripted-policy win rates for the current ruleset
+godot --headless --path godot -s res://dev/regenerate_goldens.gd    # only after an intentional rules change
 ```
 
 Run the import step after adding or renaming a `class_name` script. Otherwise Godot's class cache is stale and scripts fail to resolve.

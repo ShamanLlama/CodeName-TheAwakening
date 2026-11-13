@@ -1,6 +1,8 @@
 class_name GameEngine
 ## The monthly cult simulation. alignment-1 mirrored src/game/engine.ts; alignment-2 adds site
-## upkeep, escalating concealment, and pressure on ritual sites during the alignment.
+## upkeep, escalating concealment, and pressure on ritual sites during the alignment;
+## alignment-3 gives a threat three answers (obstruct, scatter, silence), reports the world
+## awareness an action adds as part of its price, and charges it once per region for going public.
 ## Commands never mutate their input: they return a result holding a changed deep copy, or the
 ## untouched input state when refused.
 
@@ -30,7 +32,8 @@ static func create_game_state(difficulty: String, seed: String) -> Dictionary:
 		var deniers := Js.round_half_up(region_capacity * GameData.REGIONS[id].skepticism / 200.0)
 		regions[id] = {
 			"population": { "unaware": region_capacity - deniers, "deniers": deniers, "believers": 0.0, "followers": 0.0, "losses": 0.0 },
-			"public": false, "exposure": 0.0, "madness": 0.0, "backlashUntil": 0, "cooldowns": {},
+			"public": false, "revealed": false, "scattered": false, "scatteredUntil": 0,
+			"exposure": 0.0, "madness": 0.0, "backlashUntil": 0, "cooldowns": {},
 			"site": { "invested": false, "progress": 0, "dormant": false }, "threat": null, "opportunity": null, "figure": null,
 		}
 	return {
@@ -60,6 +63,28 @@ static func counter_cost(state: Dictionary, r: Dictionary) -> int:
 	return int(Js.round_half_up(base * 2 / 3.0)) if state.specialization == "infiltration" else base
 
 
+## Silencing is priced in Dread by the same severity.
+static func silence_cost(state: Dictionary, r: Dictionary) -> int:
+	var each: int = B.SILENCE_SEVERITY_DREAD_TERROR if state.specialization == "terror" else B.SILENCE_SEVERITY_DREAD
+	return each * (r.threat.severity if r.threat != null else 1)
+
+
+## World awareness an action adds when performed. Part of its price.
+static func awareness_cost(id: String, r: Dictionary) -> float:
+	match id:
+		"reveal":
+			return 0.0 if r.revealed else B.REVEAL_AWARENESS
+		"manifest":
+			return B.MANIFEST_AWARENESS
+		"prepare":
+			return B.SITE_AWARENESS
+		"reveal_figure":
+			return B.FIGURE_AWARENESS
+		"silence":
+			return B.SILENCE_SEVERITY_AWARENESS * (r.threat.severity if r.threat != null else 1)
+	return 0.0
+
+
 ## A watched world is dearer to deceive: concealment costs more as awareness rises.
 static func conceal_cost(state: Dictionary) -> int:
 	return GameData.ACTIONS.conceal.influence + int(Js.round_half_up(state.awareness * B.CONCEAL_AWARENESS_PRICE))
@@ -76,12 +101,14 @@ static func site_dread_cost(state: Dictionary) -> int:
 
 static func preview_action(state: Dictionary, id: String, region_id: String) -> Dictionary:
 	if not GameData.ACTIONS.has(id) or not state.regions.has(region_id):
-		return { "ok": false, "reason": "Unknown action or region.", "influence": 0, "dread": 0, "followers": 0, "effect": "", "risk": "" }
+		return { "ok": false, "reason": "Unknown action or region.", "influence": 0, "dread": 0, "followers": 0, "awareness": 0.0, "effect": "", "risk": "" }
 	var a: Dictionary = GameData.ACTIONS[id]
 	var r: Dictionary = state.regions[region_id]
 	var p: Dictionary = r.population
 	var cost_influence: int = counter_cost(state, r) if id == "counter" else conceal_cost(state) if id == "conceal" else a.influence
-	var cost_dread: int = 15 if id == "manifest" and state.specialization == "terror" else site_dread_cost(state) if id == "prepare" else a.dread
+	var cost_dread: int = 15 if id == "manifest" and state.specialization == "terror" else site_dread_cost(state) if id == "prepare" \
+		else silence_cost(state, r) if id == "silence" else a.dread
+	var cost_awareness := awareness_cost(id, r)
 	var cost_followers: int = a.followers
 	var reason := "" if is_active(state) else "Start a run before acting; completed runs cannot change."
 	var cooldown: int = r.cooldowns.get(id, 0) - state.elapsedMonths
@@ -90,6 +117,8 @@ static func preview_action(state: Dictionary, id: String, region_id: String) -> 
 	if not reason and state.dread < cost_dread: reason = "Need %d Dread." % cost_dread
 	if not reason and p.followers < cost_followers: reason = "Need %d local followers." % cost_followers
 	if not reason and id != "expand" and p.followers <= 0: reason = "Establish a cult here first."
+	if not reason and r.scattered and ["recruit", "reveal", "prepare", "reveal_figure"].has(id):
+		reason = "The flock is scattered for %d more months." % (r.scatteredUntil - state.elapsedMonths)
 	if not reason and (id == "recruit" or id == "expand") and Derived.recruitable(r) < 1: reason = "No recruits available. Use a manifestation to change disbelief."
 	if not reason and id == "expand" and p.followers > 0: reason = "This region already has a cell."
 	if not reason and id == "expand" and Derived.total_followers(state) > 0 and not _has_adjacent_cell(state, region_id): reason = "Requires a cult in an adjacent region."
@@ -105,7 +134,7 @@ static func preview_action(state: Dictionary, id: String, region_id: String) -> 
 	var preparation_left: int = B.DEADLINE - state.elapsedMonths - B.FINAL_MONTHS
 	if not reason and id == "prepare" and preparation_left < B.SITE_MONTHS - acceleration:
 		reason = "Too late: preparation needs %d more months and the final rite needs %d, but only %d remain." % [B.SITE_MONTHS - acceleration, B.FINAL_MONTHS, maxi(0, B.DEADLINE - state.elapsedMonths)]
-	if not reason and id == "counter" and r.threat == null: reason = "No approaching threat in this region."
+	if not reason and ["counter", "scatter", "silence"].has(id) and r.threat == null: reason = "No approaching threat in this region."
 	if not reason and id == "exploit" and (r.opportunity == null or not ["nightmare", "eclipse"].has(r.opportunity.kind)): reason = "Requires an active nightmare or eclipse."
 	if not reason and id == "exploit" and r.opportunity != null and r.opportunity.kind == "eclipse" and (not r.site.invested or r.site.progress >= B.SITE_MONTHS): reason = "An eclipse needs an unfinished ritual site."
 	if not reason and id == "convert" and (r.figure != null or r.opportunity == null or not ["celebrity", "politician"].has(r.opportunity.kind)): reason = "Requires an unconverted prominent-person opportunity."
@@ -119,7 +148,16 @@ static func preview_action(state: Dictionary, id: String, region_id: String) -> 
 			+ " followers remain; income falls by " + Js.fixed(cost_followers * B.INFLUENCE_PER_FOLLOWER, 2) + "/month."
 		risk = "+12 Exposure. Fewer than " + Js.num(Derived.site_requirement(r)) + " followers interrupts this site's ritual."
 	elif id == "reveal":
-		risk = "+18 Exposure, +5 world awareness; recruitment backlash for 6 months, then full public growth."
+		risk = "+18 Exposure%s; recruitment backlash for 6 months, then full public growth." % ("" if r.revealed else ", +%s world awareness" % Js.num(cost_awareness))
+	elif id == "scatter":
+		effect = "The threat finds nobody. −" + Js.fixed(minf(B.SCATTER_EXPOSURE, maxf(0.0, r.exposure - (40.0 if r.site.invested else 0.0))), 0) + " Exposure."
+		risk = "For %d months this cell recruits nobody and earns nothing (−%s Influence/month)." % [B.SCATTER_MONTHS, Js.fixed(Derived.region_income(r), 2)] \
+			+ (" Its ritual site stalls and cannot carry the final rite." if r.site.invested else "") + (" Public worship ends." if r.public else "")
+	elif id == "silence":
+		effect = "The threat ends tonight."
+		risk = "+%s world awareness, +%s Exposure. The disappearances are noticed." % [Js.num(cost_awareness), Js.num(B.SILENCE_EXPOSURE)]
+	elif id == "counter":
+		risk = "No further obstruction here for %d months." % a.cooldown
 	elif id == "conceal":
 		effect = "−" + Js.fixed(minf(25.0, maxf(0.0, r.exposure - _evidence_floor(r))), 0) + " Exposure, −" + Js.fixed(minf(B.CONCEAL_AWARENESS, state.awareness), 0) \
 			+ " world awareness. The price rises with awareness."
@@ -135,7 +173,7 @@ static func preview_action(state: Dictionary, id: String, region_id: String) -> 
 		effect = "+" + Js.fixed(minf(B.RECRUIT_AMOUNT, Derived.recruitable(r)), 0) + " followers; +3 Exposure."
 	elif id == "exploit":
 		effect = "+30 Dread once, up to the resource cap." if r.opportunity != null and r.opportunity.kind == "nightmare" else "+8 months of site preparation once."
-	return { "ok": not reason, "reason": reason, "influence": cost_influence, "dread": cost_dread, "followers": cost_followers, "effect": effect, "risk": risk }
+	return { "ok": not reason, "reason": reason, "influence": cost_influence, "dread": cost_dread, "followers": cost_followers, "awareness": cost_awareness, "effect": effect, "risk": risk }
 
 
 static func _has_adjacent_cell(state: Dictionary, region_id: String) -> bool:
@@ -162,6 +200,7 @@ static func perform_action(state: Dictionary, id: String, region_id: String) -> 
 	t.dreadSpent += preview.dread
 	t.actions[id] = t.actions.get(id, 0) + 1
 	r.cooldowns[id] = next.elapsedMonths + GameData.ACTIONS[id].cooldown
+	next.awareness = Derived.clamp_pct(next.awareness + preview.awareness)
 	match id:
 		"recruit", "expand":
 			Derived.recruit(r, B.RECRUIT_AMOUNT if id == "recruit" else B.EXPAND_AMOUNT)
@@ -172,8 +211,8 @@ static func perform_action(state: Dictionary, id: String, region_id: String) -> 
 			r.exposure = Derived.clamp_pct(r.exposure + 12)
 		"reveal":
 			r.public = true
+			r.revealed = true
 			r.exposure = Derived.clamp_pct(r.exposure + 18)
-			next.awareness = Derived.clamp_pct(next.awareness + 5)
 			r.backlashUntil = maxi(r.backlashUntil, next.elapsedMonths + 6)
 			if not t.revelations.has(region_id):
 				t.revelations[region_id] = next.elapsedMonths
@@ -191,16 +230,23 @@ static func perform_action(state: Dictionary, id: String, region_id: String) -> 
 			p.believers += denied + unaware
 			r.madness = Derived.clamp_pct(r.madness + 20)
 			r.exposure = Derived.clamp_pct(r.exposure + 15)
-			next.awareness = Derived.clamp_pct(next.awareness + 8)
 		"prepare":
 			r.site.invested = true
 			r.site.dormant = false
 			r.exposure = maxf(40.0, r.exposure)
-			next.awareness = Derived.clamp_pct(next.awareness + 8)
 			Director.schedule_threat(next, region_id, true)
 		"counter":
 			r.threat = null
 			t.threatsCountered += 1
+		"scatter":
+			r.threat = null
+			r.public = false
+			r.scattered = true
+			r.scatteredUntil = next.elapsedMonths + B.SCATTER_MONTHS
+			r.exposure = maxf(_evidence_floor(r), r.exposure - B.SCATTER_EXPOSURE)
+		"silence":
+			r.threat = null
+			r.exposure = Derived.clamp_pct(r.exposure + B.SILENCE_EXPOSURE)
 		"exploit":
 			if r.opportunity.kind == "nightmare":
 				_grant_dread(next, 30)
@@ -216,7 +262,6 @@ static func perform_action(state: Dictionary, id: String, region_id: String) -> 
 			Derived.recruit(r, 60)
 			r.site.progress = mini(B.SITE_MONTHS, r.site.progress + B.FIGURE_SITE_PROGRESS)
 			r.exposure = Derived.clamp_pct(r.exposure + 25)
-			next.awareness = Derived.clamp_pct(next.awareness + 8)
 			r.backlashUntil = next.elapsedMonths + 12
 	Derived.add_log(next, GameData.ACTIONS[id].name + " · " + GameData.REGIONS[region_id].name + ". " + preview.effect)
 	return success(next)
@@ -235,6 +280,15 @@ static func _pay_upkeep(s: Dictionary) -> void:
 			s.telemetry.upkeepPaid += B.SITE_UPKEEP
 		if site.dormant and not was_dormant:
 			Derived.add_log(s, "The ritual site in " + GameData.REGIONS[id].name + " lies dormant: upkeep of %s Influence is unpaid." % Js.num(B.SITE_UPKEEP))
+
+
+## A scattered cell comes back together when its months in hiding are over.
+static func _gather_scattered(s: Dictionary) -> void:
+	for id in GameData.REGION_IDS:
+		var r: Dictionary = s.regions[id]
+		if r.scattered and s.elapsedMonths >= r.scatteredUntil:
+			r.scattered = false
+			Derived.add_log(s, "The flock in " + GameData.REGIONS[id].name + " gathers again.")
 
 
 static func _grant_dread(s: Dictionary, amount: float) -> void:
@@ -296,6 +350,7 @@ static func advance_simulation(state: Dictionary, months: float) -> Dictionary:
 		if not is_active(next):
 			break
 		next.elapsedMonths += 1
+		_gather_scattered(next)
 		Director.resolve_world(next)
 		var income := minf(Derived.influence_per_month(next), maxf(0.0, B.INFLUENCE_CAP - next.influence))
 		next.influence += income

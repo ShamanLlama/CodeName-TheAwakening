@@ -1,6 +1,6 @@
 # Glosario de trabajo
 
-**Versión:** 0.1 · **Fecha:** 2026-10-28 · **Estado:** referencia del prototipo.
+**Versión:** 0.2 · **Fecha:** 2026-11-12 · **Estado:** referencia del prototipo.
 
 Los términos españoles ayudan a conversar sobre el diseño; no fijan todavía una
 localización de la interfaz.
@@ -24,6 +24,9 @@ localización de la interfaz.
 | Doctrine | Especialización permanente de una partida, elegida una sola vez |
 | Director | Sistema de reglas y azar con semilla que programa amenazas y oportunidades |
 | Seed | Semilla: permite reproducir una partida junto con la secuencia de acciones |
-| `alignment-1` | Identificador del conjunto de reglas actual, distinto de la versión documental |
+| Obstruct | Obstruir (`counter`): detener una amenaza con Influence; quema las conexiones de la región 12 meses |
+| Scatter | Dispersar (`scatter`): la célula se oculta 8 meses; la amenaza no encuentra a nadie y la célula no recluta, no ingresa ni sostiene su sitio |
+| Silence | Silenciar (`silence`): detener una amenaza con Dread; las desapariciones suman awareness |
+| `alignment-3` | Identificador del conjunto de reglas actual (juego 0.4.0), distinto de la versión documental. `alignment-1` y `alignment-2` son los anteriores |
 
 [Volver al índice](../README.md)

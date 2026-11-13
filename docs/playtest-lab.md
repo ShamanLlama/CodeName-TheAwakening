@@ -6,7 +6,7 @@ The [GTC wire contract](../../../GTC-page/gtc-web/contracts/playtests/README.md)
 
 ## Rulesets
 
-The adapter reports the save's ruleset in `run_started`/`capture_started` (`Balance.RULESET`). Since 0.3.0 (2026-11-02) that is `alignment-2`; the GTC schema accepts `alignment-1` and `alignment-2`. A save holding an unfinished `alignment-1` run loads without that run: settings, tutorial and playtest records stay, and the start screen explains why. Every build is listed with its ruleset and date in [the version log](playtests/versiones.md); a ruleset change needs a new GTC build and round.
+The adapter reports the save's ruleset in `run_started`/`capture_started` (`Balance.RULESET`). Since 0.4.0 (2026-11-12) that is `alignment-3`, sent under the `awakening-2` adapter, whose action list adds `scatter` and `silence` ([contract](../../../GTC-page/gtc-web/contracts/playtests/awakening-2/README.md)). Builds 0.2.0–0.3.6 used `awakening-1` with `alignment-1` or `alignment-2`. A save holding an unfinished run under an older ruleset loads without that run: settings, tutorial and playtest records stay, and the start screen explains why. Every build is listed with its ruleset and date in [the version log](playtests/versiones.md); a ruleset change needs a new GTC build and round.
 
 ## Player flow
 
