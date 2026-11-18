@@ -1,0 +1,280 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using Awakening.Core.Rules;
+
+namespace Awakening.UI
+{
+    /// <summary>How a finished run ended.</summary>
+    public sealed class Ending
+    {
+        public string Cause = "";
+        public readonly List<(bool ok, string name, string detail)> Checks = new List<(bool, string, string)>();
+        public readonly List<string> Advice = new List<string>();
+    }
+
+    /// <summary>
+    /// Short player-facing wording derived from the rules: first-time notes, the headline of the
+    /// ritual timetable, threat consequences, one-line reasons an action is unavailable, and the
+    /// account of how a run ended. Nothing here changes the rules. Port of godot/ui/notes.gd.
+    /// </summary>
+    public static class Notes
+    {
+        /// <summary>id: (title, one sentence). Each appears once per device, the first time it applies.</summary>
+        public static readonly Dictionary<string, (string title, string text)> Hints = new Dictionary<string, (string, string)>
+        {
+            ["first_cell"] = ("Your cell is growing", "It recruits by itself and earns Influence. Open a neighbouring region and choose Establish a cell to spread. Every action also works while paused."),
+            ["threat"] = ("A threat is coming", "The clipping on the left counts down to a strike. Obstruct it with Influence, scatter the cell for a few months, silence the witnesses with Dread, or accept the losses."),
+            ["omen"] = ("An omen appeared", "The violet eye marks a short-lived opportunity. Open that region to use it before it fades."),
+            ["doctrine"] = ("You can afford a doctrine", "One permanent bonus for this run, from the Doctrine button in the ledger."),
+            ["sacrifice"] = ("Ritual sites take two years", "Sacrifice followers in the Rites tab for Dread, then Prepare a site in a region you hold firmly."),
+            ["awareness"] = ("The world is noticing", "World awareness slows you and ends the run at 100%. Conceal the evidence lowers it."),
+            ["unsupported"] = ("A site stopped counting", "A struck seal stalls: its region needs more followers, its flock is scattered, or its upkeep went unpaid. Open the region to see which."),
+        };
+
+        static IEnumerable<RegionState> AllRegions(GameState s) => GameData.RegionIds.Select(id => s.Regions[id]);
+
+        /// <summary>The first unseen note whose situation is on the board, or "".</summary>
+        public static string NextHint(GameState s, Func<string, bool> seen)
+        {
+            if (s.Status == "placing" || s.Status == "won" || s.Status == "lost") return "";
+            var regions = AllRegions(s).ToList();
+            var checks = new Dictionary<string, bool>
+            {
+                ["first_cell"] = true,
+                ["threat"] = regions.Any(r => r.Threat != null),
+                ["omen"] = regions.Any(r => r.Opportunity != null),
+                ["unsupported"] = regions.Any(r => r.Site.Invested && IsStalled(r)),
+                ["awareness"] = s.Awareness >= 30,
+                ["sacrifice"] = s.ElapsedMonths >= 24 && !regions.Any(r => r.Site.Invested),
+                ["doctrine"] = s.Specialization == null && s.Influence >= GameData.SpecializationCost && s.ElapsedMonths >= 6,
+            };
+            foreach (string id in new[] { "first_cell", "threat", "unsupported", "awareness", "sacrifice", "omen", "doctrine" })
+                if (checks[id] && !seen(id)) return id;
+            return "";
+        }
+
+        /// <summary>
+        /// One reading of a funded site for every place that shows it (card, map, seals, checklists):
+        /// "dormant" (upkeep unpaid), "unsupported", "ready" or "preparing". Matches Derived.ReadySites.
+        /// </summary>
+        public static string SiteState(RegionState r)
+        {
+            if (r.Site.Dormant) return "dormant";
+            if (!Derived.Supported(r)) return "unsupported";
+            return r.Site.Progress >= Balance.SiteMonths ? "ready" : "preparing";
+        }
+
+        public static bool IsStalled(RegionState r)
+        {
+            string state = SiteState(r);
+            return state == "dormant" || state == "unsupported";
+        }
+
+        /// <summary>Names the timetable's most pressing problem in a few words.</summary>
+        public static string ForecastHeadline(GameState s)
+        {
+            if (s.Status == "awakening") return $"Final rite · {s.FinalProgress} of {Balance.FinalMonths} months";
+            var sites = AllRegions(s).Where(r => r.Site.Invested).ToList();
+            int unsupported = sites.Count(IsStalled);
+            if (Derived.NetInfluencePerMonth(s) < 0) return "Upkeep exceeds income";
+            if (sites.Count >= Balance.RequiredSites)
+            {
+                var remaining = sites.Select(r => Balance.SiteMonths - r.Site.Progress).ToList();
+                remaining.Sort();
+                int earliest = Math.Max(Balance.PreparationMonths, s.ElapsedMonths + remaining[Balance.RequiredSites - 1]) + Balance.FinalMonths;
+                if (earliest > Balance.Deadline) return $"Sites will finish {earliest - Balance.Deadline} months too late";
+                if (unsupported > 0) return $"{unsupported} site{(unsupported == 1 ? "" : "s")} stopped counting";
+                return s.ElapsedMonths >= Balance.PreparationMonths ? "The stars are right" : "Ritual timetable";
+            }
+            if (unsupported > 0) return $"{unsupported} site{(unsupported == 1 ? "" : "s")} stopped counting";
+            int missing = Balance.RequiredSites - sites.Count;
+            if (Balance.LatestSiteStart - s.ElapsedMonths < 0) return "Too late for new sites without help";
+            return $"Fund {missing} more site{(missing == 1 ? "" : "s")} soon";
+        }
+
+        /// <summary>The three answers to a threat, in the order they are offered.</summary>
+        public static readonly string[] Responses = { "counter", "scatter", "silence" };
+
+        /// <summary>The stamp for one answer: the verb and what it is paid in.</summary>
+        public static string ResponseStamp(ActionPreview preview, string id)
+        {
+            switch (id)
+            {
+                case "counter": return $"OBSTRUCT · {preview.Influence} INF";
+                case "scatter": return $"SCATTER · {Balance.ScatterMonths} MO";
+                default: return $"SILENCE · {preview.Dread} DREAD";
+            }
+        }
+
+        /// <summary>What that answer costs besides its price, in a few words.</summary>
+        public static string ResponseNote(RegionState r, ActionPreview preview, string id)
+        {
+            switch (id)
+            {
+                case "counter": return $"No obstruction here for {GameData.Actions["counter"].Cooldown} months";
+                case "scatter": return "No growth or income" + (r.Site.Invested ? "; the site stalls" : "") + (r.Public ? "; worship goes underground" : "");
+                default: return "+" + Js.Num(preview.Awareness) + " world awareness";
+            }
+        }
+
+        /// <summary>What a threat does if it lands, one plain phrase per line.</summary>
+        public static List<string> ThreatEffects(RegionState r)
+        {
+            ThreatConsequences c = Threats.Consequences(r);
+            var lines = new List<string> { $"Kills {(int)Math.Ceiling(c.Followers)} followers" };
+            if (c.DestroysCell)
+            {
+                lines[0] = "Destroys the cell" + (r.Site.Invested ? " and its site" : "");
+                return lines;
+            }
+            if (c.PreparationLost > 0) lines.Add($"Site loses {c.PreparationLost} months");
+            if (c.InterruptsSite) lines.Add("Site stops counting for the rite");
+            return lines;
+        }
+
+        /// <summary>
+        /// Why an action is unavailable: (short, long). The engine names the first failed check, which
+        /// is often the price; a missing cell, threat or omen is the real obstacle, so it wins.
+        /// </summary>
+        public static (string shortText, string longText) Blocker(GameState s, string id, string regionId, ActionPreview preview)
+        {
+            if (preview.Ok) return ("", "");
+            RegionState r = s.Regions[regionId];
+            Population p = r.Population;
+            (string, string) found = ("", "");
+            if (id != "expand" && p.Followers <= 0)
+            {
+                found = ("NO CELL HERE", "Establish a cult here first.");
+            }
+            else
+            {
+                switch (id)
+                {
+                    case "expand":
+                        if (p.Followers > 0) found = ("ALREADY HELD", "This region already has a cell.");
+                        else if (Derived.TotalFollowers(s) > 0 && !GameData.Regions[regionId].Adjacent.Any(o => s.Regions[o].Population.Followers > 0))
+                            found = ("NOT NEXT TO A CELL", "Requires a cult in an adjacent region.");
+                        break;
+                    case "counter":
+                    case "scatter":
+                    case "silence":
+                        if (r.Threat == null) found = ("NO THREAT", "No approaching threat in this region.");
+                        break;
+                    case "exploit":
+                        if (r.Opportunity == null || (r.Opportunity.Kind != "nightmare" && r.Opportunity.Kind != "eclipse"))
+                            found = ("NEEDS AN OMEN", "Requires an active nightmare or eclipse.");
+                        else if (r.Opportunity.Kind == "eclipse" && (!r.Site.Invested || r.Site.Progress >= Balance.SiteMonths))
+                            found = ("NEEDS A SITE", "An eclipse needs an unfinished ritual site.");
+                        break;
+                    case "convert":
+                        if (r.Figure != null || r.Opportunity == null || (r.Opportunity.Kind != "celebrity" && r.Opportunity.Kind != "politician"))
+                            found = ("NEEDS A FIGURE", "Requires an unconverted prominent-person opportunity.");
+                        break;
+                    case "reveal_figure":
+                        if (r.Figure == null || r.Figure.Revealed) found = ("NO SECRET FIGURE", "Requires a secretly converted figure.");
+                        else if (!r.Site.Invested) found = ("NEEDS A SITE", "Prepare a local ritual site to receive their awakening contribution.");
+                        break;
+                    case "prepare":
+                        if (r.Site.Invested) found = ("FUNDED", "This site's preparation is already funded.");
+                        break;
+                    case "manifest":
+                        if (p.Deniers + p.Unaware < 1) found = ("ALL BELIEVE", "Everyone here already believes.");
+                        break;
+                    case "recruit":
+                        if (Derived.Recruitable(r) < 1) found = ("NO RECRUITS LEFT", "No recruits available. Use a manifestation to change disbelief.");
+                        break;
+                }
+            }
+            if (found.Item1 == "") found = (ShortReason(preview), preview.Reason ?? "");
+            return found;
+        }
+
+        static string Between(string text, string prefix, params string[] suffixes)
+        {
+            string rest = text.StartsWith(prefix, StringComparison.Ordinal) ? text.Substring(prefix.Length) : text;
+            foreach (string suffix in suffixes)
+                if (rest.EndsWith(suffix, StringComparison.Ordinal)) rest = rest.Substring(0, rest.Length - suffix.Length);
+            return rest;
+        }
+
+        /// <summary>A few typed words for why an action cannot be taken, shown where its cost would be.</summary>
+        public static string ShortReason(ActionPreview preview)
+        {
+            string reason = preview.Reason ?? "";
+            if (reason.StartsWith("Available in", StringComparison.Ordinal)) return "IN " + Between(reason, "Available in ", " months.", " month.") + " MO";
+            if (reason.StartsWith("Need ", StringComparison.Ordinal) && reason.EndsWith(" Influence.", StringComparison.Ordinal)) return "NEED " + Between(reason, "Need ", " Influence.") + " INF";
+            if (reason.StartsWith("Need ", StringComparison.Ordinal) && reason.EndsWith(" Dread.", StringComparison.Ordinal)) return "NEED " + Between(reason, "Need ", " Dread.") + " DREAD";
+            if (reason.StartsWith("Need ", StringComparison.Ordinal) && reason.EndsWith(" local followers.", StringComparison.Ordinal)) return "NEED " + Between(reason, "Need ", " local followers.") + " HERE";
+            if (reason.StartsWith("The flock is scattered for ", StringComparison.Ordinal)) return "SCATTERED " + Between(reason, "The flock is scattered for ", " more months.") + " MO";
+            if (reason.StartsWith("Maintain at least", StringComparison.Ordinal)) return "NEED " + Between(reason, "Maintain at least ", " local followers.") + " HERE";
+            var table = new[]
+            {
+                ("Establish a cult here", "NO CELL HERE"), ("No recruits available", "NO RECRUITS LEFT"),
+                ("already has a cell", "ALREADY HELD"), ("adjacent region", "NOT NEXT TO A CELL"),
+                ("Nothing to conceal", "NOTHING TO HIDE"), ("already believes", "ALL BELIEVE"),
+                ("already funded", "FUNDED"), ("Too late", "TOO LATE"), ("No approaching threat", "NO THREAT"),
+                ("nightmare or eclipse", "NEEDS AN OMEN"), ("eclipse needs", "NEEDS A SITE"),
+                ("prominent-person", "NEEDS A FIGURE"), ("secretly converted", "NO SECRET FIGURE"),
+                ("receive their awakening", "NEEDS A SITE"), ("already public", "ALREADY PUBLIC"),
+                ("already underground", "ALREADY HIDDEN"),
+            };
+            foreach (var (text, label) in table)
+                if (reason.Contains(text)) return label;
+            return "UNAVAILABLE";
+        }
+
+        /// <summary>How a finished run ended. The cause is the most basic failure; advice covers up to two of the problems found.</summary>
+        public static Ending Ending(GameState s)
+        {
+            var result = new Ending();
+            if (s.Status == "won")
+            {
+                result.Cause = "Three sites held through the final rite.";
+                return result;
+            }
+            var sites = AllRegions(s).Where(r => r.Site.Invested).ToList();
+            if (s.Awareness >= 100)
+            {
+                result.Cause = "World awareness reached 100%. The world found the cult before the stars were right.";
+                result.Advice.Add("Conceal the evidence before awareness passes half; it costs more as awareness rises.");
+                result.Advice.Add("Public worship, sites and a very large cult all raise awareness. Grow only as large as the rite needs.");
+                return result;
+            }
+            foreach (string id in GameData.RegionIds)
+            {
+                RegionState r = s.Regions[id];
+                if (!r.Site.Invested) continue;
+                bool ready = r.Site.Progress >= Balance.SiteMonths && Derived.Supported(r) && !r.Site.Dormant;
+                result.Checks.Add((ready, GameData.Regions[id].Name, Derived.SiteLabel(r)));
+            }
+            for (int i = 0; i < Math.Max(0, Balance.RequiredSites - sites.Count); i++) result.Checks.Add((false, "Unfunded site", "Never funded"));
+            bool started = s.FinalProgress > 0;
+            result.Checks.Add((started, "Final rite", $"{s.FinalProgress} of {Balance.FinalMonths} months"));
+            var issues = new List<(string cause, string advice)>();
+            if (started)
+                issues.Add(("The rite began but lost a supported site before its 12 months were done.",
+                    "During the rite the world hunts your sites. Keep Influence to obstruct and Dread to silence the threats against them."));
+            if (sites.Count < Balance.RequiredSites)
+            {
+                int nextCost = Balance.SiteDreadCosts[Math.Min(sites.Count, Balance.SiteDreadCosts.Length - 1)];
+                issues.Add(($"Only {sites.Count} of 3 ritual sites were funded.",
+                    $"Fund sites earlier. Each needs 24 months, then the rite needs 12; the last safe start is {Format.Date(Balance.LatestSiteStart)}."
+                    + (s.Dread < nextCost ? $" Bank Dread by sacrifice: the next site costs {nextCost}." : "")));
+            }
+            if (sites.Any(r => !Derived.Supported(r)))
+                issues.Add(($"{Derived.ReadySites(s)} of 3 sites were ready; others lost the followers they need.",
+                    "Build sites in small regions, where a quarter of the people is easier to hold, and obstruct threats there."));
+            if (sites.Any(r => Derived.Supported(r) && r.Site.Progress < Balance.SiteMonths))
+                issues.Add(("The sites were not finished in time.",
+                    $"Start preparation by {Format.Date(Balance.LatestSiteStart)}, or speed it with eclipses and revealed figures."));
+            if (!started && s.Dread < Balance.FinalDread)
+                issues.Add(("The rite needed 100 Dread.", "Bank 100 Dread before September 1924; sacrifice and nightmares give Dread."));
+            if (issues.Count == 0)
+                issues.Add(("The sites were ready, but the rite was not begun in time.", "Begin the final rite as soon as the stars are right; it needs 12 months."));
+            result.Cause = issues[0].cause;
+            foreach (var issue in issues.Take(2)) result.Advice.Add(issue.advice);
+            return result;
+        }
+    }
+}

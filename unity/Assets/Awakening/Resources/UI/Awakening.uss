@@ -1,0 +1,309 @@
+/* The game's theme. Port of godot/ui/ui_theme.gd and the button styles in godot/ui/kit.gd.
+   Controls default to paper and ink, because nearly every control lives on a document. */
+
+:root {
+    -unity-font-definition: url("../Fonts/OldStandard-Regular.ttf");
+    font-size: 16px;
+    color: rgb(33, 24, 14);
+}
+
+Label {
+    padding: 0;
+    margin: 0;
+}
+
+/* Buttons on paper: a shaded slip with an ink edge, set in small capitals. */
+.aw-button {
+    background-color: rgb(198, 179, 140);
+    border-color: rgb(125, 106, 75);
+    border-width: 1px;
+    border-radius: 0;
+    padding: 7px 12px;
+    margin: 0;
+    -unity-font-definition: url("../Fonts/IMFellEnglishSC-Regular.ttf");
+    font-size: 19px;
+    letter-spacing: 1px;
+    color: rgb(33, 24, 14);
+    -unity-text-align: middle-center;
+    cursor: link;
+}
+.aw-button:hover {
+    background-color: rgb(182, 165, 129);
+    border-color: rgb(33, 24, 14);
+}
+.aw-button:active, .aw-button.aw-on {
+    background-color: rgba(51, 84, 43, 0.14);
+    border-color: rgb(52, 85, 44);
+    color: rgb(52, 85, 44);
+}
+.aw-button:disabled {
+    background-color: rgba(198, 179, 140, 0.45);
+    border-color: rgba(125, 106, 75, 0.4);
+    color: rgb(98, 79, 51);
+}
+.aw-button:focus {
+    border-color: rgb(52, 85, 44);
+    border-width: 2px;
+}
+
+/* A printed label in solid ink: the main call to action. */
+.aw-primary {
+    background-color: rgb(52, 85, 44);
+    border-color: rgb(34, 55, 29);
+    border-width: 1px;
+    border-radius: 0;
+    padding: 9px 18px 10px 18px;
+    margin: 0;
+    -unity-font-definition: url("../Fonts/IMFellEnglishSC-Regular.ttf");
+    font-size: 21px;
+    letter-spacing: 1px;
+    color: rgb(228, 215, 181);
+    -unity-text-align: middle-center;
+    cursor: link;
+}
+.aw-primary:hover {
+    background-color: rgb(77, 106, 70);
+    border-color: rgb(33, 24, 14);
+}
+.aw-primary:active {
+    background-color: rgb(42, 68, 35);
+    border-color: rgb(33, 24, 14);
+}
+.aw-primary:disabled {
+    background-color: rgba(198, 179, 140, 0.5);
+    border-color: rgba(125, 106, 75, 0.5);
+    color: rgb(90, 72, 51);
+}
+.aw-primary:focus {
+    border-color: rgb(33, 24, 14);
+    border-width: 2px;
+}
+
+/* A quiet text link in typed capitals, for secondary destinations. */
+.aw-link {
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+    border-radius: 0;
+    padding: 2px 0;
+    margin: 0;
+    -unity-font-definition: url("../Fonts/CourierPrime-Bold.ttf");
+    font-size: 13px;
+    color: rgb(90, 72, 51);
+    -unity-text-align: middle-left;
+    cursor: link;
+}
+.aw-link:hover, .aw-link:active {
+    color: rgb(33, 24, 14);
+    background-color: rgba(0, 0, 0, 0);
+}
+.aw-link:focus {
+    border-bottom-width: 2px;
+    border-color: rgb(52, 85, 44);
+}
+
+/* A rubber stamp: a ruled box in one ink, typed capitals. */
+.aw-stamp {
+    border-width: 2px;
+    border-radius: 0;
+    padding: 0 10px;
+    height: 28px;
+    min-height: 0;
+    margin: 0;
+    -unity-font-definition: url("../Fonts/CourierPrime-Bold.ttf");
+    font-size: 14px;
+    -unity-text-align: middle-center;
+    cursor: link;
+}
+.aw-stamp:disabled {
+    background-color: rgba(0, 0, 0, 0);
+    border-left-width: 1px;
+    border-right-width: 1px;
+}
+.aw-stamp--danger { background-color: rgba(142, 29, 20, 0.04); border-color: rgb(142, 29, 20); color: rgb(142, 29, 20); }
+.aw-stamp--danger:hover { background-color: rgba(142, 29, 20, 0.16); color: rgb(114, 23, 16); }
+.aw-stamp--danger:active { background-color: rgba(142, 29, 20, 0.28); color: rgb(99, 20, 14); }
+.aw-stamp--danger:disabled { border-color: rgba(142, 29, 20, 0.45); color: rgba(142, 29, 20, 0.7); background-color: rgba(0, 0, 0, 0); }
+.aw-stamp--omen { background-color: rgba(85, 56, 120, 0.04); border-color: rgb(85, 56, 120); color: rgb(85, 56, 120); }
+.aw-stamp--omen:hover { background-color: rgba(85, 56, 120, 0.16); color: rgb(68, 45, 96); }
+.aw-stamp--omen:active { background-color: rgba(85, 56, 120, 0.28); color: rgb(60, 39, 84); }
+.aw-stamp--omen:disabled { border-color: rgba(85, 56, 120, 0.45); color: rgba(85, 56, 120, 0.7); background-color: rgba(0, 0, 0, 0); }
+.aw-stamp--cult { background-color: rgba(52, 85, 44, 0.04); border-color: rgb(52, 85, 44); color: rgb(52, 85, 44); }
+.aw-stamp--cult:hover { background-color: rgba(52, 85, 44, 0.16); color: rgb(42, 68, 35); }
+.aw-stamp--cult:active { background-color: rgba(52, 85, 44, 0.28); color: rgb(36, 60, 31); }
+.aw-stamp--cult:disabled { border-color: rgba(52, 85, 44, 0.45); color: rgba(52, 85, 44, 0.7); background-color: rgba(0, 0, 0, 0); }
+
+/* Typed fields on paper. */
+.aw-field > .unity-base-text-field__input, .aw-field TextInput {
+    background-color: rgb(228, 215, 181);
+    border-color: rgb(125, 106, 75);
+    border-width: 1px;
+    border-radius: 0;
+    padding: 9px 12px;
+    -unity-font-definition: url("../Fonts/CourierPrime-Regular.ttf");
+    font-size: 16px;
+    color: rgb(33, 24, 14);
+    --unity-cursor-color: rgb(33, 24, 14);
+    --unity-selection-color: rgba(52, 85, 44, 0.3);
+}
+.aw-field:focus > .unity-base-text-field__input {
+    border-color: rgb(33, 24, 14);
+}
+.aw-field .unity-text-element--placeholder, .aw-field .unity-base-text-field__input--placeholder {
+    color: rgb(98, 79, 51);
+}
+
+/* Scrolling sheets: a hairline thumb, wider and darker on touch screens. */
+.aw-scroll .unity-scroller--vertical {
+    width: 6px;
+    border-width: 0;
+    background-color: rgba(0, 0, 0, 0);
+}
+.aw-scroll .unity-scroller__low-button, .aw-scroll .unity-scroller__high-button {
+    display: none;
+}
+.aw-scroll .unity-base-slider__tracker {
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+}
+.aw-scroll .unity-base-slider__dragger {
+    background-color: rgba(33, 24, 14, 0.22);
+    border-width: 0;
+    border-radius: 0;
+    width: 4px;
+    left: 1px;
+}
+.aw-touch .aw-scroll .unity-scroller--vertical {
+    width: 12px;
+    background-color: rgba(33, 24, 14, 0.06);
+}
+.aw-touch .aw-scroll .unity-base-slider__dragger {
+    background-color: rgba(33, 24, 14, 0.4);
+    width: 10px;
+}
+
+/* Check boxes and sliders in ink on paper. */
+.aw-check .unity-toggle__checkmark {
+    background-color: rgb(228, 215, 181);
+    border-color: rgb(33, 24, 14);
+    border-width: 2px;
+    border-radius: 0;
+    width: 18px;
+    height: 18px;
+    background-image: none;
+    -unity-background-image-tint-color: rgba(0, 0, 0, 0);
+}
+.aw-check:checked .unity-toggle__checkmark {
+    border-color: rgb(52, 85, 44);
+    background-image: none;
+}
+.aw-check .unity-toggle__text {
+    -unity-font-definition: url("../Fonts/OldStandard-Regular.ttf");
+    font-size: 16px;
+    color: rgb(33, 24, 14);
+    margin-left: 8px;
+}
+.aw-touch .aw-check .unity-toggle__checkmark {
+    width: 22px;
+    height: 22px;
+}
+.aw-slider .unity-base-slider__tracker {
+    background-color: rgba(33, 24, 14, 0.25);
+    border-width: 0;
+    height: 4px;
+    margin-top: -2px;
+}
+.aw-slider .unity-base-slider__dragger {
+    background-color: rgb(52, 85, 44);
+    border-color: rgb(228, 215, 181);
+    border-width: 2px;
+    border-radius: 8px;
+    width: 16px;
+    height: 16px;
+    margin-top: -8px;
+}
+.aw-touch .aw-slider .unity-base-slider__dragger {
+    width: 22px;
+    height: 22px;
+    border-radius: 11px;
+    margin-top: -11px;
+}
+
+/* Tooltips on paper. */
+.aw-tooltip {
+    position: absolute;
+    background-color: rgb(228, 215, 181);
+    border-color: rgb(125, 106, 75);
+    border-width: 1px;
+    padding: 9px 12px;
+    max-width: 360px;
+    -unity-font-definition: url("../Fonts/OldStandard-Regular.ttf");
+    font-size: 15px;
+    color: rgb(33, 24, 14);
+    white-space: normal;
+}
+
+/* Actions in the case file read like entries in a price list, ruled between rows. */
+.aw-row {
+    flex-direction: row;
+    align-items: center;
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+    border-bottom-width: 1px;
+    border-color: rgba(33, 24, 14, 0.18);
+    border-radius: 0;
+    padding: 0 10px;
+    margin: 0;
+    height: 40px;
+    min-height: 0;
+    cursor: link;
+}
+.aw-row:hover, .aw-row.aw-marked, .aw-row.aw-on {
+    background-color: rgba(33, 24, 14, 0.07);
+    border-color: rgba(33, 24, 14, 0.5);
+}
+.aw-row:disabled {
+    background-color: rgba(0, 0, 0, 0);
+    border-color: rgba(33, 24, 14, 0.18);
+}
+.aw-row:disabled.aw-marked {
+    background-color: rgba(33, 24, 14, 0.07);
+    border-color: rgba(33, 24, 14, 0.5);
+}
+.aw-touch .aw-row {
+    height: 52px;
+}
+
+/* Index tabs: the open one is the same paper as the file, the others sit behind it. */
+.aw-tab {
+    flex-grow: 1;
+    flex-basis: 0;
+    background-color: rgb(198, 179, 140);
+    border-color: rgb(125, 106, 75);
+    border-width: 1px;
+    border-radius: 0;
+    padding: 5px 8px;
+    margin: 0;
+    -unity-font-definition: url("../Fonts/IMFellEnglishSC-Regular.ttf");
+    font-size: 19px;
+    letter-spacing: 1px;
+    color: rgb(90, 72, 51);
+    -unity-text-align: middle-center;
+    cursor: link;
+}
+.aw-tab:hover {
+    color: rgb(33, 24, 14);
+    background-color: rgb(198, 179, 140);
+}
+.aw-tab.aw-on {
+    background-color: rgb(215, 199, 161);
+    border-color: rgb(33, 24, 14);
+    border-top-width: 2px;
+    border-bottom-width: 0;
+    color: rgb(33, 24, 14);
+}
+
+/* Unity dims disabled controls to half opacity. The game's unavailable rows, stamps and buttons
+   carry their own legible inks (5.2:1 or better), so they stay fully opaque. */
+.aw-row:disabled, .aw-stamp:disabled, .aw-button:disabled, .aw-primary:disabled, .aw-tab:disabled, .aw-link:disabled, .aw-icon:disabled {
+    opacity: 1;
+}

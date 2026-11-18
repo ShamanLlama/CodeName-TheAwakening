@@ -1,0 +1,14 @@
+{
+    "name": "Awakening.Platform",
+    "rootNamespace": "Awakening.Platform",
+    "references": ["Awakening.Core"],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

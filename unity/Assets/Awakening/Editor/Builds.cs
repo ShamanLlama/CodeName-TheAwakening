@@ -35,6 +35,8 @@ namespace Awakening.Editor
             // projects; it shrinks and speeds up the module. Not the experimental threading option.
             PlayerSettings.WebGL.wasm2023 = Argument("-wasm", "2023") == "2023";
             PlayerSettings.WebGL.nameFilesAsHashes = false;
+            // The title page loader: Assets/WebGLTemplates/Awakening (port of godot/web/shell.html).
+            PlayerSettings.WebGL.template = "PROJECT:Awakening";
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.WebGL, ScriptingImplementation.IL2CPP);
             PlayerSettings.SetManagedStrippingLevel(NamedBuildTarget.WebGL, ManagedStrippingLevel.High);
             PlayerSettings.SetIl2CppCodeGeneration(NamedBuildTarget.WebGL, Il2CppCodeGeneration.OptimizeSize);
@@ -85,7 +87,8 @@ namespace Awakening.Editor
                 scenes = new[] { MainScene },
                 locationPathName = output,
                 target = target,
-                options = BuildOptions.None,
+                // -dev makes a development player: the screenshot and layout harnesses run only there.
+                options = Array.IndexOf(Environment.GetCommandLineArgs(), "-dev") >= 0 ? BuildOptions.Development : BuildOptions.None,
             });
             Debug.Log($"AWAKENING_BUILD {target} {report.summary.result} {report.summary.totalSize} bytes in {report.summary.totalTime}");
             if (Application.isBatchMode) EditorApplication.Exit(report.summary.result == BuildResult.Succeeded ? 0 : 1);
