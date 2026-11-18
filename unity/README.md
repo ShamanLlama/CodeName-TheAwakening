@@ -36,6 +36,31 @@ Batchmode fails while an editor has the project open ("another Unity instance is
 
 `-compression` takes `none`, `gzip` or `brotli`; compressed builds include Unity's decompression fallback because itch.io does not always send `Content-Encoding`. `-version` sets `PlayerSettings.bundleVersion`. Only the Mono Linux player is installed on this machine.
 
+## Layout regression check
+
+Run the windowed development-player walk against the same 60 combinations as Godot 0.4.0:
+
+```bash
+DISPLAY=:0 unity/layout-check.sh /tmp/awakening-layout
+# Reuse unity/Build/linux-dev after a successful development build:
+SKIP_BUILD=1 unity/layout-check.sh /tmp/awakening-layout-repeat
+```
+
+The script builds this checkout once, then runs early, mid, late, alignment and awakening, normal and crowded, in six profiles: 1600×900 at 100%; 1280×720 at 130%; 1600×900 at 160% touch; and 844×390 at 100%, 160% and 200% touch. `UNITY` overrides the editor executable; `LAYOUT_TIMEOUT` overrides the 120-second limit per player. Each case must exit zero and print `LAYOUT_CHECK_PASSED`; missing markers, timeouts and exceptions fail the matrix. Per-case logs and the build log go in the selected directory.
+
+For one case, without building or writing a screenshot:
+
+```bash
+unity/Build/linux-dev/the-awakening.x86_64 -screen-width 844 -screen-height 390 -screen-fullscreen 0 \
+  -logFile /tmp/layout.log --layout-check 1 --scenario late --crowd 1 --touch 1 --scale 2
+```
+
+`Screens/LayoutCheck.cs` uses the screenshot scenario staging, then walks every region, tab, visible action explanation and applicable dialog. It checks ledger items, case files, modal boxes, and all four chart overlays with UI Toolkit `worldBound` rectangles. Crowded mode adds threats to every held region, clears seen notes, zooms the chart and expands the timetable. These checks run only in the editor or development players, use an in-memory session, and never access the real save or send playtest data. V-sync is disabled during development harness runs so unfocused windows do not stall the walk.
+
+The walk, one-unit canvas tolerance, overlay intersections and ledger boundary match `godot/dev/layout_check.gd`, including its deliberate omission of the top-edge overflow test. Toolkit has no `get_combined_minimum_size()`: the case-file width assertion instead checks the horizontal extent of its visible laid-out descendants, including content a scroll viewport would clip. Unresolved geometry also fails explicitly. Scrollable content may extend vertically inside its viewport, as in Godot.
+
+For screenshot evidence, `shots.sh` also accepts `--crowd 1` and `--choose action` (with `--select region`). The latter opens the action's tab and explanation without performing it. UI integration checks remain available through `--shot /tmp/ui-check.png --check-ui 1`; a successful run prints `UI_CHECKS_PASSED`.
+
 ## Measure web loading
 
 ```bash

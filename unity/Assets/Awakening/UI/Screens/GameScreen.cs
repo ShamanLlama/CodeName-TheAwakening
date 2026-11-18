@@ -225,6 +225,7 @@ namespace Awakening.UI
         (Label value, Label sub) Readout(Stack parent, string caption, Color color, string hint)
         {
             Stack box = Kit.VBox(0);
+            box.name = caption.ToLowerInvariant();
             box.style.justifyContent = Justify.Center;
             box.style.minWidth = Kit.Compact ? 92 : 118;
             box.tooltip = hint;
@@ -258,6 +259,7 @@ namespace Awakening.UI
             _dread = Readout(row, "Dread", Palette.Omen, "Power for the rites. Gained only by sacrifice and omens.\nSites cost 60, 100 and 160. The final rite costs 100.").value;
             _followers = Readout(row, "Followers", Palette.Cult, "Living members of the cult, in every region.").value;
             Stack doctrine = Kit.VBox(3);
+            doctrine.name = "doctrine";
             doctrine.Add(Kit.Caption("Doctrine"));
             _doctrine = Kit.Button("", () => OpenDialog("doctrine"));
             _doctrine.style.minWidth = Kit.Compact ? 124 : 150;
@@ -303,6 +305,7 @@ namespace Awakening.UI
             }
 
             Stack awareness = Kit.VBox(2);
+            awareness.name = "awareness";
             awareness.style.alignItems = Align.Center;
             awareness.tooltip = "How much of the world knows. It climbs with the share of humanity that follows you, with public worship and with ritual sites.\nIt slows income and recruitment. At 100% the run is lost.";
             _awarenessCaption = Kit.Caption("");
@@ -312,6 +315,7 @@ namespace Awakening.UI
             row.Add(awareness);
 
             Stack sites = Kit.VBox(6);
+            sites.name = "sites";
             _sitesBox = sites;
             _sitesCaption = Kit.Caption("");
             _sites = new SiteSeals();
@@ -471,6 +475,17 @@ namespace Awakening.UI
             _note.style.left = spot.x;
             _note.style.top = spot.y;
         }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        internal IEnumerable<VisualElement> LayoutLedger => _rite.parent.Children();
+        internal (VisualElement node, string name)[] LayoutOverlaysToCheck => new[]
+        {
+            ((VisualElement)_banner, "timetable"), ((VisualElement)_note, "note"),
+            ((VisualElement)_resetView, "whole-world button"), ((VisualElement)_threatScroll, "threat clippings"),
+        };
+        internal VisualElement LayoutThreatScroll => _threatScroll;
+        internal void ExpandLayoutTimetable() => Kit.SetVisible(_bannerText, true);
+#endif
 
         void OnViewChanged(bool freeView)
         {

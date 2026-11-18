@@ -129,6 +129,41 @@ namespace Awakening.UI
             Kit.SetVisible(this, false);
         }
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        internal void LayoutSetGroup(string group) => SetGroup(group);
+        internal bool LayoutActionVisible(string action) => Kit.IsVisible(_rows[action].button);
+        // Toolkit has no combined minimum size. Check the laid-out content and its descendants
+        // instead, including horizontal overflow that a fixed-width ScrollView would clip.
+        internal float LayoutContentWidth
+        {
+            get
+            {
+                Rect bounds = worldBound;
+                float right = bounds.xMax;
+                float left = bounds.xMin;
+                void Visit(VisualElement node)
+                {
+                    if (node.resolvedStyle.display == DisplayStyle.None || node.resolvedStyle.visibility == Visibility.Hidden) return;
+                    right = Mathf.Max(right, node.worldBound.xMax);
+                    left = Mathf.Min(left, node.worldBound.xMin);
+                    foreach (var child in node.Children()) Visit(child);
+                }
+                Visit(_body);
+                return right - left;
+            }
+        }
+        internal void LayoutExplain(string action)
+        {
+            _detailId = "";
+            if (Kit.Touch) Choose(action);
+            else
+            {
+                _detailId = action;
+                RefreshDetail();
+            }
+        }
+#endif
+
         static string Capitalize(string upper) => upper.Substring(0, 1) + upper.Substring(1).ToLowerInvariant();
 
         public bool Shown => !string.IsNullOrEmpty(Region);

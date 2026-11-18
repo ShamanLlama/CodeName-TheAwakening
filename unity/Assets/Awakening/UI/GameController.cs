@@ -74,6 +74,7 @@ namespace Awakening.UI
             Debug.developerConsoleEnabled = false;
             _shot = ShotArgs();
             if (_shot.Count > 0) Application.runInBackground = true;
+            if (_shot.Count > 0) QualitySettings.vSyncCount = 0;
             Kit.Touch = GameStorage.TouchScreen() || _shot.ContainsKey("touch");
             var camera = new GameObject("Camera").AddComponent<Camera>();
             camera.clearFlags = CameraClearFlags.SolidColor;
@@ -619,7 +620,7 @@ namespace Awakening.UI
             string[] args = Environment.GetCommandLineArgs();
             for (int i = 0; i + 1 < args.Length; i++)
                 if (args[i].StartsWith("--", StringComparison.Ordinal) && args[i].Length > 2) parsed[args[i].Substring(2)] = args[i + 1];
-            return parsed.ContainsKey("shot") && (Debug.isDebugBuild || Application.isEditor) ? parsed : new Dictionary<string, string>();
+            return (parsed.ContainsKey("shot") || parsed.ContainsKey("layout-check")) && (Debug.isDebugBuild || Application.isEditor) ? parsed : new Dictionary<string, string>();
         }
 
         internal static Dictionary<string, object> ShotLabOptions() => new Dictionary<string, object>
@@ -708,7 +709,19 @@ namespace Awakening.UI
             yield return null;
             if (_screen is GameScreen game)
             {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                if (_shot.ContainsKey("crowd") && !_shot.ContainsKey("layout-check"))
+                    yield return LayoutCheck.Crowd(this, game);
+#endif
                 if (_shot.TryGetValue("select", out string region)) game.Select(region);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                if (_shot.TryGetValue("choose", out string action) && game.Selected != "")
+                {
+                    foreach (var group in RegionPanel.Groups)
+                        if (group.actions.Contains(action)) game.Panel.LayoutSetGroup(group.name);
+                    game.Panel.LayoutExplain(action);
+                }
+#endif
                 if (_shot.TryGetValue("dialog", out string dialog))
                 {
                     // --dialog none shows the screen without the dialog a phase opens by itself.
@@ -717,6 +730,13 @@ namespace Awakening.UI
                 }
             }
             for (int frame = 0; frame < 20; frame++) yield return null;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (_shot.ContainsKey("layout-check"))
+            {
+                yield return LayoutCheck.Run(this, _shot.ContainsKey("crowd"));
+                yield break;
+            }
+#endif
             if (_shot.ContainsKey("layout"))
                 _screen.Query<Label>().ForEach(label => Debug.Log($"UI_LAYOUT {label.text} rect={label.worldBound} font={label.resolvedStyle.fontSize}"));
             float wait = _shot.TryGetValue("wait", out string w) ? float.Parse(w, System.Globalization.CultureInfo.InvariantCulture) : 0.6f;
