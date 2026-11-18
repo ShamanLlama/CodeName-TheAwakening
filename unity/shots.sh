@@ -15,7 +15,7 @@ specs=("$@")
 for spec in "${specs[@]}"; do
   read -r -a parts <<< "$spec"
   name="$(echo "$spec" | tr ' -' '__' | tr -s _)"
-  timeout 60 "$here/Build/linux-dev/the-awakening.x86_64" -screen-width "${WIDTH:-1600}" -screen-height "${HEIGHT:-900}" -screen-fullscreen 0 \
+  timeout "${SHOT_TIMEOUT:-60}" "$here/Build/linux-dev/the-awakening.x86_64" -screen-width "${WIDTH:-1600}" -screen-height "${HEIGHT:-900}" -screen-fullscreen 0 \
     -logFile "$out/$name.log" --shot "$out/$name.png" --scenario "${parts[@]}" >/dev/null 2>&1 || true
   errors=$(grep -cE "Exception" "$out/$name.log" || true)
   echo "$name: $( [ -f "$out/$name.png" ] && echo ok || echo MISSING ) exceptions=$errors"
