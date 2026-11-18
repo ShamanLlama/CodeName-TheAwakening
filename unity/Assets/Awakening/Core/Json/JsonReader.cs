@@ -38,6 +38,14 @@ namespace Awakening.Core.Json
             }
         }
 
+        // Extract a top-level value with the same lexer used by Parse. The save codec uses
+        // this to retain capture-owned JSON bytes (including whitespace and number spellings).
+        internal static string RawMember(string text, string member)
+        {
+            var reader = new Cursor(text);
+            return reader.RawMember(member);
+        }
+
         sealed class Cursor
         {
             readonly string _text;
@@ -78,6 +86,28 @@ namespace Awakening.Core.Json
                     default:
                         if (c == '-' || (c >= '0' && c <= '9')) return Number();
                         throw Error($"Unexpected character '{c}'");
+                }
+            }
+
+            public string RawMember(string member)
+            {
+                SkipSpace();
+                Expect('{');
+                SkipSpace();
+                if (Peek('}')) return null;
+                while (true)
+                {
+                    SkipSpace();
+                    string key = String();
+                    SkipSpace();
+                    Expect(':');
+                    SkipSpace();
+                    int start = _at;
+                    Value(1);
+                    if (key == member) return _text.Substring(start, _at - start);
+                    SkipSpace();
+                    if (Peek('}')) return null;
+                    Expect(',');
                 }
             }
 
@@ -176,8 +206,9 @@ namespace Awakening.Core.Json
                     if (!AtEnd && (_text[_at] == '+' || _text[_at] == '-')) _at++;
                     if (!Digits()) throw Error("Bad exponent");
                 }
-                double value = double.Parse(_text.Substring(start, _at - start), NumberStyles.Float, CultureInfo.InvariantCulture);
-                if (double.IsInfinity(value)) throw Error("Number out of range");
+                // Mono throws on overflowing Parse while .NET may return infinity.
+                if (!double.TryParse(_text.Substring(start, _at - start), NumberStyles.Float, CultureInfo.InvariantCulture, out double value)
+                    || double.IsInfinity(value)) throw Error("Number out of range");
                 return value;
             }
 

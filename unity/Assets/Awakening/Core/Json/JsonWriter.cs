@@ -40,6 +40,7 @@ namespace Awakening.Core.Json
             switch (value)
             {
                 case null: builder.Append("null"); return;
+                case RawJson raw: builder.Append(raw.Text); return;
                 case string text: AppendString(builder, text); return;
                 case bool flag: builder.Append(flag ? "true" : "false"); return;
                 case double number: builder.Append(FormatNumber(number)); return;
