@@ -1,0 +1,8 @@
+{
+    "name": "Awakening.Platform.EditorTests",
+    "rootNamespace": "Awakening.Tests.Editor",
+    "references": ["Awakening.Core", "Awakening.Platform"],
+    "includePlatforms": ["Editor"],
+    "optionalUnityReferences": ["TestAssemblies"],
+    "autoReferenced": false
+}

@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Export synthetic batches and check each against the authoritative neighboring GTC contract.
+# Export synthetic and golden-through-session batches; validate each against the real GTC contract.
 set -euo pipefail
 playtest_root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 playtest_gtc="${1:-/mnt/1tb-p/Proyects/GTC-page/gtc-web}"
 playtest_output="${2:-$(mktemp -d /tmp/awakening-playtest-batches.XXXXXX)}"
 mkdir -p -- "$playtest_output"
 playtest_output="$(cd -- "$playtest_output" && pwd)"
-AWAKENING_PLAYTEST_BATCH_OUTPUT="$playtest_output" "${DOTNET:-$HOME/.dotnet/dotnet}" test "$playtest_root/core-tests/Tests" --filter FullyQualifiedName~PlaytestContractTests
+AWAKENING_PLAYTEST_BATCH_OUTPUT="$playtest_output" "${DOTNET:-$HOME/.dotnet/dotnet}" test "$playtest_root/core-tests/Tests" --filter 'FullyQualifiedName~PlaytestContractTests|FullyQualifiedName~GameSessionTests.GameCommandsEmitActualCostsAndPreserveGoldenOutcomes'
 cd -- "$playtest_gtc"
 for playtest_batch in "$playtest_output"/batch-*.json; do
     PYTHONDONTWRITEBYTECODE=1 uv run --script contracts/playtests/validate.py --json "$playtest_batch"
