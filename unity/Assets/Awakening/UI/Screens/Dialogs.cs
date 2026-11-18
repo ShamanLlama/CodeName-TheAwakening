@@ -19,6 +19,9 @@ namespace Awakening.UI
         IVisualElementScheduledItem _entrance;
         public string Kind { get; private set; } = "";
         public bool IsOpen => Kind != "";
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        internal VisualElement LayoutBox => _box;
+#endif
 
         public Dialogs(GameController game, GameScreen screen)
         {

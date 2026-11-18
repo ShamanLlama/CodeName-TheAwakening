@@ -310,6 +310,9 @@ Label {
 
 /* Runtime theme selectors are more specific than Label; documents have no default UI padding. */
 #start-screen .unity-label, #dialogs .unity-label { padding: 0; margin: 0; }
+/* Runtime .unity-label defaults outrank the Label rule above. The compact ledger is only
+   86 units tall: theme padding on every line clips its readouts and widens the rite off-screen. */
+#ledger .unity-label { padding: 0; margin: 0; }
 #start-screen .aw-primary:focus, #dialogs .aw-primary:focus {
     border-color: rgb(33, 24, 14);
     border-width: 2px;
