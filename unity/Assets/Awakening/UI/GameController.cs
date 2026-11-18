@@ -5,25 +5,19 @@ using Awakening.Core.Json;
 using Awakening.Core.Playtest;
 using Awakening.Core.Rules;
 using Awakening.Core.Save;
+using Awakening.Core.Session;
 using Awakening.Platform;
 using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace Awakening.UI
 {
-    /// <summary>A chronicle line or a refused command, as the screens receive them.</summary>
-    public sealed class GameEvent
-    {
-        public int Id;
-        public int Month;
-        public string Message;
-        public bool Refused;
-    }
-
     /// <summary>
-    /// Root of the game: owns the run, the monthly clock, saving, sound, screen switching and the
-    /// playtest capture. Port of godot/main.gd. Screens read <see cref="State"/> and call the
-    /// command methods; every change raises <see cref="Changed"/>.
+    /// Root of the game in Unity: storage, screens, sound, interface size, keys and the screenshot
+    /// harness. Port of godot/main.gd; the run, its commands, the save envelope, consent, playtest
+    /// emission and the clock partition live in the engine-free <see cref="GameSession"/>, which is
+    /// tested without Unity. Screens read <see cref="State"/> and call the command methods; every
+    /// change raises <see cref="Changed"/>.
     /// </summary>
     public sealed class GameController : MonoBehaviour
     {
@@ -38,24 +32,21 @@ namespace Awakening.UI
         public event Action Changed;
         public event Action<List<GameEvent>> Events;
 
-        public GameState State;
-        public SaveSettings Settings = new SaveSettings { Muted = false };
-        public bool TutorialComplete;
-        public Dictionary<string, object> LastResult;
-        public bool Blocked;
-        public string StorageNotice = "";
-        public PlaytestCapture Lab;
+        /// <summary>The run and its playtest capture. Null only before storage has loaded.</summary>
+        public GameSession Session { get; private set; }
+        public GameState State { get => Session.State; set => Session.State = value; }
+        public SaveSettings Settings => Session.Settings;
+        public bool TutorialComplete { get => Session.TutorialComplete; set => Session.TutorialComplete = value; }
+        public Dictionary<string, object> LastResult { get => Session.LastResult; set => Session.LastResult = value; }
+        public bool Blocked { get => Session.Blocked; set => Session.Blocked = value; }
+        public string StorageNotice { get => Session.StorageNotice; set => Session.StorageNotice = value; }
+        public PlaytestCapture Lab => Session.Lab;
         public Sfx Sfx;
         public readonly GameStorage Storage = new GameStorage();
         PlaytestOutbox _outbox;
+        bool _commanding;
+        string _lastStatus = "";
 
-        Dictionary<string, object> _labOptions = new Dictionary<string, object>();
-        long _labAt, _labSavedAt, _labCheckpointAt;
-        string _labMode = "excluded";
-        bool _labFocused = true, _labVisible = true;
-
-        float _elapsed;
-        int _holds;
         VisualElement _screen;
         VisualElement _root;
         VisualElement _rotate;
@@ -65,7 +56,7 @@ namespace Awakening.UI
         bool _ready;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         internal VisualElement CurrentScreen => _screen;
-        internal bool ClockHeld => _holds > 0;
+        internal bool ClockHeld => Session.Holds > 0;
 #endif
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -91,7 +82,6 @@ namespace Awakening.UI
             camera.gameObject.AddComponent<AudioListener>();
             Sfx = gameObject.AddComponent<Sfx>();
             BuildPanel();
-            Lab = new PlaytestCapture(debugBuild: Debug.isDebugBuild);
             StartCoroutine(Initialize());
         }
 
@@ -116,9 +106,14 @@ namespace Awakening.UI
 
         System.Collections.IEnumerator Initialize()
         {
+            var lab = new PlaytestCapture(debugBuild: Debug.isDebugBuild);
             if (_shot.Count > 0)
             {
-                Blocked = true;
+                // Screenshots never touch the real save or send anything. Like main.gd, which loads no
+                // save then, they start from its in-memory settings: sound on.
+                SaveEnvelope blank = SaveData.DefaultSave();
+                blank.Settings.Muted = false;
+                Session = new GameSession(blank, new Dictionary<string, object>(), () => Storage.Now(), _ => -1, lab, blocked: true);
             }
             else
             {
@@ -129,28 +124,24 @@ namespace Awakening.UI
                     Storage.Poll();
                     yield return null;
                 }
-                SaveEnvelope save = LoadSave();
-                _save = save;
-                State = save.State;
-                Settings = SaveData.WithDefaultSettings(save.Settings);
-                TutorialComplete = save.TutorialComplete;
-                LastResult = save.LastResult;
+                (SaveEnvelope save, bool blocked, string notice) = LoadSave();
                 if (!Storage.Writable || !Storage.Ready)
                 {
-                    Blocked = true;
-                    StorageNotice = "Another window owns this save, or storage is unavailable. This window plays in memory; saving and playtest capture are disabled.";
+                    blocked = true;
+                    notice = "Another window owns this save, or storage is unavailable. This window plays in memory; saving and playtest capture are disabled.";
                 }
-                if (_labOptions.Count == 0)
-                {
-                    var config = Resources.Load<TextAsset>("Data/playtest-config");
-                    _labOptions = config != null && JsonReader.TryParse(config.text, out object parsed) && parsed is Dictionary<string, object> options
-                        ? options : new Dictionary<string, object>();
-                }
-                Lab.Configure(_labOptions, save.Playtest ?? new Dictionary<string, object>());
-                if (!Blocked) Lab.Restore();
-                _labAt = _labSavedAt = _labCheckpointAt = Storage.Now();
-                _outbox = new PlaytestOutbox(Lab, new PlaytestStorageAdapter(Storage, () => Commit()), new PlaytestTransportAdapter(Storage), () => Storage.Now());
+                var config = Resources.Load<TextAsset>("Data/playtest-config");
+                var options = config != null && JsonReader.TryParse(config.text, out object parsed) && parsed is Dictionary<string, object> found
+                    ? found : new Dictionary<string, object>();
+                Session = new GameSession(save, options, () => Storage.Now(), envelope => Storage.Persist(SaveData.EncodeSave(envelope)), lab, blocked,
+                    () => Storage.VisibilityChanges().Select(v => new SessionVisibilityChange(v.At, v.Focused, v.Visible)),
+                    () => _outbox?.Cancel(), NewSeed);
+                Session.StorageNotice = notice;
+                _outbox = new PlaytestOutbox(Session.Lab, new PlaytestStorageAdapter(Storage, () => Session.Commit()), new PlaytestTransportAdapter(Storage), () => Storage.Now());
             }
+            Session.Changed += () => Changed?.Invoke();
+            Session.Events += OnSessionEvents;
+            _lastStatus = State?.Status ?? "";
             ApplyAudio();
             if (_shot.TryGetValue("scale", out string scale)) Settings.UiScale = double.Parse(scale, System.Globalization.CultureInfo.InvariantCulture);
             if (_shot.TryGetValue("motion", out string motion)) Settings.ReducedMotion = motion == "reduced";
@@ -161,7 +152,10 @@ namespace Awakening.UI
             else ShowStart();
         }
 
-        SaveEnvelope LoadSave()
+        /// <summary>Godot's "%08x" % randi(): an 8-digit hex seed when the player leaves it empty.</summary>
+        static string NewSeed() => ((uint)UnityEngine.Random.Range(int.MinValue, int.MaxValue)).ToString("x8");
+
+        (SaveEnvelope save, bool blocked, string notice) LoadSave()
         {
             string raw;
             try
@@ -170,42 +164,28 @@ namespace Awakening.UI
             }
             catch (Exception exception) when (exception is System.IO.IOException || exception is UnauthorizedAccessException)
             {
-                Blocked = true;
-                StorageNotice = "Storage is unavailable. You can play, but this session will not save.";
-                return SaveData.DefaultSave();
+                return (SaveData.DefaultSave(), true, "Storage is unavailable. You can play, but this session will not save.");
             }
-            if (raw == null) return SaveData.DefaultSave();
+            if (raw == null) return (SaveData.DefaultSave(), false, "");
             SaveEnvelope decoded = SaveData.DecodeSave(raw);
             if (decoded == null)
             {
-                Blocked = true;
-                StorageNotice = GameStorage.IsWeb
-                    ? "The browser save is unreadable. It has been retained; this session continues in memory."
-                    : "This save could not be read. Starting fresh will retain a recovery copy.";
-                if (!GameStorage.IsWeb) Blocked = false;
-                return SaveData.DefaultSave();
+                // The web keeps an unreadable save and plays in memory; native builds keep a recovery
+                // copy when a new run starts.
+                return GameStorage.IsWeb
+                    ? (SaveData.DefaultSave(), true, "The browser save is unreadable. It has been retained; this session continues in memory.")
+                    : (SaveData.DefaultSave(), false, "This save could not be read. Starting fresh will retain a recovery copy.");
             }
             string notice = SaveData.TakeRetiredNotice(decoded);
-            if (notice != "")
-            {
-                StorageNotice = notice;
-                // Keep the retired run aside before the next save replaces it.
-                Storage.RetainCopy(".retired.json", raw);
-            }
-            return decoded;
+            // Keep the retired run aside before the next save replaces it.
+            if (notice != "") Storage.RetainCopy(".retired.json", raw);
+            return (decoded, false, notice);
         }
 
         void OnApplicationFocus(bool focused)
         {
-            if (!_ready) return;
-            if (!GameStorage.IsWeb)
-            {
-                LabTouch();
-                _labFocused = focused;
-                LabSync();
-                LabCheckpoint("focus_changed");
-            }
-            if (!focused && State != null && GameEngine.IsActive(State) && State.Speed != 0) SetSpeed(0);
+            if (!_ready || _shot.Count > 0) return;
+            Session.OnApplicationFocus(focused, GameStorage.IsWeb);
         }
 
         void OnApplicationQuit()
@@ -227,28 +207,7 @@ namespace Awakening.UI
             if (_shot.Count > 0) return;
             Storage.Poll();
             _outbox?.Process();
-            if (Storage.Failed && !Blocked)
-            {
-                Blocked = true;
-                StorageNotice = "Saving is unavailable. This session continues in memory.";
-                Lab.StopCapture("Storage is unavailable. Capture and sending stopped; export the local record.");
-                Changed?.Invoke();
-            }
-            LabTouch();
-            if (Lab.Capturing())
-            {
-                long now = Storage.Now();
-                if (now - _labCheckpointAt >= 20000) LabCheckpoint("periodic");
-                if (now - _labSavedAt >= 5000) Commit();
-            }
-            if (State == null || _holds > 0 || !(_screen is GameScreen) || !GameEngine.IsActive(State) || State.Speed == 0) return;
-            _elapsed += Mathf.Min(Time.unscaledDeltaTime, 0.5f) * State.Speed / (float)Balance.SecondsPerMonth;
-            int months = Mathf.FloorToInt(_elapsed);
-            if (months > 0)
-            {
-                _elapsed -= months;
-                Advance(months);
-            }
+            Session.Process(Time.unscaledDeltaTime, Storage.Failed);
         }
 
         int _lastWidth, _lastHeight;
@@ -266,7 +225,7 @@ namespace Awakening.UI
                 if (!Input.GetKeyDown(key)) continue;
                 if (_screen is GameScreen game)
                 {
-                    if (_holds == 0 && !game.Dialogs.IsOpen && State != null)
+                    if (Session.Holds == 0 && !game.Dialogs.IsOpen && State != null)
                     {
                         if (key == KeyCode.Space)
                         {
@@ -304,21 +263,28 @@ namespace Awakening.UI
 
         public void ShowStart()
         {
-            LabTouch();
-            _holds = 0;
+            Detach();
+            Session.ShowStart();
             Swap(new StartScreen(this));
-            LabSync();
         }
 
         public void ShowGame()
         {
-            LabTouch();
-            if (State != null) Lab.Resume(Capture(State));
-            _holds = 0;
-            _elapsed = 0;
+            Detach();
+            Session.ShowGame();
             Swap(new GameScreen(this));
-            LabSync();
-            Commit();
+        }
+
+        /// <summary>
+        /// Takes the current screen down before the session changes screens. main.gd swaps the screen
+        /// before it saves; here the save's Changed would otherwise reach the old screen, which could
+        /// open a dialog and hold the clock on its way out.
+        /// </summary>
+        void Detach()
+        {
+            _tooltips.Hide();
+            _screen?.RemoveFromHierarchy();
+            _screen = null;
         }
 
         void Swap(VisualElement screen)
@@ -369,17 +335,15 @@ namespace Awakening.UI
 
         public void SetUiScale(float scale)
         {
-            Settings.UiScale = scale;
+            Session.SetUiScale(scale);
             FitWindow();
-            Commit();
             RebuildScreen();
         }
 
         public void SetReducedMotion(bool reduced)
         {
-            Settings.ReducedMotion = reduced;
+            Session.SetReducedMotion(reduced);
             Kit.ReducedMotion = reduced;
-            Commit();
         }
 
         /// <summary>Sizes are fixed when a screen is built, so a new layout rebuilds the current screen.</summary>
@@ -390,7 +354,8 @@ namespace Awakening.UI
             {
                 string region = game.Selected;
                 string dialog = game.Dialogs.Kind;
-                _holds = 0;
+                // The open dialog's hold on the clock goes with the old screen; the new one reopens it.
+                game.Dialogs.Close();
                 var next = new GameScreen(this);
                 Swap(next);
                 next.schedule.Execute(() =>
@@ -465,29 +430,14 @@ namespace Awakening.UI
         }
 
         /// <summary>Dialogs and the guide hold the clock while open.</summary>
-        public void Hold()
-        {
-            LabTouch();
-            _holds++;
-            LabSync();
-            LabCheckpoint("menu_changed");
-        }
+        public void Hold() => Session.Hold();
 
-        public void Release()
-        {
-            LabTouch();
-            _holds = Math.Max(0, _holds - 1);
-            LabSync();
-            LabCheckpoint("menu_changed");
-        }
+        public void Release() => Session.Release();
 
         // --- Commands --------------------------------------------------------------------
 
         public void Begin(string difficulty, string seed)
         {
-            LabTouch();
-            if (State != null && Lab.Capturing())
-                Lab.EmitEvent("run_abandoned", new Dictionary<string, object> { ["reason"] = "replaced_by_new_run" }, Capture(State), "ended");
             if (_shot.Count == 0 && !Blocked && !GameStorage.IsWeb)
             {
                 // Copies an unreadable save aside before a new run overwrites it.
@@ -495,140 +445,80 @@ namespace Awakening.UI
                 try { raw = Storage.LoadRaw(); } catch (System.IO.IOException) { }
                 if (raw != null && SaveData.DecodeSave(raw) == null) Blocked = !Storage.RetainCopy(".recovery", raw);
             }
-            string chosen = (seed ?? "").Trim();
-            if (chosen.Length == 0) chosen = ((uint)UnityEngine.Random.Range(int.MinValue, int.MaxValue)).ToString("x8");
-            State = GameEngine.CreateGameState(difficulty, chosen);
-            if (!Blocked) Lab.StartRun(Capture(State));
-            _labAt = Storage.Now();
-            LabSync();
-            Commit();
-            ShowGame();
+            Detach();
+            Session.Begin(difficulty, seed);
+            _lastStatus = State.Status;
+            Swap(new GameScreen(this));
         }
 
         public void Abandon()
         {
-            LabTouch();
-            if (State != null) Lab.EmitEvent("run_abandoned", new Dictionary<string, object> { ["reason"] = "explicit_abandon" }, Capture(State), "ended");
-            State = null;
-            Commit();
-            ShowStart();
+            Detach();
+            Session.Abandon();
+            Swap(new StartScreen(this));
         }
 
-        public void Place(string regionId)
-        {
-            LabTouch();
-            Apply(GameEngine.PlaceStartingFoothold(State, regionId), "starting_region_selected", new Dictionary<string, object> { ["region"] = regionId });
-        }
+        public void Place(string regionId) => Command(() => Session.Place(regionId));
 
-        public void Act(string actionId, string regionId)
-        {
-            LabTouch();
-            Apply(GameEngine.PerformAction(State, actionId, regionId), "action_performed", new Dictionary<string, object> { ["action"] = actionId, ["region"] = regionId });
-        }
+        public void Act(string actionId, string regionId) => Command(() => Session.Act(actionId, regionId));
 
-        public void ChooseDoctrine(string choice)
-        {
-            LabTouch();
-            Apply(GameEngine.ChooseSpecialization(State, choice), "doctrine_selected", new Dictionary<string, object> { ["doctrine"] = choice });
-        }
+        public void ChooseDoctrine(string choice) => Command(() => Session.ChooseDoctrine(choice));
 
-        public void Awaken()
+        public void Awaken() => Command(() => Session.Awaken());
+
+        /// <summary>A player command: the act sound when the run changed, the refusal sound when it did not.</summary>
+        void Command(Action run)
         {
-            LabTouch();
-            Apply(GameEngine.StartAwakening(State), "awakening_started", new Dictionary<string, object>());
+            GameState before = State;
+            _commanding = true;
+            try
+            {
+                run();
+            }
+            finally
+            {
+                _commanding = false;
+            }
+            Sfx.Play(ReferenceEquals(before, State) ? "refuse" : "act");
+            _lastStatus = State?.Status ?? "";
         }
 
         public void SetSpeed(int speed)
         {
-            LabTouch();
-            GameState next = GameEngine.SetGameSpeed(State, speed);
-            if (ReferenceEquals(next, State)) return;
-            Sfx.Play("click");
-            State = next;
-            _elapsed = 0;
-            LabSync();
-            LabCheckpoint("menu_changed");
-            Commit();
+            GameState before = State;
+            Session.SetSpeed(speed);
+            if (!ReferenceEquals(before, State)) Sfx.Play("click");
         }
 
         /// <summary>Playtest control: advances time without granting anything.</summary>
-        public void DebugAdvance(int months)
-        {
-            LabTouch();
-            if (State != null) Lab.EmitEvent("capture_gap", Gap(), Capture(State));
-            Advance(months);
-        }
+        public void DebugAdvance(int months) => Session.DebugAdvance(months);
 
-        static Dictionary<string, object> Gap() => new Dictionary<string, object> { ["reason"] = "unknown_time", ["missing_events"] = null };
-
-        void Advance(int months)
+        /// <summary>The month's news decides the sound: the ending, a threat, a ready site, an omen.</summary>
+        void OnSessionEvents(List<GameEvent> entries)
         {
-            LabTouch();
-            GameState before = State;
-            State = GameEngine.AdvanceSimulation(State, months);
-            if (ReferenceEquals(State, before)) return;
-            LabTransition(before);
-            LabSync();
-            var fresh = State.Log.Where(e => e.Id >= before.NextLogId).Select(e => new GameEvent { Id = e.Id, Month = e.Month, Message = e.Message }).ToList();
-            if (before.Status != State.Status && GameEngine.IsOver(State))
+            if (!_commanding && State != null)
             {
-                Sfx.Play("end");
-                LastResult = SaveData.ResultFor(State);
+                if (_lastStatus != State.Status && GameEngine.IsOver(State)) Sfx.Play("end");
+                else if (entries.Any(e => Classify(e.Message) == "threat")) Sfx.Play("threat");
+                else if (entries.Any(e => Classify(e.Message) == "site")) Sfx.Play("site");
+                else if (entries.Any(e => Classify(e.Message) == "omen")) Sfx.Play("omen");
+                _lastStatus = State.Status;
             }
-            else if (fresh.Any(e => Classify(e.Message) == "threat")) Sfx.Play("threat");
-            else if (fresh.Any(e => Classify(e.Message) == "site")) Sfx.Play("site");
-            else if (fresh.Any(e => Classify(e.Message) == "omen")) Sfx.Play("omen");
-            Commit();
-            Events?.Invoke(fresh);
-        }
-
-        void Apply(CommandResult result, string kind, Dictionary<string, object> payload)
-        {
-            if (result.Ok)
-            {
-                GameState before = State;
-                State = result.State;
-                if (kind != "starting_region_selected") payload["spent"] = Spent(before, State);
-                Lab.EmitEvent(kind, payload, Capture(State));
-                LabTransition(before);
-                LabSync();
-                Sfx.Play("act");
-                Commit();
-                LogEntry last = State.Log[State.Log.Count - 1];
-                Events?.Invoke(new List<GameEvent> { new GameEvent { Id = last.Id, Month = last.Month, Message = last.Message } });
-            }
-            else
-            {
-                Sfx.Play("refuse");
-                Events?.Invoke(new List<GameEvent> { new GameEvent { Id = -1, Month = State.ElapsedMonths, Message = result.Message, Refused = true } });
-            }
+            Events?.Invoke(entries);
         }
 
         public void SetAudio(bool muted, float volume)
         {
-            Settings.Muted = muted;
-            Settings.Volume = volume;
+            Session.SetAudio(muted, volume);
             ApplyAudio();
-            Commit();
         }
 
         /// <summary>Contextual tips are shown once per device.</summary>
-        public bool HintSeen(string id) => Settings.Hints.Contains(id);
+        public bool HintSeen(string id) => Session.HintSeen(id);
 
-        public void MarkHint(string id)
-        {
-            if (Settings.Hints.Contains(id)) return;
-            Settings.Hints.Add(id);
-            Commit();
-        }
+        public void MarkHint(string id) => Session.MarkHint(id);
 
-        public void CompleteTutorial()
-        {
-            LabTouch();
-            if (State != null && !TutorialComplete) Lab.Checkpoint("tutorial_completed", null, Capture(State));
-            TutorialComplete = true;
-            Commit();
-        }
+        public void CompleteTutorial() => Session.CompleteTutorial();
 
         void ApplyAudio()
         {
@@ -636,93 +526,25 @@ namespace Awakening.UI
             Sfx.Volume = (float)(Settings.Volume / 100.0);
         }
 
-        long Commit()
-        {
-            long generation = -1;
-            if (!Blocked)
-            {
-                generation = Storage.Persist(SaveData.EncodeSave(Envelope()));
-                _labSavedAt = Storage.Now();
-                if (generation < 0)
-                {
-                    Blocked = true;
-                    StorageNotice = "Saving is unavailable. This session continues in memory.";
-                    Lab.StopCapture("Saving is unavailable. Capture stopped; export the local record.");
-                }
-            }
-            Changed?.Invoke();
-            return generation;
-        }
-
-        /// <summary>The loaded envelope, kept so fields this build does not know survive a save.</summary>
-        SaveEnvelope _save = SaveData.DefaultSave();
-
-        SaveEnvelope Envelope()
-        {
-            _save.Version = 2;
-            _save.State = State;
-            _save.Settings = Settings;
-            _save.TutorialComplete = TutorialComplete;
-            _save.LastResult = LastResult;
-            _save.Playtest = Lab.Snapshot(State == null ? null : Capture(State));
-            return _save;
-        }
-
         // --- Playtest ---------------------------------------------------------------------
 
-        public static CaptureState Capture(GameState s) => new CaptureState
-        {
-            Seed = s.Seed, Difficulty = s.Difficulty, Ruleset = s.Ruleset, Status = s.Status,
-            ElapsedMonths = s.ElapsedMonths, NextLogId = s.NextLogId, IsOver = GameEngine.IsOver(s),
-        };
+        public static CaptureState Capture(GameState s) => GameSession.Capture(s);
 
-        public void SetParticipation(bool accepted)
-        {
-            LabTouch();
-            if (accepted)
-            {
-                if (Blocked || !Lab.Accept()) return;
-                if (State != null && _screen is GameScreen) Lab.Resume(Capture(State));
-            }
-            else
-            {
-                _outbox?.Cancel();
-                Lab.Withdraw();
-            }
-            _labAt = Storage.Now();
-            LabSync();
-            Commit();
-        }
+        public void SetParticipation(bool accepted) => Session.SetParticipation(accepted);
 
         /// <summary>The start screen asks once per round before the first run on this device.</summary>
-        public bool NeedsParticipationChoice() => Lab.Configured() && !Blocked && !Lab.Corrupt && !Lab.Confirmed && !Lab.Answered();
+        public bool NeedsParticipationChoice() => Session.NeedsParticipationChoice();
 
-        public void DeclineParticipation()
-        {
-            Lab.Decline();
-            Commit();
-        }
+        public void DeclineParticipation() => Session.DeclineParticipation();
 
-        public string PlaytestStatus()
-        {
-            if (!string.IsNullOrEmpty(Lab.Warning)) return Lab.Warning;
-            if (!Lab.Configured()) return "Playtest collection is not configured in this build.";
-            if (Blocked) return StorageNotice;
-            if (!Lab.Confirmed) return "Not sharing. Participation is optional; any pending records stay on this device until you join.";
-            if (Lab.PendingEvents() > 0) return $"{Lab.PendingEvents()} records pending. {_outbox?.Notice ?? ""}";
-            return Lab.Data.TryGetValue("receipt", out object receipt) && receipt is Dictionary<string, object> confirmed && confirmed.Count > 0 ? "Receipt confirmed and saved locally." : "Participation enabled. No receipt yet.";
-        }
+        public string PlaytestStatus() => Session.PlaytestStatus(_outbox?.Notice ?? "");
 
-        public bool SubmitPlaytestComment(string text)
-        {
-            if (!Lab.QueueComment(text)) return false;
-            return Commit() >= 0;
-        }
+        public bool SubmitPlaytestComment(string text) => Session.SubmitPlaytestComment(text);
 
         public void ExportPlaytestRecord()
         {
-            LabTouch();
-            Storage.Download(SaveData.EncodeSave(Envelope()), "awakening-local-playtest.json");
+            Session.LabTouch();
+            Storage.Download(SaveData.EncodeSave(Session.Envelope()), "awakening-local-playtest.json");
         }
 
         public void ExportReport()
@@ -771,78 +593,6 @@ namespace Awakening.UI
             ["dread"] = Math.Max(0, after.Telemetry.DreadSpent - before.Telemetry.DreadSpent),
             ["followers"] = Math.Max(0, after.Telemetry.Sacrificed - before.Telemetry.Sacrificed),
         };
-
-        string LabCurrentMode()
-        {
-            if (!_labVisible || !_labFocused) return "background";
-            if (State == null || !(_screen is GameScreen) || GameEngine.IsOver(State)) return "excluded";
-            return _holds == 0 && GameEngine.IsActive(State) && State.Speed != 0 ? "simulation" : "planning";
-        }
-
-        void LabSync() => _labMode = LabCurrentMode();
-
-        void LabAccount(long at)
-        {
-            if (at < _labAt) return;
-            long milliseconds = at - _labAt;
-            if (milliseconds > 30000 && _labMode != "background" && Lab.Capturing())
-            {
-                Lab.Tick((int)Math.Min(int.MaxValue, milliseconds), "excluded");
-                Lab.EmitEvent("capture_gap", Gap(), Capture(State));
-            }
-            else
-            {
-                Lab.Tick((int)Math.Min(int.MaxValue, milliseconds), _labMode);
-            }
-            _labAt = at;
-        }
-
-        void LabTouch()
-        {
-            if (_shot.Count > 0 || !Storage.Ready) return;
-            foreach (VisibilityChange entry in Storage.VisibilityChanges())
-            {
-                LabAccount(entry.At);
-                bool visibilityChanged = _labVisible != entry.Visible;
-                _labFocused = entry.Focused;
-                _labVisible = entry.Visible;
-                LabSync();
-                if (State != null)
-                    Lab.EmitEvent("time_checkpoint", new Dictionary<string, object> { ["reason"] = visibilityChanged ? "visibility_changed" : "focus_changed" }, Capture(State));
-            }
-            LabAccount(Storage.Now());
-            LabSync();
-        }
-
-        void LabCheckpoint(string reason)
-        {
-            if (State == null || !Lab.Capturing()) return;
-            Lab.EmitEvent("time_checkpoint", new Dictionary<string, object> { ["reason"] = reason }, Capture(State));
-            _labCheckpointAt = Storage.Now();
-            Commit();
-        }
-
-        void LabTransition(GameState before)
-        {
-            if (before.Status == "playing" && State.Status == "alignment")
-                Lab.EmitEvent("phase_changed", new Dictionary<string, object> { ["from_phase"] = "playing" }, Capture(State));
-            if (GameEngine.IsOver(State))
-            {
-                Lab.EmitEvent("run_finished", new Dictionary<string, object>
-                {
-                    ["outcome"] = State.Status,
-                    ["reason"] = State.Status == "won" ? "awakened" : State.Awareness >= 100 ? "world_awareness" : "deadline",
-                }, Capture(State));
-                return;
-            }
-            foreach (string id in GameData.RegionIds)
-            {
-                RegionState site = State.Regions[id];
-                RegionState previous = before.Regions[id];
-                if (site.Site.Progress >= Balance.SiteMonths && Derived.Supported(site) && (previous.Site.Progress < Balance.SiteMonths || !Derived.Supported(previous)))
-                    Lab.Checkpoint("first_site_ready", id, Capture(State));
-            }
-        }
 
         /// <summary>Sorts world-event log lines for toasts and sound. Matches the engine's fixed message text.</summary>
         public static string Classify(string message)
