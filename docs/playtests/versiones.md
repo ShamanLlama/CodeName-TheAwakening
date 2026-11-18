@@ -16,7 +16,8 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
 
 | Versión | Fecha | Commit | Ruleset | Adaptador | Ronda GTC | Estado |
 | --- | --- | --- | --- | --- | --- | --- |
-| 0.4.0 | 2026-11-13 | `528c1f2` | `alignment-3` | `awakening-2` | «0.4.0 playtest por invitación · tres respuestas a cada amenaza», abierta del 2026-11-13 al 2026-11-27 (UTC) | En itch.io (Restricted con contraseña) |
+| 0.5.0 | 2026-11-18 | `a25f916` | `alignment-3` | `awakening-2` | «0.5.0 playtest por invitación · versión Unity», abierta del 2026-11-18 al 2026-12-02 (UTC) | En itch.io (Restricted con contraseña) |
+| 0.4.0 | 2026-11-13 | `528c1f2` | `alignment-3` | `awakening-2` | «0.4.0 playtest por invitación · tres respuestas a cada amenaza», cerrada el 2026-11-18 con 1 partida | Reemplazada por 0.5.0 (último build Godot; rama `godot`) |
 | 0.3.6 | 2026-11-06 | `fdb4576` | `alignment-2` | `awakening-1` | «0.3.6 playtest por invitación · decisiones económicas», cerrada el 2026-11-13 sin partidas | Reemplazada por 0.4.0 |
 | 0.3.5 | 2026-11-06 | `88e10fc` | `alignment-2` | `awakening-1` | «0.3.5 playtest por invitación · decisiones económicas», cerrada el 2026-11-07 con 1 partida | Reemplazada por 0.3.6 |
 | 0.3.4 | 2026-11-03 | `4c9cad6` | `alignment-2` | `awakening-1` | «0.3.4 playtest por invitación · decisiones económicas», cerrada el 2026-11-07 con 4 partidas | Reemplazada por 0.3.5 |
@@ -25,6 +26,39 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
 | 0.3.1 | 2026-11-02 | `2256c6c` | `alignment-2` | `awakening-1` | «0.3.1 playtest por invitación · decisiones económicas», cerrada el 2026-11-03 con 2 partidas | Reemplazada por 0.3.2 |
 | 0.3.0 | 2026-11-02 | `85f5905`; exportada desde `dbfb07f` | `alignment-2` | `awakening-1` | «0.3.0 playtest por invitación · decisiones económicas», cerrada el mismo día sin partidas | Reemplazada por 0.3.1 |
 | 0.2.0 | 2026-10-30 / 2026-10-31 | `ae38ec0`; adaptador E4–E6 en `6aa2419` | `alignment-1` | `awakening-1` | QA técnica E7 y «E7 piloto interno de gameplay» (abierta hasta 2026-11-09) | Reemplazada en itch.io por 0.3.0 el 2026-11-02 |
+
+### 0.5.0 — el mismo juego en Unity 6.3 LTS
+
+- **Motivo:** mantener la build web para itch.io y preparar un ejecutable de escritorio para Steam (decisión del 2026-11-17). El desarrollo de reglas quedó congelado durante el port. Plan en [docs/unity/plan-migracion.md](../unity/plan-migracion.md).
+- **Motor:** Unity 6000.3.25f1 (6.3 LTS), C#, UI Toolkit; WebGL con IL2CPP y WebAssembly 2023, sin compresión propia (itch.io comprime al servir). El juego vive en `unity/`; `godot/` queda como referencia y la rama `godot` conserva la 0.4.0. Reglas en `unity/Assets/Awakening/Core/`, sin dependencias de Unity, probadas con `dotnet`.
+- **Reglas:** sin cambios (`alignment-3`). Las diez trazas grabadas reproducen estado, vistas previas, resultados, valores derivados y textos idénticos a Godot, también con la cultura del sistema en `es-CL`. El bot da las mismas victorias: con 24 seeds, 48/72 (early 9, late 24, hub 15) y las mismas medianas.
+- **Interfaz:** misma composición, textos y comportamiento que 0.4.0, rehechos en UI Toolkit:
+  - El mapa se dibuja con `Painter2D`, y el grano del papel y la luz de la lámpara se generan en código.
+  - Los tooltips son propios, porque UI Toolkit no los muestra fuera del editor.
+  - Diferencias conocidas: métrica de fuentes y textura del papel ligeramente distintas. El lector de pantalla de escritorio (`accessibility_name` en Godot) no tiene equivalente todavía.
+  - El navegador pide `favicon.ico` y recibe 404, porque la plantilla no declara ícono. Es inofensivo; se corrige en la próxima build.
+- **Guardados:** mismo sobre `save-v2`, en la misma base IndexedDB y clave que la build Godot. Quien jugó 0.4.0 en el navegador conserva partida, ajustes, tutorial, consentimiento y registros pendientes. Comprobado sembrando un guardado real de Godot.
+- **Playtest:** mismo adaptador `awakening-2`, mismos eventos, misma política de reloj y mismo flujo de consentimiento. La lógica de emisión de `main.gd` vive ahora en `GameSession` (Core) con pruebas propias:
+  - Las trazas jugadas por los comandos reales emiten el gasto exacto del motor.
+  - 33 lotes sellados validan contra el esquema.
+  - De punta a punta contra un receptor GTC local (PostgreSQL desechable, HTTPS), los lotes llegan con `201`, la secuencia es contigua y la reanudación tras recargar abre una segunda sesión con su `capture_gap`, como en Godot.
+  - El port corrigió tres diferencias del primer controlador frente a Godot: elegir la velocidad actual ya no cuenta como cambio, el recorte de la semilla es igual a `strip_edges` y el tiempo se acumula en `double`.
+- **Medición de carga (emulación de teléfono, gzip local, primera visita):**
+
+  | Build | Descarga | 12 Mbps | 4 Mbps |
+  | --- | --- | --- | --- |
+  | Godot 0.4.0 | 6,94 MB | 8,1–8,7 s | 17,1 s |
+  | Unity 0.5.0 | 9,03 MB | 7,1–7,3 s | 19,1 s |
+
+  En itch.io la 0.5.0 transfiere 9,7 MB frente a 7,2 MB de la 0.4.0. Sin teléfono físico.
+- **Tests y chequeos:**
+  - 154 pruebas `dotnet` y 1 EditMode.
+  - `--check-ui` aprobado: inicio, Continue, todas las hojas, reloj, foco, participación, ajustes, doctrina, abandonar y finales.
+  - Chequeo de layout 60/60 en los perfiles de 0.4.0; corrigió tres desbordes del libro mayor.
+  - 23 pares de capturas Godot/Unity.
+  - Detalle en [docs/unity/verificacion.md](../unity/verificacion.md).
+- **GTC (2026-11-18 UTC):** build «The Awakening 0.5.0 · alignment-3 · Unity» (`a25f916`, adaptador `awakening-2`) con su resumen en «cambios de esta build». Ronda nueva, abierta en pausa, probada en el host y habilitada; cierra el 2026-12-02. Con la ronda en pausa, el Lab de producción aceptó el contrato de un lote generado por la sesión de Unity (`collection_paused`, sin guardar nada) y rechazó el mismo lote declarado `awakening-1` con `scatter` (`schema_invalid`). La ronda 0.4.0 se cerró con 1 partida recibida, que se conserva aparte.
+- **Publicación:** upload `20638224` en itch.io como único archivo jugable (`the-awakening-0.5.0-pilot.zip`, 8,9 MB, exportado desde un checkout limpio de `a25f916`). Los archivos alojados son idénticos al export; en `index.html` solo se suma el script que inyecta itch.io. La build arranca sin enviar nada antes de responder y con el guardado listo. El texto de la página dice que es el mismo juego en otro motor y pide avisar si algo cambió o falla.
 
 ### 0.4.0 — `alignment-3`: tres respuestas a cada amenaza
 

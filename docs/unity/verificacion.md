@@ -1,6 +1,6 @@
 # Verificación del port a Unity
 
-> Estado: en curso · Fecha: 2026-11-18 · Rama `unity/main` · Unity 6000.3.25f1 (6.3 LTS)
+> Estado: publicado como 0.5.0 (`a25f916`) · Fecha: 2026-11-18 · Unity 6000.3.25f1 (6.3 LTS)
 
 Qué se comprobó del port de Godot 0.4.0 a Unity, cómo repetirlo y qué no se comprobó. Plan y fases en [plan-migracion.md](plan-migracion.md).
 
