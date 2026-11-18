@@ -1,0 +1,14 @@
+{
+    "name": "Awakening.UI",
+    "rootNamespace": "Awakening.UI",
+    "references": ["Awakening.Core"],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": true,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

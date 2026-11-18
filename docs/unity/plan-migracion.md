@@ -104,7 +104,7 @@ Decisiones y motivos:
 
 - **Core sin `UnityEngine`.** Se compila igual en Unity y en un `dotnet test` de segundos. Permite que Codex porte y pruebe reglas sin el editor, y que dos agentes no se peleen por un proyecto Unity abierto.
 - **Estado tipado** (`GameState`, `RegionState`, `Population`, `Site`, `Threat`, `Opportunity`, `Figure`, `Telemetry`) con `Clone()` profundo, en vez de diccionarios. Serialización a las mismas claves JSON (`elapsedMonths`, `rngState`, `scatteredUntil`…) para leer los guardados de Godot.
-- **JSON con `com.unity.nuget.newtonsoft-json`** (paquete oficial). `JsonUtility` no maneja diccionarios ni `null`. Requiere `link.xml` para IL2CPP.
+- **JSON propio en Core** (`Awakening.Core.Json`), sin reflexión. Se probó Newtonsoft en la fase 1: sumaba 2,5 MB comprimidos a la build web (sobre todo metadatos de IL2CPP). `JsonUtility` no maneja diccionarios ni `null`. El escritor debe reproducir el formato de números de Godot/JavaScript, así que conviene controlarlo de todos modos.
 - **UI Toolkit** para pantallas y diálogos, construido en C# como hoy en Godot, con USS para tema y escala. **`Painter2D`** (`generateVisualContent`) para mapa, medidores, sellos e iconos: es el equivalente directo de `_draw()` y rellena polígonos arbitrarios. Alternativa descartada: uGUI + meshes propios, más código para lo mismo.
 - **Shaders de papel y lámpara:** UI Toolkit no acepta materiales propios en todos los elementos; plan A, generar al arrancar una textura de ruido de papel con el mismo hash y usarla como fondo teñido; plan B, `RenderTexture` con shader para el fondo. Se decide en el spike.
 - **Texto:** UI Toolkit con fuentes SDF generadas desde los TTF. Hay que verificar que las mayúsculas de época no se encimen (el mismo problema hizo descartar el servidor de texto simple en Godot).
@@ -160,8 +160,27 @@ Cada agente trabaja en su propio worktree y rama; nadie abre el mismo proyecto U
 | Revisión cruzada | Ambos | Claude revisa reglas/playtest de Codex; Codex revisa UI/plataforma de Claude |
 | Fase 8: GTC, itch.io, `versiones.md` | Claude | Usa producción y requiere tu consentimiento en cada paso |
 
-## 9. Decisiones (respondidas el 2026-11-17)
+## 9. Resultado de la fase 1 (2026-11-18)
 
+Medición con `scripts/measure-web-load.mjs`: Chromium headless, teléfono emulado 844×390 a 3×, CPU 4× más lenta, latencia 40 ms, primera visita, servidor local con gzip nivel 6 (itch.io comprime algo menos). Dos corridas por caso. «Listo» en Godot es cuando desaparece su pantalla de carga; en Unity, dos cuadros después de dibujar el mapa, que es más exigente.
+
+| Build | Servido | 12 Mbps | 4 Mbps |
+| --- | --- | --- | --- |
+| Godot 0.4.0 publicada (plantilla propia) | 6,94 MB | 8,1–8,7 s | 17,1 s |
+| Unity, primera build (Newtonsoft, logo de Unity incluido) | 11,24 MB | 11,3–12,3 s | 26,3–26,5 s |
+| Unity, WebAssembly 2023, sin logo | 10,99 MB | 11,0 s | 25,5 s |
+| **Unity, además sin Newtonsoft (JSON propio)** | **8,38 MB** | **9,4 s** | **20,5–21,1 s** |
+
+- La escena del spike dibuja los 177 países con `Painter2D`, usa las tres familias de fuentes (las versalitas de IM Fell se ven bien) y lee el mapa con el lector JSON propio. El RNG portado da el mismo estado que Godot.
+- Lo que queda en la build web: módulo wasm 6,0 MB comprimido; datos 2,1 MB (metadatos IL2CPP, recursos por defecto de Unity 1,6 MB sin comprimir, fuentes ~1,5 MB sin comprimir).
+- Reducciones pendientes, por orden de riesgo: subconjunto de glifos de las fuentes; desactivar excepciones (no recomendado: cualquier excepción detiene el juego); servir Brotli si itch.io lo permite (sin verificar).
+- Linux (Mono): 81 MB sin comprimir; arranca y queda listo en 0,7 s en esta máquina.
+- **Conclusión:** la build Unity carga un 10 % más lento a 12 Mbps y un 20 % más lento a 4 Mbps que la de Godot. No es una medición en itch.io ni en un teléfono real. La recomendación es seguir; la decisión es tuya.
+- Herramientas: `com.unity.pipeline` 1.0.0 (estable desde el 2026-11-11) y el MCP `unity` están configurados para Codex. El runtime del paquete no entra en builds release. Mientras un editor tenga el proyecto abierto, las builds en batchmode fallan: hay que cerrarlo o construir a través del editor abierto.
+
+## 10. Decisiones (respondidas el 2026-11-17)
+
+0. **Motor:** Unity 6.3 LTS (6000.3.25f1). Nada experimental: ni versiones beta/tech ni opciones marcadas como experimentales.
 1. **Objetivo:** mantener la build web para itch.io y hacer un ejecutable para Steam. El gate de tamaño web de la fase 1 sigue vigente; la integración con Steamworks queda para después de la paridad.
 2. **Desarrollo congelado** durante la migración: se porta `alignment-3` tal cual. El árbol de talentos y los eventos escritos se hacen ya en Unity.
 3. **Codex:** `gpt-6.1-sol` con esfuerzo `high`.
@@ -169,7 +188,7 @@ Cada agente trabaja en su propio worktree y rama; nadie abre el mismo proyecto U
 5. **Versión:** 0.5.0, con `alignment-3` y `awakening-2` sin cambios. La regla de `CLAUDE.md` pasa a `PlayerSettings.bundleVersion` de Unity; se actualizan `CLAUDE.md` y `versiones.md` en la fase 8.
 6. **Escritorio:** por ahora solo Linux. Windows se decide más adelante (requiere instalar el módulo).
 
-## 10. Ramas y carpetas
+## 11. Ramas y carpetas
 
 - La rama `godot` (creada el 2026-11-17 desde `7d67097`, 0.4.0) conserva la versión Godot. Se usa solo para correcciones urgentes de la build publicada mientras dure la migración.
 - La migración se hace desde `main`: `unity/` vive junto a `godot/`, porque las golden, el bot y las capturas de Godot son la referencia del port. `godot/` sale de `main` recién en la fase 9.
