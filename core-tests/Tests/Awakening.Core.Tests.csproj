@@ -13,5 +13,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../Awakening.Core.csproj" />
+    <None Update="Fixtures/godot-playtest.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

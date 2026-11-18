@@ -16,9 +16,14 @@ namespace Awakening.Core.Json
     public static class JsonWriter
     {
         public static string Write(object value)
+            => Write(value, FormatNumber);
+
+        /// <summary>Allows a wire adapter to retain its existing numeric precision and key order.
+        /// The formatter must return a JSON number; strings and containers still use this writer.</summary>
+        public static string Write(object value, Func<double, string> formatNumber, bool sortKeys = false)
         {
             var builder = new StringBuilder();
-            Append(builder, value, 0);
+            Append(builder, value, 0, formatNumber ?? throw new ArgumentNullException(nameof(formatNumber)), sortKeys);
             return builder.ToString();
         }
 
@@ -34,7 +39,7 @@ namespace Awakening.Core.Json
             return text;
         }
 
-        static void Append(StringBuilder builder, object value, int depth)
+        static void Append(StringBuilder builder, object value, int depth, Func<double, string> formatNumber, bool sortKeys)
         {
             if (depth > JsonReader.MaxDepth) throw new ArgumentException("JSON nesting is too deep");
             switch (value)
@@ -43,21 +48,22 @@ namespace Awakening.Core.Json
                 case RawJson raw: builder.Append(raw.Text); return;
                 case string text: AppendString(builder, text); return;
                 case bool flag: builder.Append(flag ? "true" : "false"); return;
-                case double number: builder.Append(FormatNumber(number)); return;
-                case float number: builder.Append(FormatNumber(number)); return;
+                case double number: builder.Append(formatNumber(number)); return;
+                case float number: builder.Append(formatNumber(number)); return;
                 case int number: builder.Append(number.ToString(CultureInfo.InvariantCulture)); return;
                 case long number: builder.Append(number.ToString(CultureInfo.InvariantCulture)); return;
                 case uint number: builder.Append(number.ToString(CultureInfo.InvariantCulture)); return;
                 case IDictionary<string, object> map:
                     builder.Append('{');
                     bool first = true;
-                    foreach (KeyValuePair<string, object> entry in map)
+                    IEnumerable<KeyValuePair<string, object>> entries = sortKeys ? new SortedDictionary<string, object>(map, StringComparer.Ordinal) : map;
+                    foreach (KeyValuePair<string, object> entry in entries)
                     {
                         if (!first) builder.Append(',');
                         first = false;
                         AppendString(builder, entry.Key);
                         builder.Append(':');
-                        Append(builder, entry.Value, depth + 1);
+                        Append(builder, entry.Value, depth + 1, formatNumber, sortKeys);
                     }
                     builder.Append('}');
                     return;
@@ -68,7 +74,7 @@ namespace Awakening.Core.Json
                     {
                         if (!head) builder.Append(',');
                         head = false;
-                        Append(builder, item, depth + 1);
+                        Append(builder, item, depth + 1, formatNumber, sortKeys);
                     }
                     builder.Append(']');
                     return;
