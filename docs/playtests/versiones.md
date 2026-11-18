@@ -6,7 +6,7 @@ Cada build que pueda llegar a un playtest, con o sin GTC Playtest Lab, tiene una
 
 Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
 
-1. **Versión del juego** (`config/version` en `godot/project.godot`): sube en cada build distribuida. Cambio de reglas o balance → versión menor (0.3.0); solo UI, texto o correcciones → parche (0.2.1).
+1. **Versión del juego** (`bundleVersion` en `unity/ProjectSettings/ProjectSettings.asset`; hasta 0.4.0, `config/version` en `godot/project.godot`): sube en cada build distribuida. Un cambio de motor sin cambio de reglas también sube la versión menor (0.5.0). Cambio de reglas o balance → versión menor (0.3.0); solo UI, texto o correcciones → parche (0.2.1).
 2. **Ruleset** (hoy `alignment-3`): cambia con cualquier modificación de reglas o valores de balance. Se envía en `run_started`/`capture_started` y se guarda en los saves.
 3. **Adaptador** (hoy `awakening-2`): cambia si cambian acciones, regiones, doctrinas, eventos o sus campos. Requiere actualizar el contrato en `GTC-page/gtc-web/contracts/playtests/`.
 4. **GTC:** una build nueva exige build y ronda nuevas en el Lab. La build lleva en **cambios de esta build** un resumen de su entrada aquí (versión, fecha, commit, reglas, qué cambió y por qué) y el enlace a este registro; quienes revisan la ronda lo ven en GTC. No se comparan rondas con reglas o política de reloj distintas sin decirlo.

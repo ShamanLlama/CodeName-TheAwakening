@@ -1,5 +1,7 @@
 # The Awakening — GTC Playtest Lab adapter
 
+> Since 0.5.0 (2026-11) the game is the Unity project in `unity/`. The adapter, wire format, consent flow, clock partition and storage described below are unchanged and now live in `unity/Assets/Awakening/Core/Playtest/` (capture, outbox), `Core/Session/GameSession.cs` (emission points and clock) and `Platform/` (IndexedDB bridge, native storage, transport). The configuration file is `unity/Assets/Awakening/Resources/Data/playtest-config.json`. Verification of the port, including an end-to-end run against a local receiver, is in [docs/unity/verificacion.md](unity/verificacion.md). The Godot paths below describe 0.2.0–0.4.0.
+
 Phase E4 is implemented and verified locally (2026-10-31). Collection is **disabled** in the checked-in build. This is the Godot adapter for this game, not a general SDK. Rules, balance, deterministic outcomes and the existing summary export remain compatible.
 
 The [GTC wire contract](../../../GTC-page/gtc-web/contracts/playtests/README.md) is authoritative. The neighboring checkout is required for that link and the receiver integration tests.
