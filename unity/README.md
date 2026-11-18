@@ -46,7 +46,7 @@ DISPLAY=:0 unity/layout-check.sh /tmp/awakening-layout
 SKIP_BUILD=1 unity/layout-check.sh /tmp/awakening-layout-repeat
 ```
 
-The script builds this checkout once, then runs early, mid, late, alignment and awakening, normal and crowded, in six profiles: 1600×900 at 100%; 1280×720 at 130%; 1600×900 at 160% touch; and 844×390 at 100%, 160% and 200% touch. `UNITY` overrides the editor executable; `LAYOUT_TIMEOUT` overrides the 120-second limit per player. Each case must exit zero and print `LAYOUT_CHECK_PASSED`; missing markers, timeouts and exceptions fail the matrix. Per-case logs and the build log go in the selected directory.
+The script builds this checkout once, then runs early, mid, late, alignment and awakening, normal and crowded, in six profiles: 1600×900 at 100%; 1280×720 at 130%; 1600×900 at 160% touch; and 844×390 at 100%, 160% and 200% touch. `UNITY` overrides the editor executable; `LAYOUT_TIMEOUT` overrides the 120-second limit per player. `LAYOUT_JOBS=4` runs at most four independent player windows concurrently (default: one); each keeps its own log and result. Each case must exit zero and print `LAYOUT_CHECK_PASSED`; missing markers, timeouts and exceptions fail the matrix. Per-case logs and the build log go in the selected directory.
 
 For one case, without building or writing a screenshot:
 
