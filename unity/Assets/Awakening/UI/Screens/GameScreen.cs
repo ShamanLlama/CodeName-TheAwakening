@@ -161,6 +161,7 @@ namespace Awakening.UI
         Stack Bar(bool top)
         {
             var bar = new Stack(true, 0);
+            bar.name = top ? "top-bar" : "ledger";
             int side = Kit.Compact ? 14 : 20;
             Kit.Box(bar, top ? Palette.DeskRaised : Palette.Paper, top ? Palette.Brass : Palette.DeskEdge, 0, new Vector4(side, 0, side - 6, 0));
             if (top) bar.style.borderBottomWidth = 2;
@@ -300,8 +301,6 @@ namespace Awakening.UI
             {
                 Kit.SetVisible(ticker, false);
                 Kit.SetVisible(second, false);
-                var fill = Kit.Spacer();
-                row.Add(fill);
             }
 
             Stack awareness = Kit.VBox(2);
