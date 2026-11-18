@@ -11,7 +11,7 @@ unity="${UNITY:-$HOME/Unity/Hub/Editor/6000.3.25f1/Editor/Unity}"
 if [ -z "${SKIP_BUILD:-}" ]; then
   "$unity" -batchmode -nographics -quit -projectPath "$here" \
     -executeMethod Awakening.Editor.Builds.Linux -out Build/linux-dev -dev -logFile "$out/build.log" \
-    || { rg 'error CS|Exception|Error' "$out/build.log" || true; exit 1; }
+    || { grep -E 'error CS|Exception|Error' "$out/build.log" || true; exit 1; }
 fi
 jobs="${LAYOUT_JOBS:-1}"
 if ! [[ "$jobs" =~ ^[1-9][0-9]*$ ]]; then
@@ -35,13 +35,13 @@ run_case() {
   child=$!
   wait "$child" || code=$?
   trap - INT TERM
-  if [ "$code" = 0 ] && rg -q '^LAYOUT_CHECK_PASSED$' "$out/$name.log" && \
-      ! rg -q 'error CS|Exception|LAYOUT_CHECK_FAILED' "$out/$name.log"; then
+  if [ "$code" = 0 ] && grep -qE '^LAYOUT_CHECK_PASSED$' "$out/$name.log" && \
+      ! grep -qE 'error CS|Exception|LAYOUT_CHECK_FAILED' "$out/$name.log"; then
     echo "PASS $name"
     echo PASS >"$out/$name.result"
   else
     echo "FAIL $name (exit $code): $out/$name.log"
-    rg 'LAYOUT_CHECK|error CS|Exception' "$out/$name.log" || true
+    grep -E 'LAYOUT_CHECK|error CS|Exception' "$out/$name.log" || true
     echo FAIL >"$out/$name.result"
   fi
 }

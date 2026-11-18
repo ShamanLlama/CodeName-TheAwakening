@@ -1,13 +1,15 @@
 # The Awakening of Cthulhu: Unity build
 
-Unity 6000.3.25f1 port of the Godot 0.4.0 game, in progress. The plan, phases and decisions are in [docs/unity/plan-migracion.md](../docs/unity/plan-migracion.md). Until the port reaches parity, `godot/` stays the shipped build and the reference.
+The game since 0.5.0: a Unity 6000.3.25f1 (6.3 LTS) port of the Godot 0.4.0 build with the same rules (`alignment-3`), playtest adapter (`awakening-2`) and save. Plan in [docs/unity/plan-migracion.md](../docs/unity/plan-migracion.md); what was verified and how to repeat it in [docs/unity/verificacion.md](../docs/unity/verificacion.md). `godot/` stays as the reference until it is retired; the `godot` branch keeps that version.
 
 ## Layout
 
 | Path | Contents |
 |---|---|
 | `Assets/Awakening/Core/` | Rules, saves and playtest capture. `Awakening.Core` has no `UnityEngine` reference, so it also builds as a plain .NET library |
-| `Assets/Awakening/UI/` | UI Toolkit interface and the Painter2D map |
+| `Assets/Awakening/Core/Session/` | `GameSession`: commands, save envelope, consent, playtest emission and the clock partition (port of main.gd's logic) |
+| `Assets/Awakening/Platform/` | IndexedDB bridge (`Plugins/WebGL`, shared with the Godot build's save), native save with a lock, playtest transport |
+| `Assets/Awakening/UI/` | `GameController` (Unity side of main.gd), screens, dialogs, the Painter2D map, theme and sound |
 | `Assets/Awakening/Editor/` | Batchmode builds |
 | `Assets/Awakening/Resources/` | Map geometry and fonts loaded at runtime |
 | `Assets/Awakening/Licenses/` | Natural Earth provenance and the SIL Open Font Licenses (not shipped in builds) |
@@ -60,6 +62,16 @@ unity/Build/linux-dev/the-awakening.x86_64 -screen-width 844 -screen-height 390 
 The walk, one-unit canvas tolerance, overlay intersections and ledger boundary match `godot/dev/layout_check.gd`, including its deliberate omission of the top-edge overflow test. Toolkit has no `get_combined_minimum_size()`: the case-file width assertion instead checks the horizontal extent of its visible laid-out descendants, including content a scroll viewport would clip. Unresolved geometry also fails explicitly. Scrollable content may extend vertically inside its viewport, as in Godot.
 
 For screenshot evidence, `shots.sh` also accepts `--crowd 1` and `--choose action` (with `--select region`). The latter opens the action's tab and explanation without performing it. UI integration checks remain available through `--shot /tmp/ui-check.png --check-ui 1`; a successful run prints `UI_CHECKS_PASSED`.
+
+## Screenshots and checks (development players)
+
+```bash
+unity/shots.sh /tmp/shots "mid --select africa" "late --dialog menu" "start --touch 1 --scale 1.6"   # WIDTH/HEIGHT set the window
+unity/shots.sh /tmp/checks "start --check-ui 1"   # interaction checks: UI_CHECKS_PASSED
+unity/layout-check.sh /tmp/layout                 # the 60 layout combinations of 0.4.0
+```
+
+Scenarios match the Godot harness: start, consent, continue, retired, placing, guide, early, mid, late, alignment, awakening, won, lost.
 
 ## Measure web loading
 

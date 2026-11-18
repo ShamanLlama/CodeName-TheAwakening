@@ -47,9 +47,9 @@ Un guardado escrito por la build Godot, sembrado en IndexedDB (`lucid-awakening-
 | --- | --- |
 | Capturas Godot frente a Unity: inicio, consentimiento, continuar, ruleset retirado, guía, menú, doctrina, crónica, Lab, alineación, ganada, perdida, comentario final, partida temprana, media, tardía y rito, a 1600×900 y a 844×390 táctil al 160 % | 23 pares sin excepciones; diferencias menores de métrica de fuentes y grano del papel |
 | `--check-ui 1` (inicio y Continue, todas las hojas, reloj retenido por diálogos, foco de teclado, participación, ajustes, doctrina, abandonar, finales con comentario) | `UI_CHECKS_PASSED` |
-| Chequeo de layout (60 combinaciones de 0.4.0) | Pendiente |
+| Chequeo de layout: 5 escenarios (early, mid, late, alignment, awakening), normales y cargados, en los 6 perfiles de 0.4.0 (1600×900; 1280×720 al 130 %; 1600×900 al 160 % táctil; 844×390 al 100, 160 y 200 % táctil) | 60/60. Corrigió tres desbordes del libro mayor (tasa de Influence y nota de doctrina al 130 %, botón del rito al 200 %) |
 
-Repetir: `unity/shots.sh <carpeta> "mid --select africa" ...` y `unity/shots.sh <carpeta> "start --check-ui 1"`.
+Repetir: `unity/shots.sh <carpeta> "mid --select africa" ...`, `unity/shots.sh <carpeta> "start --check-ui 1"` y `unity/layout-check.sh <carpeta>` (`LAYOUT_JOBS=3` en paralelo).
 
 ## Carga web
 
