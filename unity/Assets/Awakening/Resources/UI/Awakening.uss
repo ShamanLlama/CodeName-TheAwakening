@@ -307,3 +307,54 @@ Label {
 .aw-row:disabled, .aw-stamp:disabled, .aw-button:disabled, .aw-primary:disabled, .aw-tab:disabled, .aw-link:disabled, .aw-icon:disabled {
     opacity: 1;
 }
+
+/* Runtime theme selectors are more specific than Label; documents have no default UI padding. */
+#start-screen .unity-label, #dialogs .unity-label { padding: 0; margin: 0; }
+#start-screen .aw-primary:focus, #dialogs .aw-primary:focus {
+    border-color: rgb(33, 24, 14);
+    border-width: 2px;
+}
+#start-screen .aw-button:focus, #dialogs .aw-button:focus {
+    border-color: rgb(52, 85, 44);
+    border-width: 2px;
+}
+
+/* Participation uses the same paper slip and ruled-square check as Godot's CheckBox. */
+.aw-check:disabled, .aw-slider:disabled { opacity: 1; }
+#start-screen .aw-participation, #dialogs .aw-participation {
+    flex-direction: row;
+    background-color: rgb(198, 179, 140);
+    border-color: rgb(125, 106, 75);
+    border-width: 1px;
+    border-radius: 0;
+    padding: 7px 12px;
+    margin: 0;
+}
+#start-screen .aw-participation:hover, #dialogs .aw-participation:hover { background-color: rgb(182, 165, 129); border-color: rgb(33, 24, 14); }
+#start-screen .aw-participation:focus, #dialogs .aw-participation:focus { border-color: rgb(52, 85, 44); }
+#start-screen .aw-check .unity-toggle__input, #dialogs .aw-check .unity-toggle__input { flex-direction: row; padding: 0; margin: 0; }
+#start-screen .aw-check .unity-toggle__text, #dialogs .aw-check .unity-toggle__text { font-size: 15px; white-space: normal; margin: 0 0 0 8px; padding: 0; }
+#start-screen .aw-check:disabled .unity-toggle__text, #dialogs .aw-check:disabled .unity-toggle__text { color: rgb(98, 79, 51); }
+#start-screen .aw-check .unity-toggle__checkmark, #dialogs .aw-check .unity-toggle__checkmark {
+    margin: 0;
+    background-color: rgb(228, 215, 181);
+    border-color: rgb(33, 24, 14);
+}
+#start-screen .aw-check:checked .unity-toggle__checkmark, #dialogs .aw-check:checked .unity-toggle__checkmark { border-color: rgb(52, 85, 44); }
+#start-screen .aw-check:disabled .unity-toggle__checkmark, #dialogs .aw-check:disabled .unity-toggle__checkmark { border-color: rgb(98, 79, 51); }
+
+/* The volume slider is inside a scrolling sheet, but uses its own ink and round thumb. */
+#dialogs .aw-slider .unity-base-slider__dragger {
+    background-color: rgb(52, 85, 44);
+    border-color: rgb(228, 215, 181);
+    border-width: 2px;
+    width: 16px;
+    height: 16px;
+    left: auto;
+}
+#dialogs .aw-slider:focus .unity-base-slider__dragger { border-color: rgb(33, 24, 14); }
+.aw-touch #dialogs .aw-slider .unity-base-slider__dragger { width: 22px; height: 22px; }
+#start-screen .aw-participation:disabled, #dialogs .aw-participation:disabled {
+    background-color: rgba(198, 179, 140, 0.45);
+    border-color: rgba(125, 106, 75, 0.4);
+}

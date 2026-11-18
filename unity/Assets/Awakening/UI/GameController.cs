@@ -63,6 +63,10 @@ namespace Awakening.UI
         Tooltips _tooltips;
         Dictionary<string, string> _shot = new Dictionary<string, string>();
         bool _ready;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        internal VisualElement CurrentScreen => _screen;
+        internal bool ClockHeld => _holds > 0;
+#endif
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         static void Boot()
@@ -78,6 +82,7 @@ namespace Awakening.UI
             // Development players would otherwise cover the ledger with Unity's error console.
             Debug.developerConsoleEnabled = false;
             _shot = ShotArgs();
+            if (_shot.Count > 0) Application.runInBackground = true;
             Kit.Touch = GameStorage.TouchScreen() || _shot.ContainsKey("touch");
             var camera = new GameObject("Camera").AddComponent<Camera>();
             camera.clearFlags = CameraClearFlags.SolidColor;
@@ -252,8 +257,9 @@ namespace Awakening.UI
         {
             if (!Input.anyKeyDown) return;
             // Typing in a field must not trigger shortcuts.
-            if (_root.panel?.focusController?.focusedElement is TextField || _root.panel?.focusController?.focusedElement is TextElement text && text.parent is TextField)
-                return;
+            var focused = _root.panel?.focusController?.focusedElement as VisualElement;
+            bool typing = focused is TextField || focused?.GetFirstAncestorOfType<TextField>() != null;
+            if (typing && !Input.GetKeyDown(KeyCode.Tab) && !Input.GetKeyDown(KeyCode.Escape)) return;
             bool shift = Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift);
             foreach (KeyCode key in WatchedKeys)
             {
@@ -866,14 +872,53 @@ namespace Awakening.UI
             return parsed.ContainsKey("shot") && (Debug.isDebugBuild || Application.isEditor) ? parsed : new Dictionary<string, string>();
         }
 
+        internal static Dictionary<string, object> ShotLabOptions() => new Dictionary<string, object>
+        {
+            ["enabled"] = true, ["endpoint"] = "https://playtest.example.invalid/api/playtests/v1/batches/",
+            ["collection_id"] = "10000000-0000-4000-8000-000000000001", ["build_id"] = "10000000-0000-4000-8000-000000000002",
+            ["round_id"] = "10000000-0000-4000-8000-000000000003",
+        };
+
         System.Collections.IEnumerator StageShot()
         {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (_shot.ContainsKey("check-ui"))
+            {
+                yield return UiChecks.Run(this);
+                yield return new WaitForEndOfFrame();
+                ScreenCapture.CaptureScreenshot(_shot["shot"]);
+                yield return null;
+                yield return null;
+                Application.Quit();
+                yield break;
+            }
+#endif
             string scenario = _shot.TryGetValue("scenario", out string s) ? s : "start";
             TutorialComplete = scenario != "guide";
             Settings.Hints = _shot.ContainsKey("hints") ? new List<string>() : new List<string> { "first_cell", "spread", "threat", "omen", "sites", "doctrine", "awareness", "unsupported", "sacrifice" };
             switch (scenario)
             {
                 case "start":
+                    ShowStart();
+                    break;
+                case "consent":
+                    Lab.Configure(ShotLabOptions());
+                    Blocked = false;
+                    ShowStart();
+                    ((StartScreen)_screen).schedule.Execute(() => ((StartScreen)_screen).Begin());
+                    break;
+                case "continue":
+                    State = Awakening.Core.Dev.Playthrough.Play("early", "rlyeh", 96);
+                    ShowStart();
+                    break;
+                case "retired":
+                    var retired = SaveData.DefaultSave();
+                    retired.State = GameEngine.CreateGameState("normal", "retired");
+                    retired.State.Ruleset = "alignment-2";
+                    var decoded = SaveData.DecodeSave(SaveData.EncodeSave(retired));
+                    StorageNotice = SaveData.TakeRetiredNotice(decoded);
+                    State = decoded.State;
+                    LastResult = decoded.LastResult;
                     ShowStart();
                     break;
                 case "placing":
@@ -899,6 +944,17 @@ namespace Awakening.UI
                     ShowGame();
                     break;
             }
+            if (_shot.ContainsKey("comment") && State != null && GameEngine.IsOver(State))
+            {
+                Lab.Configure(ShotLabOptions());
+                Lab.Accept();
+                Lab.StartRun(Capture(GameEngine.CreateGameState("normal", State.Seed)));
+                Lab.EmitEvent("run_finished", new Dictionary<string, object>
+                {
+                    ["outcome"] = State.Status, ["reason"] = State.Status == "won" ? "awakened" : "deadline",
+                }, Capture(State), "ended");
+                ((GameScreen)_screen).OpenDialog("end");
+            }
             yield return null;
             if (_screen is GameScreen game)
             {
@@ -911,6 +967,8 @@ namespace Awakening.UI
                 }
             }
             for (int frame = 0; frame < 20; frame++) yield return null;
+            if (_shot.ContainsKey("layout"))
+                _screen.Query<Label>().ForEach(label => Debug.Log($"UI_LAYOUT {label.text} rect={label.worldBound} font={label.resolvedStyle.fontSize}"));
             float wait = _shot.TryGetValue("wait", out string w) ? float.Parse(w, System.Globalization.CultureInfo.InvariantCulture) : 0.6f;
             yield return new WaitForSecondsRealtime(wait);
             yield return new WaitForEndOfFrame();
