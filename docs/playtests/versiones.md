@@ -16,8 +16,8 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
 
 | Versión | Fecha | Commit | Ruleset | Adaptador | Ronda GTC | Estado |
 | --- | --- | --- | --- | --- | --- | --- |
-| 0.5.2 | 2026-11-18 | `pendiente` | `alignment-3` | `awakening-2` | Sin ronda nueva todavía | Local; sin publicar |
-| 0.5.1 | 2026-11-18 | `e1d5441` | `alignment-3` | `awakening-2` | «0.5.1 playtest por invitación · interfaz legible», abierta del 2026-11-19 al 2026-12-03 (UTC) | En itch.io (Restricted con contraseña) |
+| 0.5.2 | 2026-11-18 | `880e836` | `alignment-3` | `awakening-2` | «0.5.2 playtest por invitación · interfaz legible», abierta del 2026-11-19 al 2026-12-03 (UTC) | En itch.io (Restricted con contraseña) |
+| 0.5.1 | 2026-11-18 | `e1d5441` | `alignment-3` | `awakening-2` | «0.5.1 playtest por invitación · interfaz legible», cerrada el 2026-11-19 (UTC) con 1 partida | Reemplazada por 0.5.2 |
 | 0.5.0 | 2026-11-18 | `a25f916` | `alignment-3` | `awakening-2` | «0.5.0 playtest por invitación · versión Unity», cerrada el 2026-11-19 (UTC) con 1 partida | Reemplazada por 0.5.1 |
 | 0.4.0 | 2026-11-13 | `528c1f2` | `alignment-3` | `awakening-2` | «0.4.0 playtest por invitación · tres respuestas a cada amenaza», cerrada el 2026-11-18 con 1 partida | Reemplazada por 0.5.0 (último build Godot; rama `godot`) |
 | 0.3.6 | 2026-11-06 | `fdb4576` | `alignment-2` | `awakening-1` | «0.3.6 playtest por invitación · decisiones económicas», cerrada el 2026-11-13 sin partidas | Reemplazada por 0.4.0 |
@@ -31,7 +31,7 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
 
 ### 0.5.2 — botones con su propia tinta al tocarlos
 
-- **Commit:** pendiente.
+- **Commit:** `880e836`.
 - **Motivo:** al probar 0.5.1 en un teléfono, el botón «Perform» quedó gris azulado con el texto casi invisible después de tocarlo. El tema por defecto de Unity colorea los botones con `:hover:enabled` y `:active:enabled`, reglas más específicas que las del juego (`:hover`, `:active`), así que al pasar el cursor o el dedo se veía el gris de Unity (#D1D1D1 al pasar, #959595 al pulsar). Venía desde 0.5.0; en teléfono se nota más porque el toque deja el estado de hover puesto.
 - **Reglas y playtest:** sin cambios (`alignment-3`, `awakening-2`).
 - **Interfaz:**
@@ -40,7 +40,9 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
 - **Medición:**
   - `UiChecks` simula hover y pulsación sobre botón, botón principal, sello, enlace, fila y pestaña, y falla si el color no es el del juego. Antes del arreglo falló en el primer botón (hover #D1D1D1); después pasa: `UI_CHECKS_PASSED`.
   - `unity/layout-check.sh` con `LAYOUT_JOBS=4`: 60/60 combinaciones aprobadas, todas a la resolución pedida. Pruebas de reglas sin tocar (`Core/` no cambia).
-- **Límites:** la prueba usa eventos de puntero sintéticos en el ejecutable de desarrollo Linux; el toque real en teléfono queda por confirmar en la build publicada.
+- **GTC (2026-11-19 UTC):** build «The Awakening 0.5.2 · alignment-3 · Unity» (`880e836`, adaptador `awakening-2`) con su resumen en «cambios de esta build». Ronda nueva, abierta en pausa, probada en el host y habilitada; cierra el 2026-12-03. La ronda 0.5.1 se cerró con 1 partida recibida, que se conserva aparte.
+- **Publicación:** upload `20654890` en itch.io como único archivo jugable (`the-awakening-0.5.2-pilot.zip`, 8,9 MB, exportado desde un checkout limpio de `880e836`). Los archivos alojados son idénticos al export, la configuración descomprimida tiene los IDs de la ronda nueva y la build arranca sin errores de consola, sin enviar nada antes de responder y con el guardado listo. La página pasa a «Novedad de 0.5.2 / New in 0.5.2».
+- **Límites:** la prueba usa eventos de puntero sintéticos en el ejecutable de desarrollo Linux; el toque real en teléfono queda por confirmar en un teléfono con esta build.
 
 ### 0.5.1 — tinta legible y expedientes sin recortes
 
