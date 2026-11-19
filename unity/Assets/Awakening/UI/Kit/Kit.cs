@@ -30,7 +30,8 @@ namespace Awakening.UI
             // The compact layout runs on few, small pixels; small reading type grows by two units.
             if (Compact && size < 17) size += 2;
             var node = new Label(text) { pickingMode = PickingMode.Ignore };
-            Fonts.Apply(node, weight);
+            Fonts.Apply(node, (weight == Fonts.Display || weight == Fonts.DisplaySc || weight == Fonts.DisplayItalic)
+                && text != null && System.Linq.Enumerable.Any(text, char.IsDigit) ? Fonts.BodyBold : weight);
             node.style.fontSize = size;
             node.style.color = color ?? Palette.Text;
             node.style.whiteSpace = WhiteSpace.NoWrap;

@@ -66,6 +66,7 @@ namespace Awakening.UI
                 case "playtest": Playtest(); break;
             }
             Kit.SetVisible(this, true);
+            _screen.SetModalOpen(true);
             _game.Hold();
             Fit();
             _scroll.scrollOffset = Vector2.zero;
@@ -94,6 +95,7 @@ namespace Awakening.UI
             _box.style.scale = new Scale(Vector3.one);
             Kind = "";
             Kit.SetVisible(this, false);
+            _screen.SetModalOpen(false);
             _content.Clear();
             _game.Release();
         }

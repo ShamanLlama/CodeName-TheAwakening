@@ -30,6 +30,7 @@ namespace Awakening.UI
         readonly GameController _game;
         readonly GameScreen _screen;
         readonly ScrollView _scroll;
+        readonly Label _scrollHint;
         readonly Stack _body;
         readonly Label _file, _name, _stance;
         readonly VisualElement _stats;
@@ -61,10 +62,27 @@ namespace Awakening.UI
             _scroll = new ScrollView(ScrollViewMode.Vertical) { horizontalScrollerVisibility = ScrollerVisibility.Hidden };
             _scroll.AddToClassList("aw-scroll");
             _scroll.style.flexGrow = 1;
+            _scroll.style.flexShrink = 1;
+            _scroll.style.minHeight = 0;
             _scroll.touchScrollBehavior = ScrollView.TouchScrollBehavior.Clamped;
             Add(_scroll);
-            _body = Kit.VBox(14);
-            int margin = Kit.Compact ? 14 : 18;
+            _scrollHint = Kit.Label("Scroll ↓ · more case notes", 12, Palette.Text, Fonts.TypeBold);
+            _scrollHint.style.unityTextAlign = TextAnchor.MiddleCenter;
+            _scrollHint.style.height = 22;
+            _scrollHint.style.flexShrink = 0;
+            Add(_scrollHint);
+            void ScrollHint()
+            {
+                bool overflow = _scroll.contentContainer.layout.height > _scroll.contentViewport.layout.height + 1;
+                _scrollHint.style.visibility = overflow ? Visibility.Visible : Visibility.Hidden;
+                _scrollHint.text = _scroll.scrollOffset.y >= _scroll.verticalScroller.highValue - 2
+                    ? "Scroll ↑ · actions and case notes" : "Scroll ↓ · more case notes";
+            }
+            _scroll.contentContainer.RegisterCallback<GeometryChangedEvent>(_ => ScrollHint());
+            _scroll.contentViewport.RegisterCallback<GeometryChangedEvent>(_ => ScrollHint());
+            _scroll.verticalScroller.valueChanged += _ => ScrollHint();
+            _body = Kit.VBox(Kit.Compact ? 10 : 8);
+            int margin = 14;
             _body.style.paddingLeft = _body.style.paddingRight = _body.style.paddingTop = _body.style.paddingBottom = margin;
             _scroll.Add(_body);
 
@@ -91,7 +109,7 @@ namespace Awakening.UI
             _people.Add(Kit.Caption("People"));
             _population = new PopulationBar();
             _people.Add(_population);
-            _legend = new Flow(12, 4);
+            _legend = new Flow(6, 4);
             _people.Add(_legend);
 
             _cards = Kit.VBox(10);
@@ -124,8 +142,22 @@ namespace Awakening.UI
                 _body.Add(_cards);
                 _body.Add(_profile);
             }
-            _body.Add(_stats);
-            _body.Add(_people);
+            if (Kit.Compact)
+            {
+                _body.Add(_stats);
+                _body.Add(_people);
+            }
+            else
+            {
+                // Keep the summary in a stable footer while actions and explanations use the
+                // remaining height. Opening an explanation cannot push People out of the file.
+                var summary = Kit.VBox(8);
+                summary.style.paddingLeft = summary.style.paddingRight = summary.style.paddingBottom = 14;
+                summary.Add(Kit.Rule());
+                summary.Add(_stats);
+                summary.Add(_people);
+                Insert(IndexOf(_scrollHint), summary);
+            }
             Kit.SetVisible(this, false);
         }
 
@@ -149,6 +181,8 @@ namespace Awakening.UI
                     foreach (var child in node.Children()) Visit(child);
                 }
                 Visit(_body);
+                Visit(_stats);
+                Visit(_people);
                 return right - left;
             }
         }
@@ -341,7 +375,7 @@ namespace Awakening.UI
             {
                 Stack cell = Kit.VBox(0);
                 cell.style.width = Length.Percent(33.33f);
-                if (i >= 3) cell.style.marginTop = 10;
+                if (i >= 3) cell.style.marginTop = 6;
                 cell.tooltip = hints.TryGetValue(items[i].name, out string hint) ? hint : "";
                 cell.Add(Kit.Caption(items[i].name));
                 cell.Add(Kit.Label(items[i].value, 19, items[i].color, Fonts.BodyBold));
@@ -359,7 +393,7 @@ namespace Awakening.UI
                 swatch.style.width = swatch.style.height = 8;
                 swatch.style.backgroundColor = PopulationBar.Colors[key];
                 item.Add(swatch);
-                item.Add(Kit.Label(Capitalize(key.ToUpperInvariant()) + " " + Format.Count(PopulationBar.Value(r.Population, key)), 13, Palette.Muted, Fonts.Type));
+                item.Add(Kit.Label(Capitalize(key.ToUpperInvariant()) + " " + Format.Count(PopulationBar.Value(r.Population, key)), 12, Palette.Muted, Fonts.Body));
                 _legend.Add(item);
             }
         }

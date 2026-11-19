@@ -29,6 +29,11 @@ namespace Awakening.UI
 
         public static string Months(int value) => value + " month" + (value == 1 ? "" : "s");
 
+        // Presentation copy only: preserve the rules engine's forecast and serialized contract.
+        public static string ForecastCopy(string message) => System.Text.RegularExpressions.Regex.Replace(
+            message, @"(\d+)( more ritual | )site\(s\)", match => match.Groups[1].Value + match.Groups[2].Value
+                + (match.Groups[1].Value == "1" ? "site" : "sites"));
+
         /// <summary>
         /// The game opens in January 1908. With a 200-month preparation the alignment opens in
         /// September 1924 and closes in September 1926, around the night R'lyeh rose: 23 March 1925.

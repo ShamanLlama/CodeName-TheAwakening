@@ -47,7 +47,7 @@ namespace Awakening.UI
                     // Grain: white lifts, black sinks, by the shader's multiplier offset.
                     Color layer = shift >= 0 ? new Color(1, 1, 1, shift * 1.2f) : new Color(0, 0, 0, -shift * 1.6f);
                     // Foxing browns the paper rather than greying it.
-                    float fox = Mathf.Clamp01(stain * foxing * 2.5f) * 0.42f;
+                    float fox = Mathf.Clamp01(stain * foxing) * 0.12f;
                     float alpha = fox + layer.a * (1 - fox);
                     Color rgb = alpha <= 0 ? Color.clear : (brown * fox + layer * layer.a * (1 - fox)) / alpha;
                     pixels[y * Size + x] = new Color(rgb.r, rgb.g, rgb.b, alpha);

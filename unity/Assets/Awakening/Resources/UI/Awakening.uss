@@ -20,7 +20,7 @@ Label {
     border-radius: 0;
     padding: 7px 12px;
     margin: 0;
-    -unity-font-definition: url("../Fonts/IMFellEnglishSC-Regular.ttf");
+    -unity-font-definition: url("../Fonts/OldStandard-Bold.ttf");
     font-size: 19px;
     letter-spacing: 1px;
     color: rgb(33, 24, 14);
@@ -54,7 +54,7 @@ Label {
     border-radius: 0;
     padding: 9px 18px 10px 18px;
     margin: 0;
-    -unity-font-definition: url("../Fonts/IMFellEnglishSC-Regular.ttf");
+    -unity-font-definition: url("../Fonts/OldStandard-Bold.ttf");
     font-size: 21px;
     letter-spacing: 1px;
     color: rgb(228, 215, 181);
@@ -361,3 +361,31 @@ Label {
     background-color: rgba(198, 179, 140, 0.45);
     border-color: rgba(125, 106, 75, 0.4);
 }
+
+/* Numeric buttons use lining figures; unavailable purchases keep legible ink but lose the
+   raised paper fill and receive a single quiet rule. The doctrine link still opens inspection. */
+.aw-button:disabled, .aw-primary:disabled, .aw-button.aw-unavailable,
+.aw-stamp:disabled {
+    opacity: 1;
+    background-color: rgba(33, 24, 14, 0.07);
+    color: rgb(98, 79, 51);
+    border-color: rgb(125, 106, 75);
+    border-width: 1px;
+    -unity-font-style: italic;
+    cursor: arrow;
+}
+.aw-button.aw-unavailable:hover { background-color: rgba(33, 24, 14, 0.12); }
+#region-panel .unity-label { padding: 0; margin: 0; }
+#region-panel .aw-scroll .unity-scroller--vertical {
+    width: 14px;
+    background-color: rgba(33, 24, 14, 0.12);
+}
+#region-panel .aw-scroll .unity-base-slider__dragger {
+    width: 10px;
+    left: 2px;
+    background-color: rgb(98, 79, 51);
+    min-height: 32px;
+}
+
+/* Native label padding must not enlarge complete threat clippings on a short chart. */
+#threat-stack .unity-label { padding: 0; margin: 0; }

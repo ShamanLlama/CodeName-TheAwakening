@@ -45,6 +45,14 @@ namespace Awakening.UI
         bool _noting;
         string _lastStatus = "";
         bool _layoutPending;
+        int _threatOffset;
+        // All options retain independent geometry, including while hidden. Fitting never
+        // measures last frame's degraded stack, so it can recover without oscillation.
+        readonly List<Stack> _threatOptions = new List<Stack>();
+        int _threatOption = -1;
+        float _threatAreaHeight;
+        string _tickerMessage = "";
+        const float TickerHeight = 42;
 
         public GameScreen(GameController game)
         {
@@ -74,6 +82,7 @@ namespace Awakening.UI
             Add(Panel);
             Dialogs = new Dialogs(game, this);
             Add(Dialogs);
+            Map.LabelObstacles = VisibleMapOverlays;
             _game.Changed += Refresh;
             _game.Events += OnEvents;
             RegisterCallback<DetachFromPanelEvent>(_ =>
@@ -200,7 +209,7 @@ namespace Awakening.UI
             bar.Add(left);
             Stack center = Kit.VBox(-2);
             center.style.alignItems = Align.Center;
-            _date = Kit.Label("", Kit.Compact ? 23 : 25, Palette.Lamp, Fonts.Display);
+            _date = Kit.Label("", Kit.Compact ? 23 : 25, Palette.Lamp, Fonts.Body);
             _countdown = Kit.Caption("", Palette.LampDim);
             center.Add(_date);
             center.Add(_countdown);
@@ -233,6 +242,7 @@ namespace Awakening.UI
             box.Add(Kit.Caption(caption));
             Label value = Kit.Label("0", Kit.Compact ? 26 : 31, color, Fonts.BodyBold);
             Label sub = Kit.Label("", 12, Palette.Muted, Fonts.Type);
+            sub.style.height = Kit.Compact ? 20 : 16;
             box.Add(value);
             box.Add(sub);
             parent.Add(box);
@@ -254,6 +264,7 @@ namespace Awakening.UI
             Stack bar = Bar(false);
             Stack row = Kit.HBox(Kit.Compact ? 14 : 24);
             row.style.flexGrow = 1;
+            row.style.alignItems = Align.Center;
             bar.Add(row);
             (_influence, _influenceRate) = Readout(row, "Influence", Palette.Text,
                 $"Earned each month by your followers, minus {Js.Num(Balance.SiteUpkeep)} per funded site.\nSpent on every cult action. Keep a reserve for the alignment.");
@@ -265,6 +276,7 @@ namespace Awakening.UI
             _doctrine = Kit.Button("", () => OpenDialog("doctrine"));
             _doctrine.style.minWidth = Kit.Compact ? 124 : 150;
             _doctrine.style.fontSize = 18;
+            Fonts.Apply(_doctrine, Fonts.BodyBold);
             _doctrine.tooltip = "One permanent bonus per run.  (D)";
             doctrine.Add(_doctrine);
             _doctrineNote = Kit.Label("", 12, Palette.Warn, Fonts.TypeBold);
@@ -280,6 +292,8 @@ namespace Awakening.UI
             ticker.style.flexBasis = 0;
             ticker.style.minWidth = 0;
             ticker.style.justifyContent = Justify.Center;
+            ticker.style.maxHeight = Bottom - 12;
+            ticker.style.overflow = Overflow.Hidden;
             ticker.pickingMode = PickingMode.Position;
             ticker.tooltip = "Open the chronicle  (C)";
             ticker.RegisterCallback<PointerDownEvent>(e =>
@@ -288,9 +302,11 @@ namespace Awakening.UI
             });
             _tickerHead = Kit.Caption("");
             _ticker = Kit.Body("", Kit.Compact ? 16 : 17, Palette.Text, Fonts.Italic);
-            _ticker.style.maxHeight = (Kit.Compact ? 16 : 17) * 2.6f;
+            _ticker.style.whiteSpace = WhiteSpace.Normal;
+            _ticker.style.maxHeight = TickerHeight;
             _ticker.style.overflow = Overflow.Hidden;
-            _ticker.style.textOverflow = TextOverflow.Ellipsis;
+            _ticker.style.textOverflow = TextOverflow.Clip;
+            _ticker.RegisterCallback<GeometryChangedEvent>(_ => FitTicker());
             ticker.Add(_tickerHead);
             ticker.Add(_ticker);
             row.Add(ticker);
@@ -323,6 +339,7 @@ namespace Awakening.UI
             row.Add(sites);
 
             _rite = Kit.Primary("Final Rite", () => OpenDialog("alignment"));
+            _rite.style.flexShrink = 0;
             row.Add(_rite);
         }
 
@@ -335,8 +352,10 @@ namespace Awakening.UI
             _threatScroll.pickingMode = PickingMode.Ignore;
             Add(_threatScroll);
             _threats = Kit.VBox(8);
+            _threats.name = "threat-stack";
             _threats.style.width = Kit.Compact ? 250 : 310;
             _threatScroll.Add(_threats);
+            _threats.RegisterCallback<GeometryChangedEvent>(_ => QueueLayout());
 
             _toasts = Kit.VBox(6);
             _toasts.style.position = Position.Absolute;
@@ -359,7 +378,8 @@ namespace Awakening.UI
                 Kit.SetVisible(_bannerText, !Kit.IsVisible(_bannerText));
                 Refresh();
             });
-            _bannerHead = Kit.Label("", 20, Palette.Warn, Fonts.DisplaySc);
+            _bannerHead = Kit.Label("", Kit.Compact ? 18 : 20, Palette.Warn, Fonts.BodyBold);
+            _bannerHead.style.whiteSpace = WhiteSpace.Normal;
             _bannerHead.style.unityTextAlign = TextAnchor.MiddleCenter;
             _bannerText = Kit.Body("", 14, Palette.Text);
             _bannerText.style.unityTextAlign = TextAnchor.MiddleCenter;
@@ -370,6 +390,7 @@ namespace Awakening.UI
             Kit.SetVisible(_riteBar, false);
             _banner.Add(_riteBar);
             _banner.Add(_bannerText);
+            _banner.tooltip = "Ritual timetable";
             Add(_banner);
             _banner.RegisterCallback<GeometryChangedEvent>(_ => QueueLayout());
 
@@ -408,61 +429,50 @@ namespace Awakening.UI
             });
         }
 
-        /// <summary>
-        /// Overlays share the visible chart without covering one another or the region's file: the
-        /// timetable at the bottom centre, the threat clippings down the left (scrolling above the
-        /// timetable), the whole-world button at the top right, and a note at the lower left or, when
-        /// that would cover the timetable or the clippings, at the top right below the button.
-        /// </summary>
+        /// <summary>The timetable owns a bottom strip; clippings and notes share the chart above it.</summary>
         void LayoutOverlays()
         {
             Rect screen = contentRect;
             if (screen.width <= 0 || _banner == null) return;
             float gap = Kit.Compact ? 10f : 14f;
             float mapRight = Selected != "" ? Panel.Width + 28 : 0;
-            var area = new Rect(gap, Top + gap, screen.width - mapRight - gap * 2f, screen.height - Top - Bottom - gap * 2f);
-            // The timetable is centred over the chart, but moves right of the threat clippings when
-            // both are shown; only if that leaves it too narrow do the clippings stop above it.
-            float columnWidth = Mathf.Max(_threats.resolvedStyle.width, _threats.layout.width) + 10f;
-            bool hasThreats = _threats.childCount > 0;
-            float left = area.x;
-            if (hasThreats) left = area.x + columnWidth + 8f;
-            float width = Mathf.Min(620f, area.xMax - left);
-            float centred = area.x + (area.width - Mathf.Min(620f, area.width)) * 0.5f;
-            if (!hasThreats || width < 320f)
-            {
-                left = centred;
-                width = Mathf.Min(620f, area.width);
-            }
-            else
-            {
-                left = Mathf.Max(left, centred);
-                width = Mathf.Min(620f, area.xMax - left);
-            }
-            _banner.style.left = left;
-            _banner.style.width = width;
-            bool bannerShown = Kit.IsVisible(_banner);
+            float availableWidth = screen.width - mapRight - gap * 2;
+            _banner.style.left = gap;
+            _banner.style.width = availableWidth;
             float bannerHeight = _banner.layout.height;
-            var bannerRect = new Rect(left, area.yMax - bannerHeight, width, bannerHeight);
+            if (float.IsNaN(bannerHeight)) bannerHeight = Kit.Compact ? 64 : 90;
+            float reserved = Kit.IsVisible(_banner) && _banner.resolvedStyle.visibility == Visibility.Visible ? bannerHeight + gap : 0;
+            Map.style.bottom = Bottom + 8 + reserved;
+            var area = new Rect(gap, Top + gap, availableWidth, screen.height - Top - Bottom - gap * 2 - reserved);
+            float columnWidth = (Kit.Compact ? 250 : 310) + 12;
+            _threatAreaHeight = area.height;
+            FitTicker();
+            bool hasThreats = _threatOptions.Count > 0 && _threatOptions[0].childCount > 0;
+            int option = Kit.Compact ? 1 : 0;
+            while (option < _threatOptions.Count - 1 && _threatOptions[option].layout.height > area.height)
+                option++;
+            float threatHeight = _threatOptions.Count > 0 ? _threatOptions[option].layout.height : 0;
+            if (float.IsNaN(threatHeight)) threatHeight = 0;
+            _threatOption = option;
+            for (int i = 0; i < _threatOptions.Count; i++)
+                _threatOptions[i].style.visibility = i == option ? Visibility.Visible : Visibility.Hidden;
+            _threats.style.height = threatHeight;
+            _threatScroll.style.left = area.x;
+            _threatScroll.style.top = area.y;
+            _threatScroll.style.width = columnWidth;
+            _threatScroll.style.height = threatHeight;
+            _threatScroll.pickingMode = hasThreats ? PickingMode.Position : PickingMode.Ignore;
             Vector2 button = Kit.IsVisible(_resetView) ? _resetView.layout.size : Vector2.zero;
             _resetView.style.left = area.xMax - button.x;
             _resetView.style.top = area.y;
-            float belowButton = area.y + (Kit.IsVisible(_resetView) ? button.y + 8f : 0f);
-            var column = new Rect(area.position, new Vector2(columnWidth, area.height));
-            if (bannerShown && column.Overlaps(bannerRect)) column.height = bannerRect.y - 8f - area.y;
-            _threatScroll.style.left = column.x;
-            _threatScroll.style.top = column.y;
-            _threatScroll.style.width = column.width;
-            _threatScroll.style.height = Mathf.Min(_threats.layout.height, Mathf.Max(0f, column.height));
-            _threatScroll.pickingMode = hasThreats ? PickingMode.Position : PickingMode.Ignore;
+            float belowButton = area.y + (Kit.IsVisible(_resetView) ? button.y + 8 : 0);
             if (_note == null) return;
             var noteSize = new Vector2(_note.resolvedStyle.width, _note.layout.height);
             var spot = new Rect(new Vector2(area.x, area.yMax - noteSize.y), noteSize);
-            var clippings = new Rect(column.x, column.y, column.width, _threatScroll.resolvedStyle.height);
-            bool Blocked(Rect rect) => bannerShown && rect.Overlaps(bannerRect) || hasThreats && rect.Overlaps(clippings)
-                || rect.yMax > area.yMax + 1 || rect.x < area.x - 1;
+            var clippings = new Rect(area.x, area.y, columnWidth, threatHeight);
+            bool Blocked(Rect rect) => hasThreats && rect.Overlaps(clippings)
+                || rect.yMax > area.yMax || rect.yMin < area.y || rect.xMin < area.x || rect.xMax > area.xMax;
             if (Kit.Compact || Blocked(spot)) spot.position = new Vector2(area.xMax - noteSize.x, belowButton);
-            // With no free corner the note waits, still unread, until the chart has room for it.
             bool shown = !Blocked(spot) && noteSize.y > 0;
             _note.style.visibility = shown ? Visibility.Visible : Visibility.Hidden;
             if (shown && !_game.HintSeen(_noteId))
@@ -475,6 +485,22 @@ namespace Awakening.UI
             _note.style.top = spot.y;
         }
 
+        internal IEnumerable<VisualElement> VisibleMapOverlays()
+        {
+            yield return _threatScroll;
+            yield return _note;
+            yield return _resetView;
+            yield return _prompt;
+            yield return _toasts;
+            yield return Panel;
+        }
+
+        public void SetModalOpen(bool open)
+        {
+            _banner.style.visibility = open ? Visibility.Hidden : Visibility.Visible;
+            QueueLayout();
+        }
+
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         internal IEnumerable<VisualElement> LayoutLedger => _rite.parent.Children();
         internal (VisualElement node, string name)[] LayoutOverlaysToCheck => new[]
@@ -483,6 +509,14 @@ namespace Awakening.UI
             ((VisualElement)_resetView, "whole-world button"), ((VisualElement)_threatScroll, "threat clippings"),
         };
         internal VisualElement LayoutThreatScroll => _threatScroll;
+        internal IEnumerable<VisualElement> LayoutThreatCards => _threatOptions.SelectMany(option => option.Children());
+        internal VisualElement LayoutLedgerBar => _rite.parent.parent;
+        internal Label LayoutTicker => _ticker;
+        internal int LayoutThreatOption => _threatOption;
+        internal float[] LayoutThreatHeights => _threatOptions.Select(option => option.layout.height).ToArray();
+        internal float LayoutThreatAvailableHeight => _threatAreaHeight;
+        internal void LayoutSetTicker(LogEntry entry) => SetTicker(entry);
+        internal VisualElement LayoutBanner => _banner;
         internal void ExpandLayoutTimetable() => Kit.SetVisible(_bannerText, true);
 #endif
 
@@ -531,8 +565,7 @@ namespace Awakening.UI
             RefreshDoctrine(s, placing, over);
 
             LogEntry last = s.Log.Count > 0 ? s.Log[s.Log.Count - 1] : null;
-            _tickerHead.text = last != null ? ("Chronicle · " + Format.Date(last.Month)).ToUpperInvariant() : "CHRONICLE";
-            _ticker.text = last?.Message ?? "The world sleeps. Choose where the dream begins.";
+            SetTicker(last);
 
             _awareness.Value = s.Awareness;
             _awarenessCaption.text = (Kit.Compact ? "AWARENESS  " : "WORLD AWARENESS  ") + (int)Math.Floor(s.Awareness) + "%";
@@ -542,14 +575,18 @@ namespace Awakening.UI
             _sites.State = s;
             _sitesCaption.text = s.Status == "awakening" ? $"FINAL RITE  {s.FinalProgress} / {Balance.FinalMonths}" : $"RITUAL SITES  {ready} / {Balance.RequiredSites}";
             RitualForecast forecast = Forecast.Ritual(s);
-            _sitesBox.tooltip = forecast.Message;
+            _sitesBox.tooltip = Format.ForecastCopy(forecast.Message);
             RefreshRite(s);
+            // The alignment decision gets the chronicle's space. Full entries remain in its sheet.
+            Kit.SetVisible(_tickerBox, !Kit.Compact && s.Status != "alignment");
 
             bool rite = s.Status == "awakening";
             Kit.SetVisible(_banner, (forecast.Urgent || rite) && !placing && !over);
             _bannerHead.text = Notes.ForecastHeadline(s) + (Kit.Compact && !Kit.IsVisible(_bannerText) ? "  · more" : "");
             _bannerHead.style.color = rite && Derived.ReadySites(s) >= Balance.RequiredSites ? Palette.Cult : Palette.Warn;
-            _bannerText.text = forecast.Message;
+            _bannerText.text = Format.ForecastCopy(forecast.Message);
+            _banner.tooltip = _bannerText.text;
+            SetModalOpen(Dialogs != null && Dialogs.IsOpen);
             Kit.SetVisible(_riteBar, rite);
             _riteBar.Value = s.FinalProgress;
             Kit.SetVisible(_prompt, placing);
@@ -573,6 +610,7 @@ namespace Awakening.UI
             _doctrineNote.text = "";
             if (s.Specialization != null)
             {
+                _doctrine.EnableInClassList("aw-unavailable", false);
                 _doctrine.text = GameData.Specializations[s.Specialization].Name;
                 _doctrine.style.color = Palette.Cult;
                 return;
@@ -580,7 +618,9 @@ namespace Awakening.UI
             _doctrine.text = "Choose · " + GameData.SpecializationCost;
             int shortBy = GameData.SpecializationCost - (int)Math.Floor(s.Influence);
             bool affordable = shortBy <= 0;
-            _doctrine.style.color = affordable ? Palette.Text : Palette.Muted;
+            _doctrine.EnableInClassList("aw-unavailable", !affordable);
+            _doctrine.style.color = StyleKeyword.Null;
+            _doctrine.tooltip = affordable ? "Choose a permanent doctrine  (D)" : "Inspect doctrines · " + shortBy + " more Influence to choose  (D)";
             if (!affordable && !placing && !over) _doctrineNote.text = shortBy + " MORE INFLUENCE";
         }
 
@@ -610,13 +650,66 @@ namespace Awakening.UI
             }
         }
 
+        void SetTicker(LogEntry entry)
+        {
+            _tickerHead.text = entry != null ? ("Chronicle · " + Format.Date(entry.Month)).ToUpperInvariant() : "CHRONICLE";
+            _tickerMessage = entry?.Message ?? "The world sleeps. Choose where the dream begins.";
+            _tickerBox.tooltip = _tickerMessage + "\nOpen the chronicle  (C)";
+            FitTicker();
+        }
+
+        void FitTicker()
+        {
+            float width = _ticker.contentRect.width;
+            if (width <= 0 || float.IsNaN(width)) return;
+            bool Fits(string text) => _ticker.MeasureTextSize(text, width, VisualElement.MeasureMode.Exactly, 0, VisualElement.MeasureMode.Undefined).y <= TickerHeight;
+            string copy = _tickerMessage;
+            if (!Fits(copy))
+            {
+                int sentence = copy.IndexOf(". ", StringComparison.Ordinal);
+                if (sentence >= 0) copy = copy.Substring(0, sentence + 1);
+                while (!Fits(copy) && copy.LastIndexOf(' ') > 0)
+                    copy = copy.Substring(0, copy.LastIndexOf(' '));
+            }
+            _ticker.text = copy;
+        }
+
         void RebuildThreats(GameState s)
         {
             _threats.Clear();
+            _threatOptions.Clear();
             if (GameEngine.IsOver(s)) return;
             var ids = GameData.RegionIds.Where(id => s.Regions[id].Threat != null).ToList();
             ids.Sort((a, b) => s.Regions[a].Threat.DueMonth.CompareTo(s.Regions[b].Threat.DueMonth));
-            foreach (string id in ids) _threats.Add(ThreatCard(s, id));
+            int start = ids.Count == 0 ? 0 : _threatOffset % ids.Count;
+            for (int mode = 0; mode < 3; mode++)
+            {
+                int limit = mode == 0 ? 2 : 1;
+                var option = Kit.VBox(8);
+                option.style.position = Position.Absolute;
+                option.style.left = option.style.top = 0;
+                option.style.width = Length.Percent(100);
+                option.style.visibility = Visibility.Hidden;
+                foreach (string id in ids.Skip(start).Concat(ids.Take(start)).Take(limit)) option.Add(ThreatCard(s, id, mode == 2));
+                if (ids.Count > limit)
+                {
+                    var more = Kit.Button($"+{ids.Count - limit} more threats · review", () =>
+                    {
+                        _threatOffset = (start + limit) % ids.Count;
+                        RebuildThreats(_game.State);
+                        QueueLayout();
+                    });
+                    Fonts.Apply(more, Fonts.TypeBold);
+                    more.style.fontSize = Kit.Compact ? 15 : 14;
+                    more.style.minHeight = Kit.Touch ? 44 : 32;
+                    more.tooltip = "Show the next threats, in deadline order. Select any clipping to inspect its case file.";
+                    option.Add(more);
+                }
+                _threatOptions.Add(option);
+                // Stack.Add would add an 8-unit margin to each alternative.
+                _threats.hierarchy.Add(option);
+                option.RegisterCallback<GeometryChangedEvent>(_ => QueueLayout());
+            }
         }
 
         static readonly Dictionary<string, string> KindName = new Dictionary<string, string>
@@ -625,13 +718,14 @@ namespace Awakening.UI
         };
 
         /// <summary>A press clipping: the headline names the threat, the stamps answer it.</summary>
-        VisualElement ThreatCard(GameState s, string id)
+        VisualElement ThreatCard(GameState s, string id, bool brief)
         {
             RegionState r = s.Regions[id];
             Threat threat = r.Threat;
             int months = threat.DueMonth - s.ElapsedMonths;
             bool urgent = months <= 3;
             Stack card = Kit.Panel(Palette.PaperLight, urgent ? Palette.Danger : Palette.PaperEdge, new Vector4(12, 9, 12, 10), 0.1f, 6);
+            card.name = "threat-card-" + id;
             if (urgent) card.style.borderTopWidth = card.style.borderBottomWidth = card.style.borderLeftWidth = card.style.borderRightWidth = 2;
             card.tooltip = GameData.ThreatNames[threat.Kind] + ".\nIf ignored: " + Threats.Describe(r);
             card.RegisterCallback<PointerDownEvent>(e =>
@@ -658,6 +752,11 @@ namespace Awakening.UI
             right.Add(Kit.Label(months.ToString(), Kit.Compact ? 26 : 30, Palette.Danger, Fonts.BodyBold));
             right.Add(Kit.Caption(months != 1 ? "months" : "month", Palette.Danger));
             row.Add(right);
+            if (brief)
+            {
+                card.Add(Kit.Caption(Kit.Touch ? "Tap for responses →" : "Inspect responses →", Palette.Danger));
+                return card;
+            }
             // Three answers, each paid in a different currency. The region's file says what else each costs.
             var stamps = new Flow(6, 6);
             foreach (string action in Notes.Responses)
@@ -669,7 +768,14 @@ namespace Awakening.UI
                 stamp.SetEnabled(preview.Ok);
                 stamp.tooltip = preview.Ok ? GameData.Actions[action].Name + ". " + Notes.ResponseNote(r, preview, action) + "." : preview.Reason;
                 if (Kit.Touch) stamp.style.minHeight = 40;
-                stamps.Add(stamp);
+                if (!preview.Ok)
+                {
+                    Stack disabled = Kit.VBox(2);
+                    disabled.Add(stamp);
+                    disabled.Add(Kit.Label(Notes.Blocker(s, action, id, preview).shortText, 11, Palette.Warn, Fonts.TypeBold));
+                    stamps.Add(disabled);
+                }
+                else stamps.Add(stamp);
             }
             card.Add(stamps);
             return card;

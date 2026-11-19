@@ -34,6 +34,8 @@ namespace Awakening.UI.Map
         public string Selected = "";
         public string Hovered = "";
         public bool ShowLabels = true;
+        // Overlay geometry is supplied by the screen in panel coordinates, after layout.
+        public Func<IEnumerable<VisualElement>> LabelObstacles;
 
         readonly VisualElement _sea, _land, _grain, _borders, _dots, _fx, _labels;
         readonly Rect _world;
@@ -42,6 +44,7 @@ namespace Awakening.UI.Map
         readonly Dictionary<string, Color> _regionColor = new Dictionary<string, Color>();
         readonly List<(Vector2 at, float radius, string region)> _hits = new List<(Vector2, float, string)>();
         readonly Dictionary<string, (Label title, Label count)> _regionLabels = new Dictionary<string, (Label, Label)>();
+        readonly Dictionary<Label, Label> _halos = new Dictionary<Label, Label>();
         readonly List<Label> _threatLabels = new List<Label>();
         readonly Label _north, _rlyehName, _rlyehCoords;
 
@@ -100,18 +103,20 @@ namespace Awakening.UI.Map
             hierarchy.Add(_labels);
             foreach (string id in GameData.RegionIds)
             {
-                Label title = MapLabel(Fonts.DisplaySc, Palette.Text);
-                Label count = MapLabel(Fonts.TypeBold, Palette.Cult);
+                Label title = MapLabel(Fonts.BodyBold, Palette.Text);
+                Label count = MapLabel(Fonts.TypeBold, CultInk);
+                count.style.backgroundColor = Palette.PaperLight;
+                count.style.paddingLeft = count.style.paddingRight = 3;
                 _regionLabels[id] = (title, count);
             }
-            _north = MapLabel(Fonts.Display, Palette.Alpha(Palette.Brass, 0.55f), 16, 0);
+            _north = MapLabel(Fonts.Display, Palette.Muted, 16);
             _north.text = "N";
-            _rlyehName = MapLabel(Fonts.DisplayItalic, Palette.OmenBright, 15, 0);
+            _rlyehName = MapLabel(Fonts.DisplayItalic, Palette.Omen, 15);
             _rlyehName.text = "R'lyeh";
-            _rlyehCoords = MapLabel(Fonts.Type, Palette.OmenBright, 11, 0);
+            _rlyehCoords = MapLabel(Fonts.Type, Palette.Omen, 11);
             _rlyehCoords.text = "47°9′S 126°43′W";
 
-            RegisterCallback<GeometryChangedEvent>(_ => Layout());
+            RegisterCallback<GeometryChangedEvent>(_ => { Layout(); UpdateLabels(); });
             RegisterCallback<PointerDownEvent>(OnPointerDown);
             RegisterCallback<PointerMoveEvent>(OnPointerMove);
             RegisterCallback<PointerUpEvent>(OnPointerUp);
@@ -130,16 +135,26 @@ namespace Awakening.UI.Map
             return layer;
         }
 
-        Label MapLabel(string font, Color color, int size = 18, float halo = 3.2f)
+        Label MapLabel(string font, Color color, int size = 18, float halo = 3f)
         {
             Label label = Kit.Label("", size, color, font);
             label.style.position = Position.Absolute;
             label.style.left = 0;
             label.style.top = 0;
+            label.style.paddingLeft = label.style.paddingRight = label.style.paddingTop = label.style.paddingBottom = 0;
+            label.style.marginLeft = label.style.marginRight = label.style.marginTop = label.style.marginBottom = 0;
             if (halo > 0)
             {
-                label.style.unityTextOutlineWidth = halo;
-                label.style.unityTextOutlineColor = Palette.Alpha(Palette.PaperLight, 0.93f);
+                // Only the paper copy has an SDF outline; the foreground ink keeps its full glyph.
+                Label back = Kit.Label("", size, Palette.PaperLight, font);
+                back.style.position = Position.Absolute;
+                back.style.left = back.style.top = 0;
+                back.style.paddingLeft = back.style.paddingRight = back.style.paddingTop = back.style.paddingBottom = 0;
+                back.style.marginLeft = back.style.marginRight = back.style.marginTop = back.style.marginBottom = 0;
+                back.style.unityTextOutlineWidth = halo;
+                back.style.unityTextOutlineColor = Palette.PaperLight;
+                _labels.Add(back);
+                _halos.Add(label, back);
             }
             label.style.display = DisplayStyle.None;
             _labels.Add(label);
@@ -190,27 +205,103 @@ namespace Awakening.UI.Map
             float radius = Mathf.Clamp(FitZoom() * 26f, 22f, 40f);
             Place(_north, compass + new Vector2(0, -radius - 5), 0.5f, 1f);
             Vector2 rlyeh = ToScreen(Geo.Project(Rlyeh));
-            Color color = RlyehColor();
-            _rlyehName.style.color = color;
-            _rlyehCoords.style.color = Palette.Alpha(color, color.a * 0.8f);
+            _rlyehName.style.color = Palette.Omen;
+            _rlyehCoords.style.color = Palette.Omen;
             Place(_rlyehName, rlyeh + new Vector2(11, 4), 0f, 0.8f);
             Place(_rlyehCoords, rlyeh + new Vector2(11, 17), 0f, 0.8f);
             int threatLabel = 0;
+            var blocked = OverlayRects();
+            var markers = State == null ? new List<Rect>() : MarkerRects();
             if (State != null && !GameEngine.IsOver(State))
             {
                 foreach (string id in GameData.RegionIds)
                 {
                     Threat threat = State.Regions[id].Threat;
                     if (threat == null) continue;
-                    while (_threatLabels.Count <= threatLabel) _threatLabels.Add(MapLabel(Fonts.TypeBold, Palette.Danger, 14, 2.4f));
+                    while (_threatLabels.Count <= threatLabel) _threatLabels.Add(MapLabel(Fonts.TypeBold, Palette.Danger, 16));
                     Label text = _threatLabels[threatLabel++];
                     text.text = (threat.DueMonth - State.ElapsedMonths) + " MO";
-                    Place(text, ToScreen(Geo.ThreatPosition(State.Seed, id, threat)) + new Vector2(0, -15), 0.5f, 1f);
+                    Vector2 at = ToScreen(Geo.ThreatPosition(State.Seed, id, threat));
+                    Vector2 size = text.MeasureTextSize(text.text, 0, MeasureMode.Undefined, 0, MeasureMode.Undefined);
+                    // Clear the marker's pulse as well as its resting circle.
+                    if (contentRect.Contains(at) && TryLabelRect(new Rect(at.x - size.x * .5f, at.y - 30 - size.y, size.x, size.y), blocked, markers, out Rect rect, 60))
+                    {
+                        Place(text, rect.position, 0, 0);
+                        blocked.Add(Draw2D.Grow(rect, 3));
+                    }
+                    else text.style.display = DisplayStyle.None;
                 }
             }
             for (int i = threatLabel; i < _threatLabels.Count; i++) _threatLabels[i].style.display = DisplayStyle.None;
             PlaceLabels();
+            foreach (var pair in _halos)
+            {
+                Label ink = pair.Key, paper = pair.Value;
+                paper.text = ink.text;
+                paper.style.fontSize = ink.style.fontSize;
+                paper.style.translate = ink.style.translate;
+                paper.style.paddingLeft = ink.style.paddingLeft;
+                paper.style.paddingRight = ink.style.paddingRight;
+                paper.style.display = ink.style.display;
+            }
         }
+
+        static bool Shown(VisualElement node)
+        {
+            for (var p = node; p != null; p = p.parent)
+                if (p.resolvedStyle.display == DisplayStyle.None || p.resolvedStyle.visibility == Visibility.Hidden) return false;
+            return node != null && node.panel != null;
+        }
+
+        List<Rect> OverlayRects()
+        {
+            var rects = new List<Rect>();
+            if (LabelObstacles != null)
+                foreach (var node in LabelObstacles())
+                    if (Shown(node) && node.worldBound.width > 0 && node.worldBound.height > 0)
+                        rects.Add(Draw2D.Grow(this.WorldToLocal(node.worldBound), 5));
+            return rects;
+        }
+
+        // Search nearby free space. An occluded name waits rather than naming a different landmass.
+        bool TryLabelRect(Rect desired, List<Rect> obstacles, List<Rect> placed, out Rect result, float maxShift = 120)
+        {
+            Rect view = new Rect(4, 4, contentRect.width - 8, contentRect.height - 8);
+            result = default;
+            if (desired.width > view.width || desired.height > view.height) return false;
+            Vector2 start = new Vector2(Mathf.Clamp(desired.x, view.xMin, view.xMax - desired.width), Mathf.Clamp(desired.y, view.yMin, view.yMax - desired.height));
+            float best = float.PositiveInfinity;
+            Rect resultLocal = default;
+            void Try(Vector2 position)
+            {
+                var candidate = new Rect(position, desired.size);
+                if (candidate.xMin < view.xMin || candidate.yMin < view.yMin || candidate.xMax > view.xMax || candidate.yMax > view.yMax) return;
+                foreach (Rect rect in obstacles) if (candidate.Overlaps(rect)) return;
+                foreach (Rect rect in placed) if (candidate.Overlaps(rect)) return;
+                float distance = (position - desired.position).sqrMagnitude;
+                if (distance > maxShift * maxShift) return;
+                if (distance < best) { best = distance; resultLocal = candidate; }
+            }
+            Try(start);
+            if (best == float.PositiveInfinity)
+                for (float y = Mathf.Max(view.yMin, start.y - maxShift); y <= Mathf.Min(view.yMax - desired.height, start.y + maxShift); y += 8)
+                    for (float x = Mathf.Max(view.xMin, start.x - maxShift); x <= Mathf.Min(view.xMax - desired.width, start.x + maxShift); x += 8) Try(new Vector2(x, y));
+            result = resultLocal;
+            return best < float.PositiveInfinity;
+        }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        internal bool LayoutGeometryValid => _zoom > 0 && !float.IsNaN(_zoom) && !float.IsNaN(_viewCenter.x)
+            && !float.IsNaN(_viewCenter.y) && contentRect.width > 0 && contentRect.height > 0;
+        internal IEnumerable<Label> LayoutLabels
+        {
+            get
+            {
+                foreach (var pair in _regionLabels.Values) { yield return pair.title; yield return pair.count; }
+                foreach (var label in _threatLabels) yield return label;
+            }
+        }
+#endif
 
         bool Stirring => State != null && (State.Status == "alignment" || State.Status == "awakening" || State.Status == "won");
 
@@ -231,7 +322,7 @@ namespace Awakening.UI.Map
         void Layout()
         {
             Rect r = contentRect;
-            if (r.width <= 0 || r.height <= 0) return;
+            if (r.width <= 0 || r.height <= 0 || float.IsNaN(r.width) || float.IsNaN(r.height)) return;
             _zoom = FitZoom() * _viewScale;
             _viewCenter = ClampCenter(_viewCenter, _zoom);
             _offset = r.size * 0.5f - _viewCenter * _zoom;
@@ -784,7 +875,7 @@ namespace Awakening.UI.Map
         static void Place(Label label, Vector2 anchor, float alignX, float alignY)
         {
             Vector2 size = label.MeasureTextSize(label.text, 0, MeasureMode.Undefined, 0, MeasureMode.Undefined);
-            label.style.translate = new Translate(anchor.x - size.x * alignX, anchor.y - size.y * alignY);
+            label.style.translate = new Translate(anchor.x - (size.x + label.style.paddingLeft.value.value + label.style.paddingRight.value.value) * alignX, anchor.y - size.y * alignY);
             label.style.display = DisplayStyle.Flex;
         }
 
@@ -809,9 +900,10 @@ namespace Awakening.UI.Map
             int sizeCount = Mathf.RoundToInt((FitZoom() < 1f ? 15 : 17) * grow);
             var order = new List<string>(GameData.RegionIds);
             order.Sort((a, b) => LabelRank(b).CompareTo(LabelRank(a)));
-            // Markers are placed first, so a name moves off a site, an omen or a threat's countdown.
-            List<Rect> placed = MarkerRects();
-            int markers = placed.Count;
+            var obstacles = OverlayRects();
+            var placed = MarkerRects();
+            foreach (var label in _threatLabels)
+                if (Shown(label)) placed.Add(Draw2D.Grow(this.WorldToLocal(label.worldBound), 4));
             foreach (string id in order)
             {
                 (Label title, Label count) = _regionLabels[id];
@@ -822,41 +914,24 @@ namespace Awakening.UI.Map
                 count.style.fontSize = sizeCount;
                 Vector2 titleSize = title.MeasureTextSize(title.text, 0, MeasureMode.Undefined, 0, MeasureMode.Undefined);
                 Vector2 countSize = count.text.Length > 0 ? count.MeasureTextSize(count.text, 0, MeasureMode.Undefined, 0, MeasureMode.Undefined) : Vector2.zero;
-                float height = sizeTitle * 0.85f + (count.text.Length > 0 ? sizeCount * 1.05f : 0f);
-                float width = Mathf.Max(titleSize.x, countSize.x);
+                float height = titleSize.y + countSize.y + 10;
+                float width = Mathf.Max(titleSize.x, countSize.x + 6) + 6;
                 Vector2 at = ToScreen(Geo.Anchor(id));
-                float best = 0, bestOverlap = float.PositiveInfinity;
-                foreach (float shift in new[] { 0f, height + 2f, -(height + 2f), (height + 2f) * 2f, -(height + 2f) * 2f })
+                // A zoomed-out-of-view region has no label in this viewport.
+                if (!contentRect.Contains(at) || !TryLabelRect(new Rect(at.x - width * .5f, at.y - titleSize.y, width, height), obstacles, placed, out Rect rect))
                 {
-                    var rect = new Rect(at.x - width * 0.5f, at.y - sizeTitle * 0.85f + shift, width, height);
-                    float overlap = 0;
-                    for (int k = 0; k < placed.Count; k++)
-                    {
-                        // Covering a marker costs more than touching another name.
-                        overlap += Intersection(rect, placed[k]) * (k < markers ? 3f : 1f);
-                    }
-                    if (overlap < bestOverlap)
-                    {
-                        bestOverlap = overlap;
-                        best = shift;
-                    }
-                    if (overlap <= 0) break;
+                    title.style.display = count.style.display = DisplayStyle.None;
+                    continue;
                 }
-                Vector2 origin = at + new Vector2(0, best);
-                placed.Add(Draw2D.Grow(new Rect(origin.x - width * 0.5f, origin.y - sizeTitle * 0.85f, width, height), 3));
-                bool focus = id == Selected || id == Hovered;
-                title.style.color = focus ? Palette.Text : Palette.Alpha(Palette.Text, 0.86f);
-                Place(title, origin + new Vector2(0, -4), 0.5f, 0.8f);
-                if (count.text.Length > 0) Place(count, origin + new Vector2(0, sizeCount * 0.9f), 0.5f, 0.8f);
+                placed.Add(Draw2D.Grow(rect, 3));
+                bool emphasized = id == Selected || id == Hovered;
+                title.style.color = Palette.Alpha(Palette.Text, emphasized ? 1f : .86f);
+                title.style.borderBottomWidth = emphasized ? 1 : 0;
+                title.style.borderBottomColor = Palette.Text;
+                Place(title, new Vector2(rect.center.x, rect.y + 3), .5f, 0);
+                if (count.text.Length > 0) Place(count, new Vector2(rect.center.x, rect.y + titleSize.y + 6), .5f, 0);
                 else count.style.display = DisplayStyle.None;
             }
-        }
-
-        static float Intersection(Rect a, Rect b)
-        {
-            float w = Mathf.Min(a.xMax, b.xMax) - Mathf.Max(a.xMin, b.xMin);
-            float h = Mathf.Min(a.yMax, b.yMax) - Mathf.Max(a.yMin, b.yMin);
-            return w > 0 && h > 0 ? w * h : 0;
         }
 
         /// <summary>Screen rectangles of the markers drawn over the land this frame.</summary>

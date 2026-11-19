@@ -16,6 +16,7 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
 
 | Versión | Fecha | Commit | Ruleset | Adaptador | Ronda GTC | Estado |
 | --- | --- | --- | --- | --- | --- | --- |
+| 0.5.1 | 2026-11-18 | `pendiente` | `alignment-3` | `awakening-2` | Sin ronda nueva | Local; pendiente de revisión, sin publicar |
 | 0.5.0 | 2026-11-18 | `a25f916` | `alignment-3` | `awakening-2` | «0.5.0 playtest por invitación · versión Unity», abierta del 2026-11-18 al 2026-12-02 (UTC) | En itch.io (Restricted con contraseña) |
 | 0.4.0 | 2026-11-13 | `528c1f2` | `alignment-3` | `awakening-2` | «0.4.0 playtest por invitación · tres respuestas a cada amenaza», cerrada el 2026-11-18 con 1 partida | Reemplazada por 0.5.0 (último build Godot; rama `godot`) |
 | 0.3.6 | 2026-11-06 | `fdb4576` | `alignment-2` | `awakening-1` | «0.3.6 playtest por invitación · decisiones económicas», cerrada el 2026-11-13 sin partidas | Reemplazada por 0.4.0 |
@@ -26,6 +27,28 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
 | 0.3.1 | 2026-11-02 | `2256c6c` | `alignment-2` | `awakening-1` | «0.3.1 playtest por invitación · decisiones económicas», cerrada el 2026-11-03 con 2 partidas | Reemplazada por 0.3.2 |
 | 0.3.0 | 2026-11-02 | `85f5905`; exportada desde `dbfb07f` | `alignment-2` | `awakening-1` | «0.3.0 playtest por invitación · decisiones económicas», cerrada el mismo día sin partidas | Reemplazada por 0.3.1 |
 | 0.2.0 | 2026-10-30 / 2026-10-31 | `ae38ec0`; adaptador E4–E6 en `6aa2419` | `alignment-1` | `awakening-1` | QA técnica E7 y «E7 piloto interno de gameplay» (abierta hasta 2026-11-09) | Reemplazada en itch.io por 0.3.0 el 2026-11-02 |
+
+### 0.5.1 — tinta legible y expedientes sin recortes
+
+- **Commit:** pendiente; cambios locales para revisión, sin publicación ni cambios en GTC.
+- **Motivo:** corregir los fallos de legibilidad y superposición vistos en las capturas de la build de desarrollo 0.5.0. El papel de época debe dejar claros los precios, plazos y amenazas, también en teléfono.
+- **Motor:** Unity 6000.3.25f1 (6.3 LTS), UI Toolkit; sin paquetes ni generadores de texto experimentales.
+- **Reglas y playtest:** sin cambios (`alignment-3`, `awakening-2`); no se modifica `Core/`.
+- **Interfaz:**
+  - Nombres y cuentas atrás del mapa con una copia de papel detrás de la tinta; solo la copia posterior lleva contorno SDF, por lo que el trazo de las letras conserva su grosor. Los seguidores usan fichas de papel opaco y verde oscuro, legibles sobre tierra, territorios del culto y mar. La región seleccionada o bajo el puntero recupera tinta plena y un subrayado; los demás nombres conservan opacidad 0,86. Los plazos se separan de su marcador. Las etiquetas esquivan los avisos visibles y quedan dentro de la vista del mapa; al ampliar, no se muestran nombres de regiones cuyo ancla ya está fuera de la vista. Si no hay espacio cercano, la etiqueta espera hasta mover el mapa o cerrar el aviso, para conservar su asociación geográfica.
+  - La columna muestra hasta dos amenazas completas en escritorio y una en el diseño compacto, con «+N more threats · review» para recorrer las restantes. En cada pasada de layout mide tres alternativas independientes (dos completas, una completa y una breve), consulta el modo compacto vigente y elige la más detallada que cabe. Recupera el detalle cuando vuelve el espacio, sin conservar la degradación anterior ni alternar entre cuadros. La tarjeta breve remite a las respuestas del expediente. Los bloqueos de sus respuestas se leen junto al sello.
+  - El pronóstico ocupa una franja reservada sobre el libro mayor, fuera del centro del mapa, y se oculta por completo al abrir una hoja modal. «site/sites» concuerda con la cantidad en la presentación, sin cambiar el texto del motor.
+  - Los botones y los titulares con cifras usan Old Standard o Courier Prime. Las compras y respuestas no disponibles pierden el relleno activo y conservan tinta legible y el motivo del bloqueo; el botón de doctrina sigue permitiendo inspeccionar las opciones.
+  - El expediente conserva estadísticas y People en un pie estable en escritorio; en compacto se desplaza con una barra ancha y una indicación explícita de que quedan notas. La leyenda usa menos espacio y cabe en una fila cuando hay ancho suficiente.
+  - Influence, Dread y Followers comparten las mismas alturas de línea. Durante la alineación, la crónica cede su espacio al botón del rito; su texto completo sigue disponible en la hoja Chronicle. El ticker se limita a dos líneas (42 unidades): conserva la entrada completa si cabe, o muestra su primera frase y, si hace falta, una forma más corta cortada entre palabras. El texto completo queda en el tooltip y en Chronicle; no se agrega una elipsis automática ni se permite que crezca fuera del libro mayor.
+  - Se atenúan las manchas grandes del papel y se declara un favicon SVG propio en la plantilla WebGL.
+- **Medición:**
+  - `dotnet test core-tests/Tests`: 154 pruebas aprobadas, 0 fallidas y 0 omitidas; reglas sin cambios.
+  - `unity/shots.sh` con `--check-ui 1`: `UI_CHECKS_PASSED` (inicio, Continue, hojas, reloj, foco, participación, ajustes, doctrina, abandonar y finales).
+  - `unity/layout-check.sh`, reutilizando la build final de desarrollo y con `LAYOUT_JOBS=4`: 60/60 combinaciones aprobadas. Cinco escenarios (early, mid, late, alignment y awakening), normales y cargados, en los seis perfiles de 1600×900, 1280×720 al 130 %, 1600×900 al 160 % táctil y 844×390 al 100, 160 y 200 % táctil. El arnés comprueba etiquetas contra avisos y límites del mapa, tarjetas recortadas y pronóstico visible con una hoja modal abierta. Comprueba el propio libro mayor contra su franja reservada y cada contenido contra los límites de la barra, usando la entrada real más larga de cada escenario; las amenazas adicionales de crowd se generan con Director.ScheduleThreat para producir también su crónica real.
+  - Segunda revisión: capturas nuevas de mid/Africa, late/crowd, explicación de recruit/Africa y alignment, tanto a 1600×900 como a 844×390 con táctil y escala 160 %, más alineación sin modal en teléfono y una captura de late/crowd con geometría registrada en escritorio. Las cuentas 152 (West Asia) y 143 (Oceania) vuelven a leerse; South Asia conserva contraste sobre el mar en late/crowd. Sin excepciones en las capturas.
+  - Regresión de recuperación: cambia la altura real del lienzo y verifica dos completas → una completa → breve → una completa → dos completas, con 12 cuadros de estabilización y 12 cuadros de comprobación por paso. En late/crowd de escritorio, alturas de 540/287/190 unidades; pasa con espacios disponibles de 560/414/239/414/560 unidades. La entrada real más larga de ese escenario tiene 221 caracteres; el máximo observado en la matriz es 222. El ticker conserva el texto completo en el tooltip. Una combinación de teléfono se repitió sola porque el gestor de ventanas había reducido su altura a 353 píxeles; se exige 844×390 en la verificación final de perfiles.
+- **Límites:** capturas del ejecutable de desarrollo Linux; sin prueba en teléfono físico ni nueva exportación WebGL. El favicon queda corregido en la plantilla, pendiente de comprobar en la próxima build web.
 
 ### 0.5.0 — el mismo juego en Unity 6.3 LTS
 
