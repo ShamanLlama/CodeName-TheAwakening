@@ -16,8 +16,8 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
 
 | Versión | Fecha | Commit | Ruleset | Adaptador | Ronda GTC | Estado |
 | --- | --- | --- | --- | --- | --- | --- |
-| 0.5.1 | 2026-11-18 | `pendiente` | `alignment-3` | `awakening-2` | Sin ronda nueva | Local; pendiente de revisión, sin publicar |
-| 0.5.0 | 2026-11-18 | `a25f916` | `alignment-3` | `awakening-2` | «0.5.0 playtest por invitación · versión Unity», abierta del 2026-11-18 al 2026-12-02 (UTC) | En itch.io (Restricted con contraseña) |
+| 0.5.1 | 2026-11-18 | `e1d5441` | `alignment-3` | `awakening-2` | «0.5.1 playtest por invitación · interfaz legible», abierta del 2026-11-19 al 2026-12-03 (UTC) | En itch.io (Restricted con contraseña) |
+| 0.5.0 | 2026-11-18 | `a25f916` | `alignment-3` | `awakening-2` | «0.5.0 playtest por invitación · versión Unity», cerrada el 2026-11-19 (UTC) con 1 partida | Reemplazada por 0.5.1 |
 | 0.4.0 | 2026-11-13 | `528c1f2` | `alignment-3` | `awakening-2` | «0.4.0 playtest por invitación · tres respuestas a cada amenaza», cerrada el 2026-11-18 con 1 partida | Reemplazada por 0.5.0 (último build Godot; rama `godot`) |
 | 0.3.6 | 2026-11-06 | `fdb4576` | `alignment-2` | `awakening-1` | «0.3.6 playtest por invitación · decisiones económicas», cerrada el 2026-11-13 sin partidas | Reemplazada por 0.4.0 |
 | 0.3.5 | 2026-11-06 | `88e10fc` | `alignment-2` | `awakening-1` | «0.3.5 playtest por invitación · decisiones económicas», cerrada el 2026-11-07 con 1 partida | Reemplazada por 0.3.6 |
@@ -30,7 +30,7 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
 
 ### 0.5.1 — tinta legible y expedientes sin recortes
 
-- **Commit:** pendiente; cambios locales para revisión, sin publicación ni cambios en GTC.
+- **Commit:** `e1d5441` (rama `t3/ui-glitches-051`, integrada en `main`). Corrección hecha por Codex (`gpt-6.1-sol`) en dos pasadas, con revisión de Claude entre ambas.
 - **Motivo:** corregir los fallos de legibilidad y superposición vistos en las capturas de la build de desarrollo 0.5.0. El papel de época debe dejar claros los precios, plazos y amenazas, también en teléfono.
 - **Motor:** Unity 6000.3.25f1 (6.3 LTS), UI Toolkit; sin paquetes ni generadores de texto experimentales.
 - **Reglas y playtest:** sin cambios (`alignment-3`, `awakening-2`); no se modifica `Core/`.
@@ -48,7 +48,10 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
   - `unity/layout-check.sh`, reutilizando la build final de desarrollo y con `LAYOUT_JOBS=4`: 60/60 combinaciones aprobadas. Cinco escenarios (early, mid, late, alignment y awakening), normales y cargados, en los seis perfiles de 1600×900, 1280×720 al 130 %, 1600×900 al 160 % táctil y 844×390 al 100, 160 y 200 % táctil. El arnés comprueba etiquetas contra avisos y límites del mapa, tarjetas recortadas y pronóstico visible con una hoja modal abierta. Comprueba el propio libro mayor contra su franja reservada y cada contenido contra los límites de la barra, usando la entrada real más larga de cada escenario; las amenazas adicionales de crowd se generan con Director.ScheduleThreat para producir también su crónica real.
   - Segunda revisión: capturas nuevas de mid/Africa, late/crowd, explicación de recruit/Africa y alignment, tanto a 1600×900 como a 844×390 con táctil y escala 160 %, más alineación sin modal en teléfono y una captura de late/crowd con geometría registrada en escritorio. Las cuentas 152 (West Asia) y 143 (Oceania) vuelven a leerse; South Asia conserva contraste sobre el mar en late/crowd. Sin excepciones en las capturas.
   - Regresión de recuperación: cambia la altura real del lienzo y verifica dos completas → una completa → breve → una completa → dos completas, con 12 cuadros de estabilización y 12 cuadros de comprobación por paso. En late/crowd de escritorio, alturas de 540/287/190 unidades; pasa con espacios disponibles de 560/414/239/414/560 unidades. La entrada real más larga de ese escenario tiene 221 caracteres; el máximo observado en la matriz es 222. El ticker conserva el texto completo en el tooltip. Una combinación de teléfono se repitió sola porque el gestor de ventanas había reducido su altura a 353 píxeles; se exige 844×390 en la verificación final de perfiles.
-- **Límites:** capturas del ejecutable de desarrollo Linux; sin prueba en teléfono físico ni nueva exportación WebGL. El favicon queda corregido en la plantilla, pendiente de comprobar en la próxima build web.
+- **GTC (2026-11-19 UTC):** build «The Awakening 0.5.1 · alignment-3 · Unity» (`e1d5441`, adaptador `awakening-2`) con su resumen en «cambios de esta build». Ronda nueva, abierta en pausa, probada en el host y habilitada; cierra el 2026-12-03. La ronda 0.5.0 se cerró con 1 partida recibida, que se conserva aparte: misma regla, interfaz distinta.
+- **Publicación:** upload `20654281` en itch.io como único archivo jugable (`the-awakening-0.5.1-pilot.zip`, 8,9 MB, exportado desde un checkout limpio de `e1d5441`). Los archivos alojados, incluido `favicon.svg`, son idénticos al export; en `index.html` solo se suma el script que inyecta itch.io. La build arranca sin errores de consola (ya no hay 404 de `favicon.ico`), sin enviar nada antes de responder y con el guardado listo. La página suma «Novedad de 0.5.1 / New in 0.5.1» y pide avisar si algo se ve tapado, cortado o difícil de leer.
+- **Comprobación de IDs:** Unity comprime el `.data` con LZ4, así que buscar los IDs como texto puede fallar aunque estén (el `build_id` de 0.5.1 quedó partido por una referencia de LZ4). Desde 0.5.1 los scripts de exportación y de prueba descomprimen la configuración y la comparan entera.
+- **Límites:** sin prueba en teléfono físico ni con personas todavía; las capturas de revisión son del ejecutable de desarrollo Linux.
 
 ### 0.5.0 — el mismo juego en Unity 6.3 LTS
 
