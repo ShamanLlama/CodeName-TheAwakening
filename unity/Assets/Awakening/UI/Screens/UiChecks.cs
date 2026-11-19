@@ -23,6 +23,63 @@ namespace Awakening.UI
         }
 
         static Button Find(VisualElement root, string text) => root.Query<Button>().ToList().Single(b => b.text == text);
+
+        static void Send(VisualElement root, EventType type, Vector2 at)
+        {
+            var e = new Event { type = type, mousePosition = at, button = 0, clickCount = 1 };
+            EventBase evt = type == EventType.MouseMove ? PointerMoveEvent.GetPooled(e)
+                : type == EventType.MouseDown ? PointerDownEvent.GetPooled(e) : (EventBase)PointerUpEvent.GetPooled(e);
+            using (evt) root.panel.visualTree.SendEvent(evt);
+        }
+
+        /// <summary>
+        /// Every paper button keeps the game's own hover and pressed inks. Unity's default theme
+        /// colours `:hover:enabled` and `:active:enabled`, which outrank a single pseudo-class.
+        /// </summary>
+        static IEnumerator ButtonStates(VisualElement root)
+        {
+            var probes = new (Button button, Color hover, Color down)[]
+            {
+                (Kit.Button("Probe"), new Color32(182, 165, 129, 255), new Color(51 / 255f, 84 / 255f, 43 / 255f, .14f)),
+                (Kit.Primary("Probe"), new Color32(77, 106, 70, 255), new Color32(42, 68, 35, 255)),
+                (Kit.Stamp("Probe", null, Accent.Danger), new Color(142 / 255f, 29 / 255f, 20 / 255f, .16f), new Color(142 / 255f, 29 / 255f, 20 / 255f, .28f)),
+                (Kit.Link("Probe", null), Color.clear, Color.clear),
+                (Classed("aw-row"), new Color(33 / 255f, 24 / 255f, 14 / 255f, .07f), new Color(33 / 255f, 24 / 255f, 14 / 255f, .07f)),
+                (Classed("aw-tab"), new Color32(198, 179, 140, 255), new Color32(198, 179, 140, 255)),
+            };
+            foreach (var probe in probes)
+            {
+                Button b = probe.button;
+                b.style.position = Position.Absolute;
+                b.style.left = 40;
+                b.style.top = 120;
+                root.Add(b);
+                yield return Layout();
+                Vector2 at = b.worldBound.center;
+                Send(root, EventType.MouseMove, at);
+                yield return Layout();
+                Color hover = b.resolvedStyle.backgroundColor;
+                Send(root, EventType.MouseDown, at);
+                yield return Layout();
+                Color down = b.resolvedStyle.backgroundColor;
+                Send(root, EventType.MouseUp, at);
+                Send(root, EventType.MouseMove, new Vector2(2, 2));
+                yield return Layout();
+                Debug.Log($"UI_STATE {string.Join(" ", b.GetClasses())}: hover={hover} down={down} text={b.resolvedStyle.color}");
+                Check(Close(hover, probe.hover), $"{string.Join(" ", b.GetClasses())} hover keeps the paper ink: {hover}");
+                Check(Close(down, probe.down), $"{string.Join(" ", b.GetClasses())} press keeps the paper ink: {down}");
+                b.RemoveFromHierarchy();
+            }
+        }
+
+        static Button Classed(string name)
+        {
+            var button = new Button { text = "Probe", focusable = false };
+            button.AddToClassList(name);
+            return button;
+        }
+
+        static bool Close(Color a, Color b) => Mathf.Abs(a.r - b.r) < .02f && Mathf.Abs(a.g - b.g) < .02f && Mathf.Abs(a.b - b.b) < .02f && Mathf.Abs(a.a - b.a) < .02f;
         static void Press(VisualElement root, string text) => ((Action)Find(root, text).userData)();
 
         public static IEnumerator Run(GameController game)
@@ -50,6 +107,8 @@ namespace Awakening.UI
             game.Place("africa");
             Debug.Log("UI_CHECK: start and Continue");
             var screen = (GameScreen)game.CurrentScreen;
+            yield return ButtonStates(screen);
+            Debug.Log("UI_CHECK: button hover and press inks");
             foreach (string kind in new[] { "menu", "doctrine", "chronicle", "guide", "alignment", "playtest" })
             {
                 screen.OpenDialog(kind);

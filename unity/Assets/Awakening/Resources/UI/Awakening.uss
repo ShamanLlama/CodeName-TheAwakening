@@ -12,6 +12,9 @@ Label {
     margin: 0;
 }
 
+/* Unity's default theme colours buttons with `:hover:enabled` and `:active:enabled`. Those outrank a
+   single pseudo-class, so every hover and press rule here repeats `:enabled` (and `:hover:active:enabled`)
+   to keep the paper inks; UiChecks.ButtonStates fails if the grey theme state comes back. */
 /* Buttons on paper: a shaded slip with an ink edge, set in small capitals. */
 .aw-button {
     background-color: rgb(198, 179, 140);
@@ -27,11 +30,11 @@ Label {
     -unity-text-align: middle-center;
     cursor: link;
 }
-.aw-button:hover {
+.aw-button:hover:enabled {
     background-color: rgb(182, 165, 129);
     border-color: rgb(33, 24, 14);
 }
-.aw-button:active, .aw-button.aw-on {
+.aw-button:active:enabled, .aw-button:hover:active:enabled, .aw-button.aw-on, .aw-button.aw-on:hover:enabled {
     background-color: rgba(51, 84, 43, 0.14);
     border-color: rgb(52, 85, 44);
     color: rgb(52, 85, 44);
@@ -61,11 +64,11 @@ Label {
     -unity-text-align: middle-center;
     cursor: link;
 }
-.aw-primary:hover {
+.aw-primary:hover:enabled {
     background-color: rgb(77, 106, 70);
     border-color: rgb(33, 24, 14);
 }
-.aw-primary:active {
+.aw-primary:active:enabled, .aw-primary:hover:active:enabled {
     background-color: rgb(42, 68, 35);
     border-color: rgb(33, 24, 14);
 }
@@ -92,7 +95,7 @@ Label {
     -unity-text-align: middle-left;
     cursor: link;
 }
-.aw-link:hover, .aw-link:active {
+.aw-link:hover:enabled, .aw-link:active:enabled, .aw-link:hover:active:enabled {
     color: rgb(33, 24, 14);
     background-color: rgba(0, 0, 0, 0);
 }
@@ -120,16 +123,16 @@ Label {
     border-right-width: 1px;
 }
 .aw-stamp--danger { background-color: rgba(142, 29, 20, 0.04); border-color: rgb(142, 29, 20); color: rgb(142, 29, 20); }
-.aw-stamp--danger:hover { background-color: rgba(142, 29, 20, 0.16); color: rgb(114, 23, 16); }
-.aw-stamp--danger:active { background-color: rgba(142, 29, 20, 0.28); color: rgb(99, 20, 14); }
+.aw-stamp--danger:hover:enabled { background-color: rgba(142, 29, 20, 0.16); color: rgb(114, 23, 16); }
+.aw-stamp--danger:active:enabled, .aw-stamp--danger:hover:active:enabled { background-color: rgba(142, 29, 20, 0.28); color: rgb(99, 20, 14); }
 .aw-stamp--danger:disabled { border-color: rgba(142, 29, 20, 0.45); color: rgba(142, 29, 20, 0.7); background-color: rgba(0, 0, 0, 0); }
 .aw-stamp--omen { background-color: rgba(85, 56, 120, 0.04); border-color: rgb(85, 56, 120); color: rgb(85, 56, 120); }
-.aw-stamp--omen:hover { background-color: rgba(85, 56, 120, 0.16); color: rgb(68, 45, 96); }
-.aw-stamp--omen:active { background-color: rgba(85, 56, 120, 0.28); color: rgb(60, 39, 84); }
+.aw-stamp--omen:hover:enabled { background-color: rgba(85, 56, 120, 0.16); color: rgb(68, 45, 96); }
+.aw-stamp--omen:active:enabled, .aw-stamp--omen:hover:active:enabled { background-color: rgba(85, 56, 120, 0.28); color: rgb(60, 39, 84); }
 .aw-stamp--omen:disabled { border-color: rgba(85, 56, 120, 0.45); color: rgba(85, 56, 120, 0.7); background-color: rgba(0, 0, 0, 0); }
 .aw-stamp--cult { background-color: rgba(52, 85, 44, 0.04); border-color: rgb(52, 85, 44); color: rgb(52, 85, 44); }
-.aw-stamp--cult:hover { background-color: rgba(52, 85, 44, 0.16); color: rgb(42, 68, 35); }
-.aw-stamp--cult:active { background-color: rgba(52, 85, 44, 0.28); color: rgb(36, 60, 31); }
+.aw-stamp--cult:hover:enabled { background-color: rgba(52, 85, 44, 0.16); color: rgb(42, 68, 35); }
+.aw-stamp--cult:active:enabled, .aw-stamp--cult:hover:active:enabled { background-color: rgba(52, 85, 44, 0.28); color: rgb(36, 60, 31); }
 .aw-stamp--cult:disabled { border-color: rgba(52, 85, 44, 0.45); color: rgba(52, 85, 44, 0.7); background-color: rgba(0, 0, 0, 0); }
 
 /* Typed fields on paper. */
@@ -257,7 +260,7 @@ Label {
     min-height: 0;
     cursor: link;
 }
-.aw-row:hover, .aw-row.aw-marked, .aw-row.aw-on {
+.aw-row:hover:enabled, .aw-row:active:enabled, .aw-row:hover:active:enabled, .aw-row.aw-marked, .aw-row.aw-on {
     background-color: rgba(33, 24, 14, 0.07);
     border-color: rgba(33, 24, 14, 0.5);
 }
@@ -290,11 +293,11 @@ Label {
     -unity-text-align: middle-center;
     cursor: link;
 }
-.aw-tab:hover {
+.aw-tab:hover:enabled, .aw-tab:active:enabled, .aw-tab:hover:active:enabled {
     color: rgb(33, 24, 14);
     background-color: rgb(198, 179, 140);
 }
-.aw-tab.aw-on {
+.aw-tab.aw-on, .aw-tab.aw-on:hover:enabled, .aw-tab.aw-on:active:enabled, .aw-tab.aw-on:hover:active:enabled {
     background-color: rgb(215, 199, 161);
     border-color: rgb(33, 24, 14);
     border-top-width: 2px;
@@ -374,7 +377,7 @@ Label {
     -unity-font-style: italic;
     cursor: arrow;
 }
-.aw-button.aw-unavailable:hover { background-color: rgba(33, 24, 14, 0.12); }
+.aw-button.aw-unavailable:hover:enabled, .aw-button.aw-unavailable:active:enabled, .aw-button.aw-unavailable:hover:active:enabled { background-color: rgba(33, 24, 14, 0.12); }
 #region-panel .unity-label { padding: 0; margin: 0; }
 #region-panel .aw-scroll .unity-scroller--vertical {
     width: 14px;

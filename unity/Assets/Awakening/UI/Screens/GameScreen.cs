@@ -754,7 +754,7 @@ namespace Awakening.UI
             row.Add(right);
             if (brief)
             {
-                card.Add(Kit.Caption(Kit.Touch ? "Tap for responses →" : "Inspect responses →", Palette.Danger));
+                card.Add(Kit.Caption(Kit.Touch ? "Tap for responses" : "Inspect responses", Palette.Danger));
                 return card;
             }
             // Three answers, each paid in a different currency. The region's file says what else each costs.

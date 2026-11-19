@@ -16,6 +16,7 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
 
 | Versión | Fecha | Commit | Ruleset | Adaptador | Ronda GTC | Estado |
 | --- | --- | --- | --- | --- | --- | --- |
+| 0.5.2 | 2026-11-18 | `pendiente` | `alignment-3` | `awakening-2` | Sin ronda nueva todavía | Local; sin publicar |
 | 0.5.1 | 2026-11-18 | `e1d5441` | `alignment-3` | `awakening-2` | «0.5.1 playtest por invitación · interfaz legible», abierta del 2026-11-19 al 2026-12-03 (UTC) | En itch.io (Restricted con contraseña) |
 | 0.5.0 | 2026-11-18 | `a25f916` | `alignment-3` | `awakening-2` | «0.5.0 playtest por invitación · versión Unity», cerrada el 2026-11-19 (UTC) con 1 partida | Reemplazada por 0.5.1 |
 | 0.4.0 | 2026-11-13 | `528c1f2` | `alignment-3` | `awakening-2` | «0.4.0 playtest por invitación · tres respuestas a cada amenaza», cerrada el 2026-11-18 con 1 partida | Reemplazada por 0.5.0 (último build Godot; rama `godot`) |
@@ -27,6 +28,19 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
 | 0.3.1 | 2026-11-02 | `2256c6c` | `alignment-2` | `awakening-1` | «0.3.1 playtest por invitación · decisiones económicas», cerrada el 2026-11-03 con 2 partidas | Reemplazada por 0.3.2 |
 | 0.3.0 | 2026-11-02 | `85f5905`; exportada desde `dbfb07f` | `alignment-2` | `awakening-1` | «0.3.0 playtest por invitación · decisiones económicas», cerrada el mismo día sin partidas | Reemplazada por 0.3.1 |
 | 0.2.0 | 2026-10-30 / 2026-10-31 | `ae38ec0`; adaptador E4–E6 en `6aa2419` | `alignment-1` | `awakening-1` | QA técnica E7 y «E7 piloto interno de gameplay» (abierta hasta 2026-11-09) | Reemplazada en itch.io por 0.3.0 el 2026-11-02 |
+
+### 0.5.2 — botones con su propia tinta al tocarlos
+
+- **Commit:** pendiente.
+- **Motivo:** al probar 0.5.1 en un teléfono, el botón «Perform» quedó gris azulado con el texto casi invisible después de tocarlo. El tema por defecto de Unity colorea los botones con `:hover:enabled` y `:active:enabled`, reglas más específicas que las del juego (`:hover`, `:active`), así que al pasar el cursor o el dedo se veía el gris de Unity (#D1D1D1 al pasar, #959595 al pulsar). Venía desde 0.5.0; en teléfono se nota más porque el toque deja el estado de hover puesto.
+- **Reglas y playtest:** sin cambios (`alignment-3`, `awakening-2`).
+- **Interfaz:**
+  - Todas las reglas de hover y pulsación de botones, sellos, filas de acciones, pestañas y enlaces repiten `:enabled` (y `:hover:active:enabled`), y conservan las tintas de papel del juego. La pestaña abierta y el botón activo mantienen su color aunque se toquen.
+  - Courier Prime e IM Fell no tienen flechas: «Scroll ↓/↑» se veía como un hueco. Ahora dice «Scroll down · more case notes» y «Scroll up · actions and case notes», y la tarjeta plegada de amenaza dice «Tap for responses» / «Inspect responses».
+- **Medición:**
+  - `UiChecks` simula hover y pulsación sobre botón, botón principal, sello, enlace, fila y pestaña, y falla si el color no es el del juego. Antes del arreglo falló en el primer botón (hover #D1D1D1); después pasa: `UI_CHECKS_PASSED`.
+  - `unity/layout-check.sh` con `LAYOUT_JOBS=4`: 60/60 combinaciones aprobadas, todas a la resolución pedida. Pruebas de reglas sin tocar (`Core/` no cambia).
+- **Límites:** la prueba usa eventos de puntero sintéticos en el ejecutable de desarrollo Linux; el toque real en teléfono queda por confirmar en la build publicada.
 
 ### 0.5.1 — tinta legible y expedientes sin recortes
 

@@ -66,7 +66,7 @@ namespace Awakening.UI
             _scroll.style.minHeight = 0;
             _scroll.touchScrollBehavior = ScrollView.TouchScrollBehavior.Clamped;
             Add(_scroll);
-            _scrollHint = Kit.Label("Scroll ↓ · more case notes", 12, Palette.Text, Fonts.TypeBold);
+            _scrollHint = Kit.Label("Scroll down · more case notes", 12, Palette.Text, Fonts.TypeBold);
             _scrollHint.style.unityTextAlign = TextAnchor.MiddleCenter;
             _scrollHint.style.height = 22;
             _scrollHint.style.flexShrink = 0;
@@ -76,7 +76,7 @@ namespace Awakening.UI
                 bool overflow = _scroll.contentContainer.layout.height > _scroll.contentViewport.layout.height + 1;
                 _scrollHint.style.visibility = overflow ? Visibility.Visible : Visibility.Hidden;
                 _scrollHint.text = _scroll.scrollOffset.y >= _scroll.verticalScroller.highValue - 2
-                    ? "Scroll ↑ · actions and case notes" : "Scroll ↓ · more case notes";
+                    ? "Scroll up · actions and case notes" : "Scroll down · more case notes";
             }
             _scroll.contentContainer.RegisterCallback<GeometryChangedEvent>(_ => ScrollHint());
             _scroll.contentViewport.RegisterCallback<GeometryChangedEvent>(_ => ScrollHint());
