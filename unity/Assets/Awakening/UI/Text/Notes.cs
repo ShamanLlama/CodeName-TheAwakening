@@ -9,21 +9,45 @@ namespace Awakening.UI
     public sealed class Ending
     {
         public string Cause = "";
+        public string Fact = "";
         public readonly List<(bool ok, string name, string detail)> Checks = new List<(bool, string, string)>();
         public readonly List<string> Advice = new List<string>();
     }
 
+    /// <summary>One dated milestone for a player's first runs, derived from state and calendar.</summary>
+    public sealed class GoalStep
+    {
+        public string Id = "";
+        public string Title = "";
+        public string Detail = "";
+        public int DeadlineMonth = -1;
+        public bool Done;
+        public bool Overdue;
+    }
+
     /// <summary>
-    /// Short player-facing wording derived from the rules: first-time notes, the headline of the
-    /// ritual timetable, threat consequences, one-line reasons an action is unavailable, and the
-    /// account of how a run ended. Nothing here changes the rules. Port of godot/ui/notes.gd.
+    /// Short player-facing wording derived from the rules: first-time notes, case-file tab guide,
+    /// first-run milestones, the headline of the ritual timetable, threat consequences, one-line
+    /// reasons an action is unavailable, and the account of how a run ended. Nothing here changes
+    /// the rules. Port of godot/ui/notes.gd.
     /// </summary>
     public static class Notes
     {
+        public const string TabsHintId = "file_tabs";
+        public const string TabsHintTitle = "Case file tabs";
+        public const string TabsHintText = "CULT grows cells, conceals evidence, and answers threats. RITES turns followers into Dread and raises sites. OMENS claims passing signs and figures.";
+
+        public static readonly Dictionary<string, string> TabDescriptions = new Dictionary<string, string>
+        {
+            ["CULT"] = "Grow cells, conceal evidence, and answer threats.",
+            ["RITES"] = "Sacrifice for Dread, manifestations, and ritual sites.",
+            ["OMENS"] = "Passing nightmares, eclipses, and prominent figures.",
+        };
+
         /// <summary>id: (title, one sentence). Each appears once per device, the first time it applies.</summary>
         public static readonly Dictionary<string, (string title, string text)> Hints = new Dictionary<string, (string, string)>
         {
-            ["first_cell"] = ("Your cell is growing", "It recruits by itself and earns Influence. Open a neighbouring region and choose Establish a cell to spread. Every action also works while paused."),
+            ["first_cell"] = ("Your first cell", ""),
             ["threat"] = ("A threat is coming", "The clipping on the left counts down to a strike. Obstruct it with Influence, scatter the cell for a few months, silence the witnesses with Dread, or accept the losses."),
             ["omen"] = ("An omen appeared", "The violet eye marks a short-lived opportunity. Open that region to use it before it fades."),
             ["doctrine"] = ("You can afford a doctrine", "One permanent bonus for this run, from the Doctrine button in the ledger."),
@@ -31,6 +55,92 @@ namespace Awakening.UI
             ["awareness"] = ("The world is noticing", "World awareness slows you and ends the run at 100%. Conceal the evidence lowers it."),
             ["unsupported"] = ("A site stopped counting", "A struck seal stalls: its region needs more followers, its flock is scattered, or its upkeep went unpaid. Open the region to see which."),
         };
+
+        /// <summary>Dynamic wording for a contextual note; reads live numbers from state and GameData.</summary>
+        public static (string title, string text) Hint(GameState s, string id)
+        {
+            if (id == "first_cell")
+            {
+                string influence = Format.Count(s.Influence);
+                int gather = GameData.Actions["recruit"].Influence;
+                int expand = GameData.Actions["expand"].Influence;
+                return ("Your first cell", $"You have {influence} Influence. Gathering followers costs {gather}; opening a neighbouring cell costs {expand}. Every action works while paused.");
+            }
+            return Hints[id];
+        }
+
+        /// <summary>Dated chained milestones for the first runs; dates derive from Format's calendar.</summary>
+        public static List<GoalStep> FirstRunGoals(GameState s)
+        {
+            int by1911 = Format.MonthOf(1911);
+            int by1917 = Format.MonthOf(1917);
+            int by1923 = Format.MonthOf(1923);
+            var regions = AllRegions(s).ToList();
+            int cells = regions.Count(r => r.Population.Followers > 0);
+            bool sacrificed = s.Telemetry.Sacrificed > 0
+                || (s.Telemetry.Actions.TryGetValue("sacrifice", out int sacrifices) && sacrifices > 0);
+            int sites = regions.Count(r => r.Site.Invested);
+
+            bool cellsDone = cells >= 3;
+            bool cellsOverdue = !cellsDone && s.ElapsedMonths >= by1911;
+            bool firstSiteDone = sites >= 1;
+            bool firstSiteOverdue = !firstSiteDone && s.ElapsedMonths >= by1917;
+            bool threeSitesDone = sites >= Balance.RequiredSites;
+            bool threeSitesOverdue = !threeSitesDone && s.ElapsedMonths >= by1923;
+
+            return new List<GoalStep>
+            {
+                new GoalStep
+                {
+                    Id = "three_cells",
+                    Title = $"Three cells before {Format.Date(by1911)}",
+                    Detail = cellsOverdue
+                        ? $"{cells} of 3 cells · past {Format.Date(by1911)}"
+                        : $"{cells} of 3 cells · open neighbouring regions",
+                    DeadlineMonth = by1911,
+                    Done = cellsDone,
+                    Overdue = cellsOverdue,
+                },
+                new GoalStep
+                {
+                    Id = "first_sacrifice",
+                    Title = "First sacrifice",
+                    Detail = "Sacrifice followers in the Rites tab for Dread.",
+                    DeadlineMonth = -1,
+                    Done = sacrificed,
+                    Overdue = false,
+                },
+                new GoalStep
+                {
+                    Id = "first_site",
+                    Title = $"First ritual site before {Format.Date(by1917)}",
+                    Detail = firstSiteOverdue
+                        ? $"0 of 1 site · small regions hold rites cheaply"
+                        : "Small regions hold rites cheaply.",
+                    DeadlineMonth = by1917,
+                    Done = firstSiteDone,
+                    Overdue = firstSiteOverdue,
+                },
+                new GoalStep
+                {
+                    Id = "three_sites",
+                    Title = $"Three sites before {Format.Date(by1923)}",
+                    Detail = threeSitesOverdue
+                        ? $"{sites} of {Balance.RequiredSites} sites · past {Format.Date(by1923)}"
+                        : $"{sites} of {Balance.RequiredSites} sites funded",
+                    DeadlineMonth = by1923,
+                    Done = threeSitesDone,
+                    Overdue = threeSitesOverdue,
+                },
+            };
+        }
+
+        /// <summary>The current incomplete milestone during preparation, or null once all are met.</summary>
+        public static GoalStep ActiveGoal(GameState s)
+        {
+            if (s == null || s.Status != "playing") return null;
+            return FirstRunGoals(s).FirstOrDefault(g => !g.Done);
+        }
 
         static IEnumerable<RegionState> AllRegions(GameState s) => GameData.RegionIds.Select(id => s.Regions[id]);
 
@@ -227,7 +337,7 @@ namespace Awakening.UI
         /// <summary>How a finished run ended. The cause is the most basic failure; advice covers up to two of the problems found.</summary>
         public static Ending Ending(GameState s)
         {
-            var result = new Ending();
+            var result = new Ending { Fact = DatedFact(s) };
             if (s.Status == "won")
             {
                 result.Cause = "Three sites held through the final rite.";
@@ -275,6 +385,84 @@ namespace Awakening.UI
             result.Cause = issues[0].cause;
             foreach (var issue in issues.Take(2)) result.Advice.Add(issue.advice);
             return result;
+        }
+
+        /// <summary>One dated fact from the run's state or chronicle explaining how it ended.</summary>
+        public static string DatedFact(GameState s)
+        {
+            if (s.Status == "won")
+            {
+                int slack = Balance.Deadline - s.ElapsedMonths;
+                LogEntry riteStart = s.Log.LastOrDefault(e => e.Message.StartsWith("The final rite begins.", StringComparison.Ordinal));
+                if (riteStart != null)
+                {
+                    return slack > 0
+                        ? $"The final rite began in {Format.Date(riteStart.Month)} and finished with {Format.Months(slack)} to spare."
+                        : $"The final rite began in {Format.Date(riteStart.Month)} and finished in the final month of the alignment.";
+                }
+                return slack > 0
+                    ? $"The awakening closed in {Format.Date(s.ElapsedMonths)}, with {Format.Months(slack)} left in the alignment."
+                    : $"The awakening closed in {Format.Date(s.ElapsedMonths)}, as the alignment ended.";
+            }
+
+            if (s.Awareness >= 100)
+            {
+                int silences = s.Telemetry.Actions.TryGetValue("silence", out int sc) ? sc : 0;
+                LogEntry lastSilence = s.Log.LastOrDefault(e => e.Message.StartsWith("Silence the witnesses · ", StringComparison.Ordinal));
+                if (silences > 0 && lastSilence != null)
+                    return $"By {Format.Date(s.ElapsedMonths)} awareness reached 100%; witnesses were silenced {silences} {(silences == 1 ? "time" : "times")}, last in {Format.Date(lastSilence.Month)}.";
+                if (s.Telemetry.Revelations.Count > 0)
+                {
+                    var firstRev = s.Telemetry.Revelations.OrderBy(p => p.Value).First();
+                    return $"Public worship began in {GameData.Regions[firstRev.Key].Name} in {Format.Date(firstRev.Value)}; by {Format.Date(s.ElapsedMonths)} awareness reached 100%.";
+                }
+                int conceals = s.Telemetry.Actions.TryGetValue("conceal", out int cc) ? cc : 0;
+                if (conceals == 0)
+                    return $"Awareness reached 100% in {Format.Date(s.ElapsedMonths)} with {Format.Count(Derived.TotalFollowers(s))} followers and evidence never concealed.";
+                int cells = AllRegions(s).Count(r => r.Population.Followers > 0);
+                return $"Awareness reached 100% in {Format.Date(s.ElapsedMonths)} with {Format.Count(Derived.TotalFollowers(s))} followers across {cells} {(cells == 1 ? "region" : "regions")}.";
+            }
+
+            if (s.FinalProgress > 0)
+            {
+                LogEntry riteStart = s.Log.LastOrDefault(e => e.Message.StartsWith("The final rite begins.", StringComparison.Ordinal));
+                if (riteStart != null)
+                {
+                    LogEntry hit = s.Log.LastOrDefault(e => e.Month >= riteStart.Month
+                        && (e.Message.Contains("Ritual support is interrupted.") || e.Message.Contains("The cell and any ritual site are destroyed.") || e.Message.Contains("lies dormant")));
+                    if (hit != null)
+                        return $"The rite began in {Format.Date(riteStart.Month)}, but lost support in {Format.Date(hit.Month)} ({s.FinalProgress} of {Balance.FinalMonths} months held).";
+                    if (riteStart.Month > Balance.LatestRiteStart)
+                        return $"The rite did not begin until {Format.Date(riteStart.Month)}, past the {Format.Date(Balance.LatestRiteStart)} cutoff.";
+                    return $"The rite began in {Format.Date(riteStart.Month)}, yet only {s.FinalProgress} of {Balance.FinalMonths} months were held before {Format.Date(Balance.Deadline)}.";
+                }
+                return $"When {Format.Date(s.ElapsedMonths)} closed, the final rite stood at {s.FinalProgress} of {Balance.FinalMonths} months.";
+            }
+
+            int lateOrders = s.Log.Count(e => e.Month > Balance.LatestRiteStart && e.Message.Contains(" · "));
+            if (lateOrders > 0)
+                return $"When {Format.Date(Balance.LatestRiteStart)} passed you had not begun the rite, though {lateOrders} {(lateOrders == 1 ? "order was" : "orders were")} still given afterward.";
+
+            var funded = AllRegions(s).Where(r => r.Site.Invested).ToList();
+            if (funded.Count < Balance.RequiredSites)
+            {
+                LogEntry lastSite = s.Log.LastOrDefault(e => e.Message.StartsWith("Prepare a ritual site · ", StringComparison.Ordinal));
+                if (funded.Count == 0)
+                    return $"When {Format.Date(Balance.LatestRiteStart)} passed, no ritual site had been funded and the rite could not begin.";
+                if (lastSite != null)
+                    return $"Your last ritual site was funded in {Format.Date(lastSite.Month)}; by {Format.Date(Balance.LatestRiteStart)} only {funded.Count} of {Balance.RequiredSites} existed.";
+                return $"By {Format.Date(Balance.LatestRiteStart)} only {funded.Count} of {Balance.RequiredSites} ritual sites were funded, and the rite had not begun.";
+            }
+
+            LogEntry lateSite = s.Log.LastOrDefault(e => e.Month > Balance.LatestSiteStart && e.Message.StartsWith("Prepare a ritual site · ", StringComparison.Ordinal));
+            if (lateSite != null)
+                return $"A ritual site was funded in {Format.Date(lateSite.Month)}, past the {Format.Date(Balance.LatestSiteStart)} safe date, and the rite never began.";
+
+            LogEntry siteHit = s.Log.LastOrDefault(e => e.Message.Contains("Ritual loses ") || e.Message.Contains("Ritual support is interrupted."));
+            if (siteHit != null)
+                return $"After a strike in {Format.Date(siteHit.Month)}, the cult reached {Format.Date(Balance.LatestRiteStart)} without beginning the rite.";
+
+            return $"When {Format.Date(Balance.LatestRiteStart)} closed you had not begun the rite, leaving too little time before {Format.Date(Balance.Deadline)}.";
         }
     }
 }

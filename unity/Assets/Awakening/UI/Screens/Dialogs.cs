@@ -234,6 +234,21 @@ namespace Awakening.UI
                 motion.Add(option);
             }
             column.Add(motion);
+            column.Add(SheetUI.Caption("First-run goals"));
+            var goals = Kit.HBox(0);
+            foreach (bool hidden in new[] { false, true })
+            {
+                Button option = null;
+                option = SheetUI.Button(hidden ? "Hidden" : "Shown", () =>
+                {
+                    _game.SetHideGoals(hidden);
+                    foreach (var child in goals.Children()) child.EnableInClassList("aw-on", child == option);
+                }, height: 40);
+                option.EnableInClassList("aw-on", _game.Settings.HideGoals == hidden);
+                SheetUI.Equal(option);
+                goals.Add(option);
+            }
+            column.Add(goals);
             column.Add(Kit.Rule());
             var links = Kit.HBox(18);
             links.Add(SheetUI.Link("GTC PLAYTEST LAB", () => Open("playtest")));
@@ -423,12 +438,14 @@ namespace Awakening.UI
                 Title("Cthulhu Awakens", Palette.Cult, 60);
                 _content.Add(SheetUI.Body("That is not dead which can eternal lie,\nAnd with strange aeons even death may die.", 20, Palette.Muted, Fonts.DisplayItalic));
                 _content.Add(SheetUI.Body(story.Cause + " The dreamer wakes.", 17, Palette.Text, Fonts.Italic));
+                if (!string.IsNullOrEmpty(story.Fact)) _content.Add(SheetUI.Body(story.Fact, 16, Palette.Muted, Fonts.Italic));
             }
             else
             {
                 Title(aware ? "The World Knows" : "The Alignment Has Passed", Palette.Danger);
                 _content.Add(SheetUI.Caption(Format.Date(s.ElapsedMonths)));
                 _content.Add(SheetUI.Body(story.Cause, 18, Palette.Text, Fonts.BodyBold));
+                if (!string.IsNullOrEmpty(story.Fact)) _content.Add(SheetUI.Body(story.Fact, 16, Palette.Muted, Fonts.Italic));
                 if (story.Checks.Count > 0)
                 {
                     var checks = Kit.VBox(6);
@@ -494,7 +511,12 @@ namespace Awakening.UI
                 }));
                 _content.Add(status);
             }
-            Buttons(Primary("New Awakening", () => { Close(); _game.Abandon(); }), Secondary("View the Map", Close));
+            string difficulty = s.Difficulty;
+            string seed = s.Seed;
+            Action retry = () => { Close(); _game.Begin(difficulty, seed); };
+            Action fresh = () => { Close(); _game.Abandon(); };
+            if (won) Buttons(Primary("New World", fresh), Secondary("Try this world again", retry), Secondary("View the Map", Close));
+            else Buttons(Primary("Try this world again", retry), Secondary("New World", fresh), Secondary("View the Map", Close));
             var links = Kit.HBox(18);
             links.Add(SheetUI.Link("EXPORT REPORT", _game.ExportReport));
             links.Add(SheetUI.Link("GTC PLAYTEST STATUS", () => Open("playtest")));

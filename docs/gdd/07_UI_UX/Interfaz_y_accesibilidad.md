@@ -1,6 +1,6 @@
 # Interfaz, aprendizaje y accesibilidad
 
-**Versión:** 0.6 · **Fecha:** 2026-11-18 · **Estado:** interfaz de 0.3.5–0.4.0 rehecha en Unity UI Toolkit (0.5.0) y corregida en legibilidad (0.5.1); usabilidad por validar con personas, en teléfono físico y en el ejecutable para Steam.
+**Versión:** 0.7 · **Fecha:** 2026-11-21 · **Estado:** interfaz de 0.3.5–0.4.0 rehecha en Unity UI Toolkit (0.5.0), corregida en legibilidad (0.5.1) y ampliada en onboarding y reintento (0.6.0, ola 1); usabilidad por validar con personas, en teléfono físico y en el ejecutable para Steam.
 
 ## Flujo implementado
 
@@ -126,5 +126,15 @@ Correcciones vistas en capturas de la build de desarrollo 0.5.0; sin cambios de 
 
 Comprobado con `unity/layout-check.sh` (60/60) y capturas a 1600×900 y 844×390 táctil;
 sin prueba en teléfono físico. Detalle en el [registro de versiones](../../playtests/versiones.md).
+
+## Onboarding y reintento (0.6.0, ola 1 — 2026-11-21)
+
+Respuesta a la revisión de gameplay (F1 y F2), sin automatizar decisiones ni conceder recompensas por perder:
+
+- **Colocación inicial.** El subtítulo ya no empuja a empezar en una región pequeña; explica la regla real: las regiones pobladas reclutan bien y las pequeñas sostienen sitios con menor coste de seguidores.
+- **Primera decisión económica.** Al fundar la primera célula, la nota contextual `first_cell` lee los valores reales del estado y de `GameData` (Influence disponible, coste de reunir seguidores y coste de abrir una célula vecina) para plantear la primera disyuntiva sin decidir por el jugador.
+- **Pestañas del expediente.** La primera vez que se abre un expediente de región en partida activa, una nota breve bajo las pestañas explica qué agrupa **CULT**, **RITES** y **OMENS**; se registra en `settings.hints` (`file_tabs`) y cada pestaña mantiene además su tooltip descriptivo.
+- **Metas con fecha para las primeras partidas.** Una ficha discreta sobre el mapa guía cuatro metas encadenadas calculadas con el calendario de `Format`: tres células antes de enero de 1911, primer sacrificio, primer sitio antes de enero de 1917 (con la pista de que las regiones pequeñas sostienen sitios con facilidad) y tres sitios antes de enero de 1923. El jugador puede ocultarlas desde la propia ficha o alternarlas en el menú; el ajuste `hideGoals` se guarda en `SaveSettings` con compatibilidad hacia atrás para guardados anteriores. La ficha cede espacio automáticamente a amenazas, notas contextuales y etiquetas del mapa.
+- **Reintentar y hecho fechado.** La pantalla final añade **«Try this world again»** junto a **«New World»** para reiniciar con la misma semilla y la misma dificultad, e incluye un hecho fechado derivado del estado o de la crónica que explica el desenlace sin otorgar bonificaciones tras perder.
 
 [Volver al índice](../README.md)

@@ -12,6 +12,7 @@ namespace Awakening.Core.Save
         public double Volume = 40;
         public double UiScale = 1.0;
         public bool ReducedMotion;
+        public bool HideGoals;
         public List<string> Hints = new List<string>();
         internal Dictionary<string, object> Extra = new Dictionary<string, object>();
     }
@@ -54,6 +55,7 @@ namespace Awakening.Core.Save
             if (v == null || !(Get(v, "muted") is bool) || !Number(Get(v, "volume"), 100)) return false;
             if (v.ContainsKey("uiScale") && !Number(v["uiScale"], 4)) return false;
             if (v.ContainsKey("reducedMotion") && !(v["reducedMotion"] is bool)) return false;
+            if (v.ContainsKey("hideGoals") && !(v["hideGoals"] is bool)) return false;
             if (v.ContainsKey("hints") && (!(v["hints"] is List<object> hints) || hints.Any(h => !(h is string)))) return false;
             return true;
         }
@@ -64,6 +66,7 @@ namespace Awakening.Core.Save
                 Muted = (bool)value["muted"], Volume = N(value["volume"]),
                 UiScale = value.ContainsKey("uiScale") ? N(value["uiScale"]) : 1.0,
                 ReducedMotion = value.ContainsKey("reducedMotion") && (bool)value["reducedMotion"],
+                HideGoals = value.ContainsKey("hideGoals") && (bool)value["hideGoals"],
                 Hints = value.ContainsKey("hints") ? ((List<object>)value["hints"]).Cast<string>().ToList() : new List<string>(),
                 Extra = new Dictionary<string, object>(value)
             };
@@ -71,6 +74,7 @@ namespace Awakening.Core.Save
         public static SaveSettings WithDefaultSettings(SaveSettings value) => new SaveSettings
         {
             Muted = value.Muted, Volume = value.Volume, UiScale = value.UiScale, ReducedMotion = value.ReducedMotion,
+            HideGoals = value.HideGoals,
             Hints = new List<string>(value.Hints), Extra = new Dictionary<string, object>(value.Extra)
         };
         public static bool IsGameState(object value)
@@ -178,7 +182,7 @@ namespace Awakening.Core.Save
             var settings = new Dictionary<string, object>(save.Settings.Extra)
             {
                 ["muted"] = save.Settings.Muted, ["volume"] = save.Settings.Volume, ["uiScale"] = save.Settings.UiScale,
-                ["reducedMotion"] = save.Settings.ReducedMotion, ["hints"] = save.Settings.Hints
+                ["reducedMotion"] = save.Settings.ReducedMotion, ["hideGoals"] = save.Settings.HideGoals, ["hints"] = save.Settings.Hints
             };
             var envelope = new Dictionary<string, object>(save.Extra)
             {
