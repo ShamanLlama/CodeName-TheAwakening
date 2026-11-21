@@ -6,7 +6,7 @@ The game is set in a lamp-lit cult archive from 1908 to 1926: the map is an old 
 
 ## Status
 
-- **Version 0.5.1**, in development. Rules `alignment-3`. Changes per build are in the [version log](docs/playtests/versiones.md).
+- **Version 0.6.0**, in development. Rules `alignment-4`. Changes per build are in the [version log](docs/playtests/versiones.md).
 - **Engine:** Unity 6.3 LTS (6000.3.25f1) since 0.5.0. Versions 0.2.0–0.4.0 were made in Godot 4.7. They stay in `godot/` and on the `godot` branch until that version is retired.
 - **Release:** a free, short, complete game, released mainly on **Steam** as a desktop build (Linux now, Windows later).
 - **Beta:** the web build is on itch.io by invitation. Each build gets its own round in GTC Playtest Lab, and data is recorded only with the player's consent. The itch.io page is for testing, not the release.
@@ -40,7 +40,7 @@ Development builds add playtest controls to the menu that advance 1, 12 or 120 m
 - **Followers** are the cult. They recruit on their own, earn Influence, and carry ritual sites.
 - **Influence** pays for recruiting, opening cells in neighbouring regions, hiding evidence, answering threats and converting prominent figures.
 - **Dread** comes from sacrifice (40 followers for 25 Dread) and omens. It pays for sites, manifestations and silencing.
-- **Awareness** is how much the world knows. It grows with the share of humanity that follows you and slows income and recruitment. At 100 the run is lost. Every action that raises it shows the amount in its price. Concealing evidence lowers it, at a price that rises with awareness.
+- **Awareness** is how much the world knows. It grows with the share of humanity that follows you and slows income and recruitment. At 100 the run is lost. Every action that raises it shows the amount in its price. Concealing evidence lowers it by 3, at a price that rises with awareness; that world effect then rests for 6 months in every region, while local concealment keeps working.
 - **Ritual sites** cost 40 Influence and 60, then 100, then 160 Dread, plus 1 Influence a month. Each needs 24 supported months to prepare. A site is supported while a quarter of its region's population follows you: 75 followers in Oceania, 450 in South Asia.
 - **Threats** grow out of exposure, public worship, sites and awareness. You can answer each one in three ways, each paid in a different currency:
   - **Obstruct:** 30 Influence per severity, and no further obstructing in that region for a year.

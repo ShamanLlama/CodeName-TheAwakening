@@ -7,8 +7,8 @@ Cada build que pueda llegar a un playtest, con o sin GTC Playtest Lab, tiene una
 Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
 
 1. **Versión del juego** (`bundleVersion` en `unity/ProjectSettings/ProjectSettings.asset`; hasta 0.4.0, `config/version` en `godot/project.godot`): sube en cada build distribuida. Un cambio de motor sin cambio de reglas también sube la versión menor (0.5.0). Cambio de reglas o balance → versión menor (0.3.0); solo UI, texto o correcciones → parche (0.2.1).
-2. **Ruleset** (hoy `alignment-3`): cambia con cualquier modificación de reglas o valores de balance. Se envía en `run_started`/`capture_started` y se guarda en los saves.
-3. **Adaptador** (hoy `awakening-2`): cambia si cambian acciones, regiones, doctrinas, eventos o sus campos. Requiere actualizar el contrato en `GTC-page/gtc-web/contracts/playtests/`.
+2. **Ruleset** (hoy `alignment-4`): cambia con cualquier modificación de reglas o valores de balance. Se envía en `run_started`/`capture_started` y se guarda en los saves.
+3. **Adaptador** (hoy `awakening-3`): cambia si cambian acciones, regiones, doctrinas, eventos o sus campos. Requiere actualizar el contrato en `GTC-page/gtc-web/contracts/playtests/`.
 4. **GTC:** una build nueva exige build y ronda nuevas en el Lab. La build lleva en **cambios de esta build** un resumen de su entrada aquí (versión, fecha, commit, reglas, qué cambió y por qué) y el enlace a este registro; quienes revisan la ronda lo ven en GTC. No se comparan rondas con reglas o política de reloj distintas sin decirlo.
 5. **Entrada en este registro**, en la misma rama que el cambio: fecha, versión, commit, ruleset, adaptador, cambios, motivo y medición que lo respalda.
 
@@ -16,6 +16,7 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
 
 | Versión | Fecha | Commit | Ruleset | Adaptador | Ronda GTC | Estado |
 | --- | --- | --- | --- | --- | --- | --- |
+| 0.6.0 | 2026-11-21 | `675e2a7` | `alignment-4` | `awakening-3` | «0.6.0 playtest por invitación · ocultar con plazo y margen del rito» (pendiente) | Pendiente de publicación |
 | 0.5.2 | 2026-11-18 | `880e836` | `alignment-3` | `awakening-2` | «0.5.2 playtest por invitación · interfaz legible», abierta del 2026-11-19 al 2026-12-03 (UTC) | En itch.io (Restricted con contraseña) |
 | 0.5.1 | 2026-11-18 | `e1d5441` | `alignment-3` | `awakening-2` | «0.5.1 playtest por invitación · interfaz legible», cerrada el 2026-11-19 (UTC) con 1 partida | Reemplazada por 0.5.2 |
 | 0.5.0 | 2026-11-18 | `a25f916` | `alignment-3` | `awakening-2` | «0.5.0 playtest por invitación · versión Unity», cerrada el 2026-11-19 (UTC) con 1 partida | Reemplazada por 0.5.1 |
@@ -28,6 +29,56 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
 | 0.3.1 | 2026-11-02 | `2256c6c` | `alignment-2` | `awakening-1` | «0.3.1 playtest por invitación · decisiones económicas», cerrada el 2026-11-03 con 2 partidas | Reemplazada por 0.3.2 |
 | 0.3.0 | 2026-11-02 | `85f5905`; exportada desde `dbfb07f` | `alignment-2` | `awakening-1` | «0.3.0 playtest por invitación · decisiones económicas», cerrada el mismo día sin partidas | Reemplazada por 0.3.1 |
 | 0.2.0 | 2026-10-30 / 2026-10-31 | `ae38ec0`; adaptador E4–E6 en `6aa2419` | `alignment-1` | `awakening-1` | QA técnica E7 y «E7 piloto interno de gameplay» (abierta hasta 2026-11-09) | Reemplazada en itch.io por 0.3.0 el 2026-11-02 |
+
+### 0.6.0 — ocultar con plazo, margen del rito y primera partida guiada
+
+- **Commit:** `675e2a7`, rama `t3/release-0.6.0` integrada en `main`. La hicieron tres agentes en paralelo: Claude Opus 5.5 (reglas), GPT‑6.1 Sol (telemetría y Lab) y Gemini 4 Neon (interfaz, en dos pasadas). Claude integró y revisó.
+- **Motivo:** la revisión de gameplay del 2026-11-20 (siete revisores, síntesis fuera del repo) coincidió en tres problemas:
+  - ocultar en ráfagas de 5 a 8 regiones en un mismo mes borraba la awareness;
+  - el jugador no veía cuándo el rito dejaba de caber;
+  - el Lab no registraba amenazas ni recursos a lo largo de la partida.
+
+  Se suman las decisiones del usuario del 2026-11-21: cerrar la partida cuando el rito ya no cabe, no abrumar en Easy, y explicar las pestañas, que es el único comentario recibido de un jugador.
+- **Reglas (`alignment-4`):**
+  - Ocultar sigue siendo regional: −25 de exposición local y 12 meses de cooldown por región.
+  - Su −3 de awareness mundial ahora descansa 6 meses en todas las regiones (`Balance.ConcealWorldMonths`). Mientras descansa, ocultar cuesta 20 de Influence y solo limpia la exposición local.
+  - Con awareness en 0 no gasta el efecto mundial.
+  - El jugador puede cerrar la partida como derrota cuando el rito ya no puede completarse y aún no empezó (`GameEngine.CanConcede`/`Concede`, `ResultCode = "conceded"`).
+  - Cada final guarda su causa en `ResultCode`.
+  - Las partidas sin terminar de `alignment-3` se retiran con aviso; los ajustes se conservan.
+- **Playtest (`awakening-3`):** eventos nuevos:
+  - `threat_spawned`;
+  - `threat_resolved`, con la respuesta (incluida `ignored`), las respuestas legales en ese momento y las pérdidas;
+  - `month_snapshot` cada 12 meses (awareness, Influence, Dread, seguidores, células y sitios financiados y listos);
+  - `speed_changed`.
+
+  `run_finished` informa la causa exacta (`awakened`, `world_awareness`, `deadline`, `conceded`). Contrato en `GTC-page/gtc-web/contracts/playtests/awakening-3/`; el Lab resume amenazas por respuesta, curva de awareness, velocidad y causa de cierre (migración `0010`, sin transformar datos).
+- **Interfaz:**
+  - **Margen del rito:** una banda en la franja del pronóstico muestra la fecha más temprana y la última para iniciar el rito y el margen en meses, con fichas por sitio (seguidores, meses, dispersión, apoyo) y el Dread sobre 100. Se vuelve más visible cuando el margen se achica. Cuando el rito ya no cabe, avisa «The stars will pass without you» con la causa y ofrece «LET THE STARS PASS», con confirmación.
+  - **Ocultar:** su fila muestra «GLOBAL EFFECT IN N MO» mientras el efecto mundial descansa.
+  - **Primera partida:**
+    - Nota con las cifras reales de la primera decisión económica.
+    - Explicación de CULT, RITES y OMENS la primera vez que se abre un expediente.
+    - Cuatro metas con fecha que se pueden ocultar desde el menú.
+    - El subtítulo de colocación ya no empuja a empezar en una región chica.
+  - **Final:** un hecho fechado que explica el resultado y «Try this world again», con la misma semilla y dificultad.
+- **Medición:**
+  - `dotnet test core-tests/Tests`: 184/184, antes 154.
+  - Bot, Normal, 48 semillas por política (`dotnet run --project core-tests/Tools -- measure --seeds=48`): victorias de 103/144 con `alignment-3` a 80/144 con `alignment-4`.
+    - Por política: early de 21 a 5, late de 48 a 45, hub de 34 a 30.
+    - Con 4 meses serían 86/144; se quedó en 6 porque 80 cumple el umbral acordado.
+    - **Riesgo:** la estrategia de culto público (early) casi deja de ganar, y bajar el plazo no la arregla (8/48 con 4 meses). Revisar con datos de jugadores antes de 0.7.0.
+  - Las goldens de Godot (`alignment-3`) siguen intactas. Hay goldens nuevas para `alignment-4` y una prueba exige que coincidan con las viejas hasta el primer ocultamiento con el efecto mundial en reposo.
+  - `UiChecks`: `UI_CHECKS_PASSED`. `unity/layout-check.sh`: 60/60.
+  - GTC: 121 pruebas aprobadas y 9 omitidas por requerir PostgreSQL. Validador del contrato: 23 lotes válidos y 42 rechazos comprobados.
+- **Qué mirar en esta ronda:**
+  - Meses con 4 o más ocultamientos (objetivo 0).
+  - Ocultar por debajo del 15 % de las acciones.
+  - Awareness final de las victorias entre 35 y 75.
+  - Órdenes después del mes 212 sin rito iniciado (objetivo 0).
+  - Cuántas partidas se cierran con «LET THE STARS PASS».
+  - Abandonos antes del mes 24.
+- **Límites:** sin prueba con personas ni en teléfono físico todavía; las capturas son del ejecutable de desarrollo Linux. Mysticism sigue sin efecto: se diseña con el árbol en 0.7.0.
 
 ### 0.5.2 — botones con su propia tinta al tocarlos
 
