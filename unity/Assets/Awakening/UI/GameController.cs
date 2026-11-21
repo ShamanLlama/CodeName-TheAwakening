@@ -347,6 +347,13 @@ namespace Awakening.UI
             Kit.ReducedMotion = reduced;
         }
 
+        public void SetHideGoals(bool hidden)
+        {
+            if (Settings.HideGoals == hidden) return;
+            Settings.HideGoals = hidden;
+            Session.Commit();
+        }
+
         /// <summary>Sizes are fixed when a screen is built, so a new layout rebuilds the current screen.</summary>
         void RebuildScreen()
         {
@@ -646,7 +653,7 @@ namespace Awakening.UI
 #endif
             string scenario = _shot.TryGetValue("scenario", out string s) ? s : "start";
             TutorialComplete = scenario != "guide";
-            Settings.Hints = _shot.ContainsKey("hints") ? new List<string>() : new List<string> { "first_cell", "spread", "threat", "omen", "sites", "doctrine", "awareness", "unsupported", "sacrifice" };
+            Settings.Hints = _shot.ContainsKey("hints") ? new List<string>() : new List<string> { "first_cell", "spread", "threat", "omen", "sites", "doctrine", "awareness", "unsupported", "sacrifice", Notes.TabsHintId };
             switch (scenario)
             {
                 case "start":

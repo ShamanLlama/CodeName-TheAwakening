@@ -39,11 +39,14 @@ namespace Awakening.UI
         readonly Flow _legend;
         readonly Stack _cards, _profile;
         readonly Stack _tabs;
+        readonly Stack _tabGuide;
         readonly Stack _actions;
         readonly Stack _detail;
         readonly Dictionary<string, (Button button, Label title, Label cost, Label aware)> _rows = new Dictionary<string, (Button, Label, Label, Label)>();
         string _detailId = "";
         string _detailShown = "";
+        bool _tabGuideOpen;
+        bool _markingTabs;
 
         public RegionPanel(GameController game, GameScreen screen)
         {
@@ -121,8 +124,23 @@ namespace Awakening.UI
                 string groupName = group.name;
                 var tab = new Button(() => SetGroup(groupName)) { text = Capitalize(groupName), focusable = false, name = groupName };
                 tab.AddToClassList("aw-tab");
+                if (Notes.TabDescriptions.TryGetValue(groupName, out string tabTip)) tab.tooltip = tabTip;
                 _tabs.Add(tab);
             }
+            _tabGuide = Kit.Panel(Palette.PaperLight, Palette.Cult, new Vector4(12, 8, 12, 9), 0.08f, 4);
+            _tabGuide.name = "tab-guide";
+            _tabGuide.style.borderLeftWidth = 3;
+            Stack guideHead = Kit.HBox(8);
+            Label guideTitle = Kit.Caption(Notes.TabsHintTitle, Palette.Cult);
+            guideTitle.style.flexGrow = 1;
+            guideHead.Add(guideTitle);
+            Button guideOk = Kit.Link("GOT IT", null);
+            guideOk.style.color = Palette.Cult;
+            Tap(guideOk, DismissTabGuide);
+            guideHead.Add(guideOk);
+            _tabGuide.Add(guideHead);
+            _tabGuide.Add(Kit.Body(Notes.TabsHintText, 13, Palette.Text));
+            Kit.SetVisible(_tabGuide, false);
             _actions = Kit.VBox(0);
             _detail = Kit.VBox(6);
 
@@ -135,6 +153,7 @@ namespace Awakening.UI
                 _body.Add(_profile);
             }
             _body.Add(_tabs);
+            _body.Add(_tabGuide);
             _body.Add(_actions);
             _body.Add(_detail);
             if (Kit.Compact)
@@ -207,11 +226,21 @@ namespace Awakening.UI
             Region = id ?? "";
             Kit.SetVisible(this, Shown);
             _detailId = "";
-            if (Shown)
+            if (!Shown)
             {
-                BuildRows();
-                Refresh();
+                _tabGuideOpen = false;
+                Kit.SetVisible(_tabGuide, false);
+                return;
             }
+            BuildRows();
+            Refresh();
+        }
+
+        void DismissTabGuide()
+        {
+            _tabGuideOpen = false;
+            Kit.SetVisible(_tabGuide, false);
+            if (!_game.HintSeen(Notes.TabsHintId)) _game.MarkHint(Notes.TabsHintId);
         }
 
         void SetGroup(string groupName)
@@ -291,10 +320,11 @@ namespace Awakening.UI
 
         public void Refresh()
         {
-            if (!Shown || _game.State == null) return;
+            if (_markingTabs || !Shown || _game.State == null) return;
             GameState s = _game.State;
             RegionState r = s.Regions[Region];
             bool placing = s.Status == "placing";
+            bool over = GameEngine.IsOver(s);
             _file.text = "CASE FILE No. " + (Array.IndexOf(GameData.RegionIds, Region) + 1);
             _name.text = GameData.Regions[Region].Name;
             string stance = "NO CULT PRESENCE";
@@ -323,9 +353,18 @@ namespace Awakening.UI
             Kit.SetVisible(_detail, !placing);
             if (placing)
             {
+                Kit.SetVisible(_tabGuide, false);
                 FillProfile(s);
                 return;
             }
+            if (!over && !_tabGuideOpen && !_game.HintSeen(Notes.TabsHintId))
+            {
+                _tabGuideOpen = true;
+                _markingTabs = true;
+                _game.MarkHint(Notes.TabsHintId);
+                _markingTabs = false;
+            }
+            Kit.SetVisible(_tabGuide, !over && _tabGuideOpen);
             foreach (var pair in _rows)
             {
                 string id = pair.Key;

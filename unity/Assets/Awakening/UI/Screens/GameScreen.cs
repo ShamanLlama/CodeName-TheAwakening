@@ -39,6 +39,8 @@ namespace Awakening.UI
         Stack _toasts;
         Stack _banner, _prompt;
         Bar _riteBar;
+        Stack _goals;
+        string _goalsShown = "";
         Stack _note;
         string _noteId = "";
         float _noteAt;
@@ -350,6 +352,7 @@ namespace Awakening.UI
             _threatScroll.AddToClassList("aw-scroll");
             _threatScroll.style.position = Position.Absolute;
             _threatScroll.pickingMode = PickingMode.Ignore;
+            _threatScroll.RegisterCallback<GeometryChangedEvent>(_ => Map.RefreshLabels());
             Add(_threatScroll);
             _threats = Kit.VBox(8);
             _threats.name = "threat-stack";
@@ -404,16 +407,27 @@ namespace Awakening.UI
             _prompt.pickingMode = PickingMode.Ignore;
             Label title = Kit.Label("Choose where the dream takes root", 27, Palette.Cult, Fonts.Display);
             title.style.unityTextAlign = TextAnchor.MiddleCenter;
-            Label sub = Kit.Label("Pick a region on the map · small regions are easier to hold", 15, Palette.Muted, Fonts.Italic);
+            Label sub = Kit.Body("Pick a region on the map · populous regions recruit well; small regions hold sites cheaply", 15, Palette.Muted, Fonts.Italic);
             sub.style.unityTextAlign = TextAnchor.MiddleCenter;
             _prompt.Add(title);
             _prompt.Add(sub);
             Add(_prompt);
 
+            _goals = Kit.Panel(Palette.PaperLight, Palette.PaperEdge, new Vector4(12, 9, 12, 10), 0.1f, 3);
+            _goals.name = "first-run-goals";
+            _goals.style.borderLeftWidth = 4;
+            _goals.style.position = Position.Absolute;
+            _goals.style.width = Kit.Compact ? 276 : 292;
+            _goals.style.visibility = Visibility.Hidden;
+            Kit.SetVisible(_goals, false);
+            _goals.RegisterCallback<GeometryChangedEvent>(_ => { QueueLayout(); Map.RefreshLabels(); });
+            Add(_goals);
+
             _resetView = Kit.Button("Whole world", () => Map.ResetView());
             _resetView.tooltip = "Show the whole chart  (R)";
             _resetView.style.fontSize = 17;
             _resetView.style.position = Position.Absolute;
+            _resetView.RegisterCallback<GeometryChangedEvent>(_ => Map.RefreshLabels());
             Kit.SetVisible(_resetView, false);
             Add(_resetView);
         }
@@ -463,32 +477,82 @@ namespace Awakening.UI
             _threatScroll.style.height = threatHeight;
             _threatScroll.pickingMode = hasThreats ? PickingMode.Position : PickingMode.Ignore;
             Vector2 button = Kit.IsVisible(_resetView) ? _resetView.layout.size : Vector2.zero;
+            bool hasReset = Kit.IsVisible(_resetView) && button.x > 0 && button.y > 0;
             _resetView.style.left = area.xMax - button.x;
             _resetView.style.top = area.y;
-            float belowButton = area.y + (Kit.IsVisible(_resetView) ? button.y + 8 : 0);
-            if (_note == null) return;
-            var noteSize = new Vector2(_note.resolvedStyle.width, _note.layout.height);
-            var spot = new Rect(new Vector2(area.x, area.yMax - noteSize.y), noteSize);
+            float belowButton = area.y + (hasReset ? button.y + 8 : 0);
             var clippings = new Rect(area.x, area.y, columnWidth, threatHeight);
-            bool Blocked(Rect rect) => hasThreats && rect.Overlaps(clippings)
-                || rect.yMax > area.yMax || rect.yMin < area.y || rect.xMin < area.x || rect.xMax > area.xMax;
-            if (Kit.Compact || Blocked(spot)) spot.position = new Vector2(area.xMax - noteSize.x, belowButton);
-            bool shown = !Blocked(spot) && noteSize.y > 0;
-            _note.style.visibility = shown ? Visibility.Visible : Visibility.Hidden;
-            if (shown && !_game.HintSeen(_noteId))
+            var resetRect = hasReset ? new Rect(area.xMax - button.x, area.y, button.x, button.y) : Rect.zero;
+            bool Blocked(Rect rect)
             {
-                _noting = true;
-                _game.MarkHint(_noteId);
-                _noting = false;
+                if (rect.width <= 0 || rect.height <= 0 || float.IsNaN(rect.width) || float.IsNaN(rect.height)) return true;
+                if (rect.yMax > area.yMax || rect.yMin < area.y || rect.xMin < area.x || rect.xMax > area.xMax) return true;
+                Rect padded = Draw2D.Grow(rect, 2f);
+                if (hasThreats && padded.Overlaps(clippings)) return true;
+                if (hasReset && padded.Overlaps(resetRect)) return true;
+                return false;
             }
-            _note.style.left = spot.x;
-            _note.style.top = spot.y;
+            Rect noteRect = Rect.zero;
+            bool noteShown = false;
+            if (_note != null)
+            {
+                var noteSize = new Vector2(_note.resolvedStyle.width, _note.layout.height);
+                var spot = new Rect(new Vector2(area.x, area.yMax - noteSize.y), noteSize);
+                if (Kit.Compact || Blocked(spot)) spot.position = new Vector2(area.xMax - noteSize.x, belowButton);
+                noteShown = !Blocked(spot);
+                _note.style.visibility = noteShown ? Visibility.Visible : Visibility.Hidden;
+                if (noteShown)
+                {
+                    noteRect = Draw2D.Grow(spot, 2f);
+                    if (!_game.HintSeen(_noteId))
+                    {
+                        _noting = true;
+                        _game.MarkHint(_noteId);
+                        _noting = false;
+                    }
+                    _note.style.left = spot.x;
+                    _note.style.top = spot.y;
+                }
+            }
+            if (_goals != null && Kit.IsVisible(_goals))
+            {
+                if (Kit.Compact && noteShown)
+                {
+                    _goals.style.visibility = Visibility.Hidden;
+                }
+                else
+                {
+                    var goalsSize = new Vector2(_goals.resolvedStyle.width, _goals.layout.height);
+                    bool GoalsFit(Rect rect) => !Blocked(rect) && (!noteShown || !Draw2D.Grow(rect, 2f).Overlaps(noteRect));
+                    Rect chosen = new Rect(new Vector2(area.xMax - goalsSize.x, belowButton), goalsSize);
+                    bool goalsShown = GoalsFit(chosen);
+                    if (!goalsShown && noteShown)
+                    {
+                        chosen.position = new Vector2(area.xMax - goalsSize.x, noteRect.yMax + 6);
+                        goalsShown = GoalsFit(chosen);
+                    }
+                    if (!goalsShown)
+                    {
+                        chosen.position = new Vector2(area.x, area.yMax - goalsSize.y);
+                        goalsShown = GoalsFit(chosen);
+                    }
+                    _goals.style.visibility = goalsShown ? Visibility.Visible : Visibility.Hidden;
+                    if (goalsShown)
+                    {
+                        _goals.style.left = chosen.x;
+                        _goals.style.top = chosen.y;
+                    }
+                }
+            }
+            Map.RefreshLabels();
+            Map.schedule.Execute(Map.RefreshLabels);
         }
 
         internal IEnumerable<VisualElement> VisibleMapOverlays()
         {
             yield return _threatScroll;
             yield return _note;
+            yield return _goals;
             yield return _resetView;
             yield return _prompt;
             yield return _toasts;
@@ -506,6 +570,7 @@ namespace Awakening.UI
         internal (VisualElement node, string name)[] LayoutOverlaysToCheck => new[]
         {
             ((VisualElement)_banner, "timetable"), ((VisualElement)_note, "note"),
+            ((VisualElement)_goals, "first-run goals"),
             ((VisualElement)_resetView, "whole-world button"), ((VisualElement)_threatScroll, "threat clippings"),
         };
         internal VisualElement LayoutThreatScroll => _threatScroll;
@@ -592,6 +657,7 @@ namespace Awakening.UI
             Kit.SetVisible(_prompt, placing);
             RebuildThreats(s);
             Panel.Refresh();
+            RefreshGoals(s);
             RefreshNote(s);
             QueueLayout();
 
@@ -858,7 +924,7 @@ namespace Awakening.UI
             _noting = true;
             _noteAt = Time.unscaledTime;
             _noteId = id;
-            var hint = Notes.Hints[id];
+            var hint = Notes.Hint(s, id);
             _note = Kit.Panel(Palette.PaperLight, Palette.Cult, new Vector4(16, 12, 14, 12), 0.1f, 4);
             _note.style.borderLeftWidth = 4;
             _note.style.position = Position.Absolute;
@@ -879,7 +945,7 @@ namespace Awakening.UI
             ok.style.color = Palette.Cult;
             _note.Add(ok);
             Insert(IndexOf(Panel), _note);
-            _note.RegisterCallback<GeometryChangedEvent>(_ => QueueLayout());
+            _note.RegisterCallback<GeometryChangedEvent>(_ => { QueueLayout(); Map.RefreshLabels(); });
             _noting = false;
             QueueLayout();
             if (!Kit.ReducedMotion)
@@ -905,6 +971,41 @@ namespace Awakening.UI
             _noteId = "";
             if (id != "") _game.MarkHint(id);
             schedule.Execute(Refresh);
+        }
+
+        void RefreshGoals(GameState s)
+        {
+            if (_goals == null) return;
+            GoalStep active = _game.Settings.HideGoals ? null : Notes.ActiveGoal(s);
+            if (active == null)
+            {
+                _goalsShown = "";
+                Kit.SetVisible(_goals, false);
+                _goals.style.visibility = Visibility.Hidden;
+                return;
+            }
+            var all = Notes.FirstRunGoals(s);
+            int done = all.Count(g => g.Done);
+            string key = string.Join("|", active.Id, active.Title, active.Detail, active.Overdue, done);
+            Kit.SetVisible(_goals, true);
+            if (key == _goalsShown && _goals.childCount > 0) return;
+            _goalsShown = key;
+            _goals.Clear();
+            Color accent = active.Overdue ? Palette.Warn : Palette.Cult;
+            _goals.style.borderLeftColor = accent;
+            Stack head = Kit.HBox(8);
+            Label cap = Kit.Caption($"First-run goals · {done}/{all.Count}", accent);
+            cap.style.flexGrow = 1;
+            head.Add(cap);
+            Action hideAction = () => _game.SetHideGoals(true);
+            Button hide = Kit.Link("HIDE", hideAction);
+            hide.userData = hideAction;
+            hide.tooltip = "Hide first-run goals. Restore anytime in Menu.";
+            head.Add(hide);
+            _goals.Add(head);
+            _goals.Add(Kit.Body(active.Title, Kit.Compact ? 14 : 16, Palette.Text, Fonts.BodyBold));
+            _goals.Add(Kit.Body(active.Detail, 13, active.Overdue ? Palette.Warn : Palette.Muted, Fonts.Italic));
+            _goals.tooltip = string.Join("\n", all.Select(g => (g.Done ? "◆ " : "○ ") + g.Title)) + "\nHide anytime here or in Menu.";
         }
     }
 }

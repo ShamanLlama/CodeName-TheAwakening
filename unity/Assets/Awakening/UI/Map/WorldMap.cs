@@ -170,6 +170,8 @@ namespace Awakening.UI.Map
             _dots.MarkDirtyRepaint();
         }
 
+        public void RefreshLabels() => UpdateLabels();
+
         void Tick(TimerState timer)
         {
             float delta = Mathf.Min(timer.deltaTime / 1000f, 0.1f);

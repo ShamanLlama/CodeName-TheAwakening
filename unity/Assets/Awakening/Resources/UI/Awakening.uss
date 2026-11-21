@@ -391,4 +391,4 @@ Label {
 }
 
 /* Native label padding must not enlarge complete threat clippings on a short chart. */
-#threat-stack .unity-label { padding: 0; margin: 0; }
+#threat-stack .unity-label, #first-run-goals .unity-label { padding: 0; margin: 0; }

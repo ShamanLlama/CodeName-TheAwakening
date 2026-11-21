@@ -48,5 +48,8 @@ namespace Awakening.UI
 
         /// <summary>"Mar 1925"</summary>
         public static string DateShort(int month) => MonthNames[month % 12].Substring(0, 3) + " " + (FirstYear + (int)Math.Floor(month / 12.0));
+
+        /// <summary>Zero-based month index for a calendar year and month (0 = January).</summary>
+        public static int MonthOf(int year, int monthOfYear = 0) => (year - FirstYear) * 12 + monthOfYear;
     }
 }
