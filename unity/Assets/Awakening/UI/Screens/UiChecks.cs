@@ -265,7 +265,8 @@ namespace Awakening.UI
 
             foreach (string outcome in new[] { "won", "lost" })
             {
-                game.State = Awakening.Core.Dev.Playthrough.Play("early", outcome == "won" ? "resume" : "rlyeh", Balance.Deadline);
+                game.State = Awakening.Core.Dev.Playthrough.Play("early", outcome == "won" ? "resume" : "drowned", Balance.Deadline);
+                Check(game.State.Status == outcome, outcome + " harness seed ends as " + outcome);
                 game.Lab.StartRun(GameController.Capture(GameEngine.CreateGameState("normal", "ending")));
                 game.Lab.EmitEvent("run_finished", new Dictionary<string, object> { ["outcome"] = outcome, ["reason"] = outcome == "won" ? "awakened" : "deadline" }, GameController.Capture(game.State), "ended");
                 game.ShowGame();
@@ -285,6 +286,123 @@ namespace Awakening.UI
                 Press(screen.Dialogs, "View the Map");
                 Check(!screen.Dialogs.IsOpen && !game.ClockHeld && game.State.Status == outcome, outcome + " keeps finished map");
             }
+
+            // Conceal global cooldown stamp on the action row and detail pane.
+            var concealState = GameEngine.PlaceStartingFoothold(GameEngine.CreateGameState("normal", "conceal-ui"), "africa").State;
+            Derived.Recruit(concealState.Regions["europe"], 100);
+            concealState.Awareness = 40;
+            concealState.Influence = 200;
+            concealState.Regions["africa"].Exposure = 30;
+            concealState.Regions["europe"].Exposure = 30;
+            game.State = concealState;
+            game.ShowGame();
+            yield return Layout();
+            screen = (GameScreen)game.CurrentScreen;
+            screen.Select("africa");
+            yield return Layout();
+            var concealRow = screen.Panel.Q<Button>("conceal");
+            Check(concealRow != null && !concealRow.Query<Label>().ToList().Any(l => l.text.Contains("GLOBAL EFFECT IN")), "conceal row omits global cooldown stamp before concealing");
+            game.Act("conceal", "africa");
+            yield return Layout();
+            Check(GameEngine.ConcealWorldCooldown(game.State) == Balance.ConcealWorldMonths, "concealing starts global awareness cooldown");
+            screen.Select("europe");
+            yield return Layout();
+            concealRow = screen.Panel.Q<Button>("conceal");
+            string expectedStamp = $"GLOBAL EFFECT IN {Balance.ConcealWorldMonths} MO";
+            Check(concealRow.Query<Label>().ToList().Any(l => l.text == expectedStamp), "conceal row shows global cooldown stamp");
+            screen.Panel.LayoutExplain("conceal");
+            yield return Layout();
+            var panelTexts = screen.Panel.Query<Label>().ToList().Select(l => l.text).ToList();
+            Check(panelTexts.Any(t => t == expectedStamp) && panelTexts.Any(t => t.Contains($"The world effect returns in {Balance.ConcealWorldMonths} months.")), "conceal detail shows stamp and preview copy");
+            screen.Deselect();
+            Debug.Log("UI_CHECK: conceal global cooldown stamp");
+
+            // Rite margin strip: 3 sites, Dread/100, calendar dates, click-to-inspect detail, and negative-margin acceleration.
+            var marginState = GameEngine.PlaceStartingFoothold(GameEngine.CreateGameState("normal", "margin-ui"), "africa").State;
+            marginState.ElapsedMonths = 185;
+            marginState.Status = "playing";
+            marginState.Dread = 85;
+            marginState.Influence = 200;
+            Derived.Recruit(marginState.Regions["oceania"], Derived.SiteRequirement(marginState.Regions["oceania"]) + 40);
+            marginState.Regions["oceania"].Site = new Site { Invested = true, Progress = 24 };
+            Derived.Recruit(marginState.Regions["middle_east"], Derived.SiteRequirement(marginState.Regions["middle_east"]) + 40);
+            marginState.Regions["middle_east"].Site = new Site { Invested = true, Progress = 20 };
+            marginState.Regions["middle_east"].Scattered = true;
+            marginState.Regions["middle_east"].ScatteredUntil = 189;
+            marginState.Regions["latin_america"].Population.Followers = 50;
+            marginState.Regions["latin_america"].Site = new Site { Invested = true, Progress = 2 };
+            game.State = marginState;
+            game.ShowGame();
+            yield return Layout();
+            screen = (GameScreen)game.CurrentScreen;
+            var riteBanner = screen.Q("rite-banner");
+            Check(riteBanner != null && Kit.IsVisible(riteBanner), "rite margin strip appears when sites are funded");
+            string marginLine = screen.Q<Label>("rite-margin-line").text;
+            Check(marginLine.Contains(Format.Date(207)) && marginLine.Contains(Format.Date(212)) && marginLine.Contains("margin 5 months"), "rite margin line uses calendar dates and margin: " + marginLine);
+            Check(screen.Q<Label>("rite-margin-dread").text == "DREAD 85/100", "rite margin strip displays Dread out of 100");
+            Check(!Kit.IsVisible(screen.Q("concede-button")), "concede button stays hidden while the rite fits");
+            var siteChips = Enumerable.Range(0, 3).Select(i => screen.Q<Button>("rite-site-" + i)).ToList();
+            Check(siteChips.All(c => c != null), "rite margin strip renders three site chips");
+            Check(siteChips.Any(c => c.text.Contains("scattered")), "site chip flags scattered flock");
+            Check(siteChips.Any(c => c.text.Contains("50/")), "site chip flags unsupported site followers/required");
+            ((Action)siteChips[1].userData)();
+            yield return Layout();
+            var siteDetail = screen.Q("rite-site-detail");
+            Check(siteDetail != null && Kit.IsVisible(siteDetail), "clicking a site chip reveals site detail");
+            string detailText = string.Join(" ", siteDetail.Query<Label>().ToList().Select(l => l.text));
+            Check(detailText.Contains("followers") && detailText.Contains("Scattered"), "site detail reports followers and scattered status: " + detailText);
+            ((Action)siteChips[1].userData)();
+            yield return Layout();
+            Check(!Kit.IsVisible(siteDetail), "clicking the same site chip collapses site detail");
+
+            // Negative margin with Fits == true (eclipse available) means acceleration needed, not doomed.
+            var accelState = marginState.Clone();
+            accelState.ElapsedMonths = 190;
+            accelState.Regions["latin_america"].Site.Progress = 0;
+            accelState.Regions["latin_america"].Opportunity = new Opportunity { Kind = "eclipse", ExpiresMonth = 195 };
+            var accelMargin = Forecast.Margin(accelState);
+            Check(accelMargin.Margin < 0 && accelMargin.Fits && !GameEngine.CanConcede(accelState), "eclipse makes negative-margin state still fit");
+            game.State = accelState;
+            game.ShowGame();
+            yield return Layout();
+            screen = (GameScreen)game.CurrentScreen;
+            Check(screen.Q<Label>("rite-margin-line").text.Contains("needs acceleration"), "negative margin with Fits explains acceleration is needed");
+            Check(!Kit.IsVisible(screen.Q("concede-button")), "concede button stays hidden when acceleration can save the rite");
+            Debug.Log("UI_CHECK: rite margin strip and site details");
+
+            // Doomed warning, concede button, confirmation dialog, and conceded ending with DatedFact.
+            game.State = Awakening.Core.Dev.Playthrough.Play("early", "drowned", 200);
+            Check(!Forecast.Margin(game.State).Fits && GameEngine.CanConcede(game.State), "doomed harness state cannot fit and can concede");
+            game.ShowGame();
+            yield return Layout();
+            screen = (GameScreen)game.CurrentScreen;
+            screen.Dialogs.Close();
+            yield return Layout();
+            Check(screen.Q("rite-banner").Query<Label>().ToList().Any(l => l.text == Notes.RiteDoomedHeadline), "doomed state displays Lovecraftian warning headline");
+            Check(Kit.IsVisible(screen.Q("rite-doomed-cause")) && !string.IsNullOrEmpty(screen.Q<Label>("rite-doomed-cause").text), "doomed state displays the cause");
+            var concedeBtn = screen.Q<Button>("concede-button");
+            Check(concedeBtn != null && Kit.IsVisible(concedeBtn), "concede button is visible when CanConcede is true");
+            ((Action)concedeBtn.userData)();
+            yield return Layout();
+            Check(screen.Dialogs.Kind == "concede" && game.ClockHeld, "concede button opens confirmation dialog and holds clock");
+            Press(screen.Dialogs, "Keep Watching");
+            yield return Layout();
+            Check(!screen.Dialogs.IsOpen && GameEngine.IsActive(game.State), "Keep Watching cancels conceding");
+            ((Action)screen.Q<Button>("concede-button").userData)();
+            yield return Layout();
+            Press(screen.Dialogs, "LET THE STARS PASS");
+            yield return Layout();
+            Check(game.State.Status == "lost" && game.State.ResultCode == "conceded", "confirming concede ends run as conceded loss");
+            Check(screen.Dialogs.Kind == "end" && game.ClockHeld, "conceding opens the ending sheet");
+            var concededEnding = Notes.Ending(game.State);
+            Check(concededEnding.Fact.StartsWith("You let the stars pass in " + Format.Date(game.State.ElapsedMonths), StringComparison.Ordinal), "conceded ending derives its own dated fact: " + concededEnding.Fact);
+            var endLabels = screen.Dialogs.Query<Label>().ToList().Select(l => l.text).ToList();
+            Check(endLabels.Any(t => t.Contains("The Stars Passed Unanswered")), "conceded ending shows its own title");
+            Check(endLabels.Any(t => t.Contains(concededEnding.Fact)), "conceded ending renders its dated fact");
+            var postCutoff = GameEngine.Concede(Awakening.Core.Dev.Playthrough.Play("early", "drowned", 213));
+            Check(postCutoff.ResultCode == "conceded" && Notes.DatedFact(postCutoff).Contains(Format.Date(213)), "post-cutoff conceded run derives a dated fact");
+            Debug.Log("UI_CHECK: doomed warning, concede confirmation, and conceded ending");
+
             // Retry with the same seed and difficulty; also check awareness-loss dated fact and New World.
             var awareStart = GameEngine.PlaceStartingFoothold(GameEngine.CreateGameState("hard", "retry-world"), "africa").State;
             awareStart.Awareness = 99.99;
@@ -298,14 +416,14 @@ namespace Awakening.UI
             yield return Layout();
             Check(game.CurrentScreen is GameScreen && game.State.Status == "placing" && game.State.ElapsedMonths == 0
                 && game.State.Difficulty == "hard" && game.State.Seed == "retry-world", "Try this world again keeps seed and difficulty");
-            game.State = Awakening.Core.Dev.Playthrough.Play("early", "rlyeh", Balance.Deadline);
+            game.State = Awakening.Core.Dev.Playthrough.Play("early", "drowned", Balance.Deadline);
             game.ShowGame();
             yield return Layout();
             screen = (GameScreen)game.CurrentScreen;
             Press(screen.Dialogs, "New World");
             yield return Layout();
             Check(game.State == null && game.CurrentScreen is StartScreen && !game.ClockHeld, "New World returns to start screen");
-            Debug.Log("UI_CHECKS_PASSED: start, saved run, onboarding, goals, all sheets, clock, keyboard focus, participation, settings, doctrine, abandon, endings, retry");
+            Debug.Log("UI_CHECKS_PASSED: start, saved run, onboarding, goals, all sheets, clock, keyboard focus, participation, settings, doctrine, abandon, endings, conceal stamp, rite margin, concede, retry");
         }
     }
 }

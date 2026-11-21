@@ -36,6 +36,118 @@ namespace Awakening.UI
         public const string TabsHintId = "file_tabs";
         public const string TabsHintTitle = "Case file tabs";
         public const string TabsHintText = "CULT grows cells, conceals evidence, and answers threats. RITES turns followers into Dread and raises sites. OMENS claims passing signs and figures.";
+        public const string RiteDoomedHeadline = "The stars will pass without you";
+
+        static readonly Dictionary<string, string> ShortRegions = new Dictionary<string, string>
+        {
+            ["north_america"] = "N. America",
+            ["latin_america"] = "L. America",
+            ["europe"] = "Europe",
+            ["africa"] = "Africa",
+            ["middle_east"] = "W. Asia",
+            ["south_asia"] = "S. Asia",
+            ["east_asia"] = "E. Asia",
+            ["oceania"] = "Oceania",
+        };
+
+        /// <summary>Short stamp for Conceal while its global awareness reduction is resting, or "".</summary>
+        public static string ConcealGlobalStamp(GameState s)
+        {
+            int cd = GameEngine.ConcealWorldCooldown(s);
+            return cd > 0 ? $"GLOBAL EFFECT IN {cd} MO" : "";
+        }
+
+        /// <summary>Prominence tier for the rite margin strip: none, quiet, tight, doomed, or rite.</summary>
+        public static string RiteBandLevel(GameState s, RiteMargin margin, RitualForecast forecast)
+        {
+            if (s == null || s.Status == "placing" || GameEngine.IsOver(s)) return "none";
+            if (margin.Started) return "rite";
+            if (!margin.Fits) return "doomed";
+            bool tightMargin = margin.EarliestStart >= 0 && margin.Margin <= 6;
+            bool tightUnfunded = margin.EarliestStart < 0 && Balance.LatestSiteStart - s.ElapsedMonths <= 24;
+            bool anyStalled = margin.Sites.Any(site => !site.Supported || site.Scattered || s.Regions[site.Region].Site.Dormant);
+            if (tightMargin || tightUnfunded || anyStalled || forecast.Urgent) return "tight";
+            if (margin.Sites.Count > 0 || s.ElapsedMonths >= 72) return "quiet";
+            return "none";
+        }
+
+        /// <summary>Why the final rite can no longer fit before the alignment closes.</summary>
+        public static string RiteDoomedCause(GameState s, RiteMargin margin)
+        {
+            if (s.ElapsedMonths > Balance.LatestRiteStart)
+            {
+                int left = Math.Max(0, Balance.Deadline - s.ElapsedMonths);
+                if (Derived.ReadySites(s) >= Balance.RequiredSites && s.Dread < Balance.FinalDread)
+                    return $"Only {Format.Months(left)} remain before {Format.Date(Balance.Deadline)}; the final rite needs {Balance.FinalMonths} months and {Balance.FinalDread} Dread.";
+                return $"Only {Format.Months(left)} remain before {Format.Date(Balance.Deadline)}; the final rite needs {Balance.FinalMonths} months and can no longer finish.";
+            }
+            if (margin.Sites.Count < Balance.RequiredSites)
+                return $"Only {margin.Sites.Count} of {Balance.RequiredSites} ritual sites are funded; a new site cannot be prepared before the {Format.Date(margin.LatestStart)} cutoff.";
+            SiteMargin third = margin.Sites[Balance.RequiredSites - 1];
+            int lateBy = Math.Max(1, margin.EarliestStart - margin.LatestStart);
+            if (third.Scattered)
+                return $"The flock in {GameData.Regions[third.Region].Name} is scattered; the third site misses the {Format.Date(margin.LatestStart)} cutoff by {Format.Months(lateBy)}.";
+            return $"The third site needs {Format.Months(third.MonthsLeft)} more preparation, missing the {Format.Date(margin.LatestStart)} cutoff by {Format.Months(lateBy)} with no acceleration left.";
+        }
+
+        /// <summary>Calendar line summarizing earliest start, latest start, and margin (or active rite slack).</summary>
+        public static string RiteMarginLine(GameState s, RiteMargin margin, bool compact = false)
+        {
+            Func<int, string> fmt = compact ? (Func<int, string>)Format.DateShort : Format.Date;
+            Func<int, string> mo = compact ? (Func<int, string>)(n => n + " mo") : Format.Months;
+            string head = compact ? "Earliest" : "Earliest rite";
+            if (margin.Started)
+            {
+                int left = Math.Max(0, Balance.Deadline - s.ElapsedMonths);
+                int need = Math.Max(0, Balance.FinalMonths - s.FinalProgress);
+                int slack = left - need;
+                if (!margin.Fits)
+                    return $"Final rite: {s.FinalProgress}/{Balance.FinalMonths} mo · deadline {fmt(Balance.Deadline)} · {mo(-slack)} short";
+                return $"Final rite: {s.FinalProgress}/{Balance.FinalMonths} mo · deadline {fmt(Balance.Deadline)} · margin {mo(slack)}";
+            }
+            if (margin.EarliestStart >= 0)
+            {
+                if (!margin.Fits)
+                    return $"{head}: {fmt(margin.EarliestStart)} · latest: {fmt(margin.LatestStart)} · {mo(-margin.Margin)} too late";
+                if (margin.Margin < 0)
+                    return $"{head}: {fmt(margin.EarliestStart)} · latest: {fmt(margin.LatestStart)} · margin −{-margin.Margin} mo (needs acceleration)";
+                return $"{head}: {fmt(margin.EarliestStart)} · latest: {fmt(margin.LatestStart)} · margin {mo(margin.Margin)}";
+            }
+            if (!margin.Fits)
+                return $"{head}: none ({margin.Sites.Count}/{Balance.RequiredSites} sites) · latest: {fmt(margin.LatestStart)} · window closed";
+            if (s.ElapsedMonths > Balance.LatestSiteStart)
+                return $"{head}: pending ({margin.Sites.Count}/{Balance.RequiredSites} sites) · latest: {fmt(margin.LatestStart)} · needs acceleration";
+            return $"{head}: pending ({margin.Sites.Count}/{Balance.RequiredSites} sites) · latest: {fmt(margin.LatestStart)} · fund by {fmt(Balance.LatestSiteStart)}";
+        }
+
+        /// <summary>Compact label for one funded site chip in the rite margin strip.</summary>
+        public static string SiteChipText(GameState s, SiteMargin site, bool compact)
+        {
+            RegionState r = s.Regions[site.Region];
+            string name = compact && ShortRegions.TryGetValue(site.Region, out string shortName) ? shortName : GameData.Regions[site.Region].Name;
+            if (r.Site.Dormant) return $"× {name} · dormant";
+            if (site.Scattered) return $"× {name} · scattered ({site.MonthsLeft}m)";
+            if (!site.Supported) return $"× {name} · {site.Followers}/{site.Required} ({site.MonthsLeft}m)";
+            return site.MonthsLeft == 0 ? $"◆ {name} · ready" : $"◇ {name} · {site.MonthsLeft}m";
+        }
+
+        /// <summary>Full detail for one funded site on hover or tap.</summary>
+        public static string SiteMarginDetail(GameState s, SiteMargin site)
+        {
+            RegionState r = s.Regions[site.Region];
+            string regionName = GameData.Regions[site.Region].Name;
+            string support;
+            if (r.Site.Dormant) support = "Dormant (upkeep unpaid)";
+            else if (site.Scattered) support = $"Scattered ({Math.Max(1, r.ScatteredUntil - s.ElapsedMonths)} mo) · unsupported";
+            else if (!site.Supported) support = $"Unsupported (needs {Math.Max(1, site.Required - site.Followers)} more)";
+            else support = "Supported";
+            string prep = site.MonthsLeft == 0 ? "Prepared" : $"{Format.Months(site.MonthsLeft)} left";
+            return $"{regionName} · {Format.Count(site.Followers)}/{Format.Count(site.Required)} followers · {support} · {prep}";
+        }
+
+        /// <summary>Detail text for an unfunded required site slot.</summary>
+        public static string UnfundedSiteDetail(int slotNumber) =>
+            $"Site {slotNumber} of {Balance.RequiredSites} is unfunded. Small regions need fewer followers; safe start by {Format.Date(Balance.LatestSiteStart)}.";
 
         public static readonly Dictionary<string, string> TabDescriptions = new Dictionary<string, string>
         {
@@ -185,16 +297,16 @@ namespace Awakening.UI
         public static string ForecastHeadline(GameState s)
         {
             if (s.Status == "awakening") return $"Final rite · {s.FinalProgress} of {Balance.FinalMonths} months";
+            RiteMargin margin = Forecast.Margin(s);
+            if (!margin.Fits) return RiteDoomedHeadline;
             var sites = AllRegions(s).Where(r => r.Site.Invested).ToList();
             int unsupported = sites.Count(IsStalled);
             if (Derived.NetInfluencePerMonth(s) < 0) return "Upkeep exceeds income";
-            if (sites.Count >= Balance.RequiredSites)
+            if (margin.EarliestStart >= 0)
             {
-                var remaining = sites.Select(r => Balance.SiteMonths - r.Site.Progress).ToList();
-                remaining.Sort();
-                int earliest = Math.Max(Balance.PreparationMonths, s.ElapsedMonths + remaining[Balance.RequiredSites - 1]) + Balance.FinalMonths;
-                if (earliest > Balance.Deadline) return $"Sites will finish {earliest - Balance.Deadline} months too late";
+                if (margin.Margin < 0) return "Rite needs acceleration";
                 if (unsupported > 0) return $"{unsupported} site{(unsupported == 1 ? "" : "s")} stopped counting";
+                if (margin.Margin <= 6) return $"Tight rite margin · {Format.Months(margin.Margin)}";
                 return s.ElapsedMonths >= Balance.PreparationMonths ? "The stars are right" : "Ritual timetable";
             }
             if (unsupported > 0) return $"{unsupported} site{(unsupported == 1 ? "" : "s")} stopped counting";
@@ -382,7 +494,9 @@ namespace Awakening.UI
                 issues.Add(("The rite needed 100 Dread.", "Bank 100 Dread before September 1924; sacrifice and nightmares give Dread."));
             if (issues.Count == 0)
                 issues.Add(("The sites were ready, but the rite was not begun in time.", "Begin the final rite as soon as the stars are right; it needs 12 months."));
-            result.Cause = issues[0].cause;
+            result.Cause = s.ResultCode == "conceded"
+                ? "The cult let the stars pass unanswered: " + char.ToLowerInvariant(issues[0].cause[0]) + issues[0].cause.Substring(1)
+                : issues[0].cause;
             foreach (var issue in issues.Take(2)) result.Advice.Add(issue.advice);
             return result;
         }
@@ -403,6 +517,18 @@ namespace Awakening.UI
                 return slack > 0
                     ? $"The awakening closed in {Format.Date(s.ElapsedMonths)}, with {Format.Months(slack)} left in the alignment."
                     : $"The awakening closed in {Format.Date(s.ElapsedMonths)}, as the alignment ended.";
+            }
+
+            if (s.ResultCode == "conceded")
+            {
+                int remaining = Math.Max(0, Balance.Deadline - s.ElapsedMonths);
+                var fundedSites = AllRegions(s).Where(r => r.Site.Invested).ToList();
+                if (s.ElapsedMonths > Balance.LatestRiteStart)
+                    return $"You let the stars pass in {Format.Date(s.ElapsedMonths)}, past the {Format.Date(Balance.LatestRiteStart)} cutoff, with {Format.Months(remaining)} left in the alignment.";
+                if (fundedSites.Count < Balance.RequiredSites)
+                    return $"You let the stars pass in {Format.Date(s.ElapsedMonths)} with only {fundedSites.Count} of {Balance.RequiredSites} ritual sites funded and too little time before {Format.Date(Balance.LatestRiteStart)}.";
+                int readySites = Derived.ReadySites(s);
+                return $"You let the stars pass in {Format.Date(s.ElapsedMonths)} with {readySites} of {Balance.RequiredSites} sites ready and no path to begin by {Format.Date(Balance.LatestRiteStart)}.";
             }
 
             if (s.Awareness >= 100)

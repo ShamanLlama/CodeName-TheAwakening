@@ -384,8 +384,12 @@ namespace Awakening.UI
                 Fonts.Apply(row.title, preview.Ok ? Fonts.Body : Fonts.Italic);
                 row.title.style.color = preview.Ok ? Palette.Text : Palette.Muted;
                 row.cost.text = preview.Ok ? CostText(preview) : blocked.shortText;
-                row.aware.text = AwarenessText(preview);
-                Kit.SetVisible(row.aware, preview.Ok && preview.Awareness > 0);
+                string concealStamp = id == "conceal" ? Notes.ConcealGlobalStamp(s) : "";
+                bool showAware = preview.Ok && preview.Awareness > 0;
+                row.aware.text = showAware ? AwarenessText(preview) : concealStamp;
+                row.aware.style.color = showAware ? Palette.Danger : Palette.Warn;
+                row.aware.style.fontSize = !showAware && concealStamp != "" ? (Kit.Compact ? 12 : 11) : (Kit.Compact ? 14 : 12);
+                Kit.SetVisible(row.aware, showAware || concealStamp != "");
                 row.cost.style.color = !preview.Ok ? Palette.Warn : preview.Dread > 0 ? Palette.Omen : Palette.Text;
             }
             RefreshDetail();
@@ -683,8 +687,9 @@ namespace Awakening.UI
                 ? GameEngine.PreviewAction(_game.State, _detailId, Region) : null;
             // The clock refreshes the file every month; rebuilding an unchanged explanation would
             // swallow a tap that lands between frames.
+            int worldConcealCd = _detailId == "conceal" && _game.State != null ? GameEngine.ConcealWorldCooldown(_game.State) : 0;
             string shown = preview == null ? "" : string.Join("|", _detailId, Region, preview.Ok, preview.Reason, preview.Influence, preview.Dread,
-                preview.Followers, preview.Awareness, preview.Effect, preview.Risk);
+                preview.Followers, preview.Awareness, preview.Effect, preview.Risk, worldConcealCd);
             if (shown == _detailShown && _detail.childCount > 0) return;
             _detailShown = shown;
             _detail.Clear();
@@ -712,6 +717,7 @@ namespace Awakening.UI
             if (price != "") _detail.Add(Kit.Label("COST  " + price, 13, preview.Dread > 0 ? Palette.Omen : Palette.Text, Fonts.TypeBold));
             // World awareness is a price too; it gets its own line so a long price never widens the file.
             if (preview.Awareness > 0) _detail.Add(Kit.Label(AwarenessText(preview).Replace("AWARENESS", "WORLD AWARENESS"), 13, Palette.Danger, Fonts.TypeBold));
+            if (_detailId == "conceal" && worldConcealCd > 0) _detail.Add(Kit.Label(Notes.ConcealGlobalStamp(_game.State), 13, Palette.Warn, Fonts.TypeBold));
             _detail.Add(Kit.Body(preview.Effect, 15, Palette.Text));
             if (!string.IsNullOrEmpty(preview.Risk)) _detail.Add(Kit.Body(preview.Risk, 15, Palette.Danger, Fonts.Italic));
             if (!preview.Ok) _detail.Add(Kit.Body(Notes.Blocker(_game.State, _detailId, Region, preview).longText, 15, Palette.Warn, Fonts.BodyBold));

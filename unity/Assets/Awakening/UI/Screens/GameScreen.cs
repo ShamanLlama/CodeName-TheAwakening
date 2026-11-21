@@ -29,16 +29,20 @@ namespace Awakening.UI
 
         Label _date, _countdown, _influence, _influenceRate, _dread, _followers, _doctrineNote, _tickerHead, _ticker;
         readonly List<IconButton> _speed = new List<IconButton>();
-        Button _doctrine, _rite, _resetView;
-        Label _awarenessCaption, _sitesCaption, _bannerHead, _bannerText;
+        Button _doctrine, _rite, _resetView, _concede, _bannerToggle;
+        Label _awarenessCaption, _sitesCaption, _bannerHead, _bannerText, _bannerCause, _marginLine;
         AwarenessGauge _awareness;
         SiteSeals _sites;
         VisualElement _sitesBox, _tickerBox;
         Stack _threats;
         ScrollView _threatScroll;
         Stack _toasts;
-        Stack _banner, _prompt;
+        Stack _banner, _bannerHeadRow, _marginBox, _siteDetail, _prompt;
+        Flow _marginChips;
         Bar _riteBar;
+        bool _bannerExpanded;
+        int _selectedSiteSlot = -1;
+        string _marginShown = "";
         Stack _goals;
         string _goalsShown = "";
         Stack _note;
@@ -369,31 +373,68 @@ namespace Awakening.UI
             _toasts.pickingMode = PickingMode.Ignore;
             Add(_toasts);
 
-            // The ritual timetable: a headline that names the problem, then the detail.
-            _banner = Kit.Panel(Palette.PaperLight, Palette.Warn, new Vector4(16, 9, 16, 10), 0.1f, 2);
+            // The ritual timetable and rite margin band: compact when calm, louder as margin shrinks.
+            _banner = Kit.Panel(Palette.PaperLight, Palette.Warn, Kit.Compact ? new Vector4(8, 4, 8, 4) : new Vector4(14, 7, 14, 8), 0.1f, Kit.Compact ? 2 : 4);
+            _banner.name = "rite-banner";
             _banner.style.position = Position.Absolute;
             _banner.style.bottom = Bottom + (Kit.Compact ? 10 : 14);
-            // On short screens only the headline shows; a click or tap unfolds the detail.
-            _banner.pickingMode = Kit.Compact ? PickingMode.Position : PickingMode.Ignore;
-            _banner.RegisterCallback<PointerDownEvent>(e =>
-            {
-                if (!Kit.Compact || e.button != 0) return;
-                Kit.SetVisible(_bannerText, !Kit.IsVisible(_bannerText));
-                Refresh();
-            });
-            _bannerHead = Kit.Label("", Kit.Compact ? 18 : 20, Palette.Warn, Fonts.BodyBold);
+            _banner.pickingMode = PickingMode.Position;
+            _bannerHeadRow = Kit.HBox(10);
+            _bannerHeadRow.style.alignItems = Align.Center;
+            _bannerHead = Kit.Label("", Kit.Compact ? 16 : 19, Palette.Warn, Fonts.BodyBold);
             _bannerHead.style.whiteSpace = WhiteSpace.Normal;
-            _bannerHead.style.unityTextAlign = TextAnchor.MiddleCenter;
-            _bannerText = Kit.Body("", 14, Palette.Text);
-            _bannerText.style.unityTextAlign = TextAnchor.MiddleCenter;
-            Kit.SetVisible(_bannerText, !Kit.Compact);
-            _banner.Add(_bannerHead);
+            _bannerHead.style.flexGrow = 1;
+            _bannerHead.style.flexShrink = 1;
+            _bannerHead.style.unityTextAlign = TextAnchor.MiddleLeft;
+            Action concedeAction = () => OpenDialog("concede");
+            _concede = Kit.Stamp("LET THE STARS PASS", concedeAction, Accent.Danger);
+            _concede.name = "concede-button";
+            _concede.userData = concedeAction;
+            _concede.style.fontSize = Kit.Compact ? 12 : 13;
+            _concede.style.flexShrink = 0;
+            if (Kit.Touch) _concede.style.minHeight = 32;
+            _concede.tooltip = "End this run as a loss now that the final rite can no longer finish.";
+            Kit.SetVisible(_concede, false);
+            Action toggleBanner = () =>
+            {
+                _bannerExpanded = !_bannerExpanded;
+                Refresh();
+            };
+            _bannerToggle = Kit.Link("MORE", toggleBanner);
+            _bannerToggle.userData = toggleBanner;
+            _bannerToggle.style.flexShrink = 0;
+            Kit.SetVisible(_bannerToggle, false);
+            _bannerHeadRow.Add(_bannerHead);
+            _bannerHeadRow.Add(_concede);
+            _bannerHeadRow.Add(_bannerToggle);
+            _banner.Add(_bannerHeadRow);
             // During the final rite the timetable becomes a progress bar that stays on screen.
             _riteBar = new Bar(Balance.FinalMonths, Palette.Cult, 8);
             Kit.SetVisible(_riteBar, false);
             _banner.Add(_riteBar);
+            _bannerCause = Kit.Body("", Kit.Compact ? 12 : 14, Palette.Danger, Fonts.BodyBold);
+            _bannerCause.name = "rite-doomed-cause";
+            Kit.SetVisible(_bannerCause, false);
+            _banner.Add(_bannerCause);
+            _marginBox = Kit.VBox(Kit.Compact ? 2 : 4);
+            _marginBox.name = "rite-margin";
+            _marginLine = Kit.Body("", Kit.Compact ? 11 : 13, Palette.Text, Fonts.TypeBold);
+            _marginLine.name = "rite-margin-line";
+            _marginChips = new Flow(Kit.Compact ? 4 : 6, Kit.Compact ? 2 : 4);
+            _marginChips.name = "rite-margin-sites";
+            _siteDetail = Kit.HBox(8);
+            _siteDetail.name = "rite-site-detail";
+            _siteDetail.style.alignItems = Align.Center;
+            Kit.SetVisible(_siteDetail, false);
+            _marginBox.Add(_marginLine);
+            _marginBox.Add(_marginChips);
+            _marginBox.Add(_siteDetail);
+            _banner.Add(_marginBox);
+            _bannerText = Kit.Body("", Kit.Compact ? 11 : 13, Palette.Muted);
+            _bannerText.name = "rite-forecast-text";
+            Kit.SetVisible(_bannerText, !Kit.Compact);
             _banner.Add(_bannerText);
-            _banner.tooltip = "Ritual timetable";
+            _banner.tooltip = "Ritual timetable and rite margin";
             Add(_banner);
             _banner.RegisterCallback<GeometryChangedEvent>(_ => QueueLayout());
 
@@ -582,7 +623,11 @@ namespace Awakening.UI
         internal float LayoutThreatAvailableHeight => _threatAreaHeight;
         internal void LayoutSetTicker(LogEntry entry) => SetTicker(entry);
         internal VisualElement LayoutBanner => _banner;
-        internal void ExpandLayoutTimetable() => Kit.SetVisible(_bannerText, true);
+        internal void ExpandLayoutTimetable()
+        {
+            _bannerExpanded = true;
+            Kit.SetVisible(_bannerText, true);
+        }
 #endif
 
         void OnViewChanged(bool freeView)
@@ -645,15 +690,8 @@ namespace Awakening.UI
             // The alignment decision gets the chronicle's space. Full entries remain in its sheet.
             Kit.SetVisible(_tickerBox, !Kit.Compact && s.Status != "alignment");
 
-            bool rite = s.Status == "awakening";
-            Kit.SetVisible(_banner, (forecast.Urgent || rite) && !placing && !over);
-            _bannerHead.text = Notes.ForecastHeadline(s) + (Kit.Compact && !Kit.IsVisible(_bannerText) ? "  · more" : "");
-            _bannerHead.style.color = rite && Derived.ReadySites(s) >= Balance.RequiredSites ? Palette.Cult : Palette.Warn;
-            _bannerText.text = Format.ForecastCopy(forecast.Message);
-            _banner.tooltip = _bannerText.text;
+            RefreshBanner(s, forecast, placing, over);
             SetModalOpen(Dialogs != null && Dialogs.IsOpen);
-            Kit.SetVisible(_riteBar, rite);
-            _riteBar.Value = s.FinalProgress;
             Kit.SetVisible(_prompt, placing);
             RebuildThreats(s);
             Panel.Refresh();
@@ -666,6 +704,154 @@ namespace Awakening.UI
                 _lastStatus = s.Status;
                 if (s.Status == "alignment") OpenDialog("alignment");
                 else if (GameEngine.IsOver(s)) OpenDialog("end");
+            }
+        }
+
+        void RefreshBanner(GameState s, RitualForecast forecast, bool placing, bool over)
+        {
+            RiteMargin margin = Forecast.Margin(s);
+            string level = Notes.RiteBandLevel(s, margin, forecast);
+            bool visible = level != "none" && !placing && !over;
+            Kit.SetVisible(_banner, visible);
+            if (!visible)
+            {
+                _marginShown = "";
+                _selectedSiteSlot = -1;
+                return;
+            }
+            bool rite = level == "rite";
+            bool doomed = level == "doomed";
+            bool quiet = level == "quiet";
+            bool canConcede = GameEngine.CanConcede(s);
+            bool riteHealthy = margin.Fits && Derived.ReadySites(s) >= Balance.RequiredSites;
+
+            Color fill = quiet ? Palette.Paper : Palette.PaperLight;
+            Color edge = doomed ? Palette.Danger : rite ? (riteHealthy ? Palette.Cult : Palette.Danger) : quiet ? Palette.PaperEdge : Palette.Warn;
+            int borderWidth = quiet ? 1 : 2;
+            int leftWidth = doomed ? 6 : quiet ? 3 : 5;
+            _banner.style.backgroundColor = fill;
+            _banner.style.borderTopColor = _banner.style.borderBottomColor = _banner.style.borderRightColor = _banner.style.borderLeftColor = edge;
+            _banner.style.borderTopWidth = _banner.style.borderBottomWidth = _banner.style.borderRightWidth = borderWidth;
+            _banner.style.borderLeftWidth = leftWidth;
+
+            Kit.SetVisible(_bannerHeadRow, !quiet || canConcede);
+            _bannerHead.text = doomed ? Notes.RiteDoomedHeadline : Notes.ForecastHeadline(s);
+            _bannerHead.style.color = doomed ? Palette.Danger : rite ? (riteHealthy ? Palette.Cult : Palette.Danger) : Palette.Warn;
+            Kit.SetVisible(_concede, canConcede);
+
+            Kit.SetVisible(_riteBar, rite);
+            _riteBar.Value = s.FinalProgress;
+            _riteBar.FillColor = riteHealthy ? Palette.Cult : Palette.Danger;
+
+            Kit.SetVisible(_bannerCause, doomed);
+            if (doomed) _bannerCause.text = Notes.RiteDoomedCause(s, margin);
+
+            string marginText = Notes.RiteMarginLine(s, margin, Kit.Compact);
+            _marginLine.text = marginText;
+            _marginLine.style.color = doomed ? Palette.Danger : (margin.EarliestStart >= 0 && margin.Margin <= 6 && !margin.Started) ? Palette.Warn : Palette.Text;
+
+            string forecastCopy = Format.ForecastCopy(forecast.Message);
+            bool hasForecastDetail = (forecast.Urgent || rite) && !doomed && !quiet;
+            Kit.SetVisible(_bannerToggle, Kit.Compact && hasForecastDetail);
+            _bannerToggle.text = _bannerExpanded ? "LESS" : "MORE";
+            bool showForecastText = hasForecastDetail && (!Kit.Compact || _bannerExpanded);
+            Kit.SetVisible(_bannerText, showForecastText);
+            _bannerText.text = forecastCopy;
+            _banner.tooltip = doomed ? Notes.RiteDoomedHeadline + " — " + _bannerCause.text : forecastCopy;
+
+            int dread = (int)Math.Floor(s.Dread);
+            var keyParts = new List<string> { level, margin.Started.ToString(), margin.Fits.ToString(), margin.EarliestStart.ToString(), margin.LatestStart.ToString(), margin.Margin.ToString(), dread.ToString(), _selectedSiteSlot.ToString(), Kit.Compact.ToString(), s.Status };
+            for (int i = 0; i < Balance.RequiredSites; i++)
+            {
+                if (i < margin.Sites.Count)
+                {
+                    SiteMargin sm = margin.Sites[i];
+                    RegionState r = s.Regions[sm.Region];
+                    keyParts.Add($"{sm.Region}:{sm.MonthsLeft}:{sm.Followers}/{sm.Required}:{sm.Supported}:{sm.Scattered}:{r.Site.Dormant}:{(sm.Scattered ? r.ScatteredUntil - s.ElapsedMonths : 0)}");
+                }
+                else keyParts.Add("empty");
+            }
+            string key = string.Join("|", keyParts);
+            if (key == _marginShown && _marginChips.childCount > 0) return;
+            _marginShown = key;
+
+            _marginChips.Clear();
+            for (int slot = 0; slot < Balance.RequiredSites; slot++)
+            {
+                int index = slot;
+                Action toggleSlot = () =>
+                {
+                    _selectedSiteSlot = _selectedSiteSlot == index ? -1 : index;
+                    Refresh();
+                };
+                var chip = new Button(toggleSlot) { focusable = false, name = "rite-site-" + slot };
+                chip.userData = toggleSlot;
+                chip.AddToClassList("aw-chip");
+                chip.EnableInClassList("aw-on", _selectedSiteSlot == slot);
+                if (slot < margin.Sites.Count)
+                {
+                    SiteMargin site = margin.Sites[slot];
+                    RegionState r = s.Regions[site.Region];
+                    chip.text = Notes.SiteChipText(s, site, Kit.Compact);
+                    chip.tooltip = Notes.SiteMarginDetail(s, site) + (Kit.Touch ? "" : "\nClick to pin detail.");
+                    Color chipColor = r.Site.Dormant || site.Scattered || !site.Supported ? Palette.Danger : site.MonthsLeft == 0 ? Palette.Cult : Palette.Omen;
+                    chip.style.color = chipColor;
+                    chip.style.borderTopColor = chip.style.borderBottomColor = chip.style.borderLeftColor = chip.style.borderRightColor = Palette.Alpha(chipColor, 0.7f);
+                }
+                else
+                {
+                    chip.text = Kit.Compact ? $"○ Site {slot + 1}" : $"○ Site {slot + 1} · unfunded";
+                    chip.tooltip = Notes.UnfundedSiteDetail(slot + 1);
+                    chip.style.color = Palette.Muted;
+                }
+                _marginChips.Add(chip);
+            }
+            if (!margin.Started)
+            {
+                bool enoughDread = dread >= Balance.FinalDread;
+                Color dreadColor = enoughDread ? Palette.Cult : (s.Status == "alignment" || level == "tight" || doomed) ? Palette.Warn : Palette.Omen;
+                var dreadBadge = Kit.Label($"DREAD {dread}/{Balance.FinalDread}", 12, dreadColor, Fonts.TypeBold);
+                dreadBadge.name = "rite-margin-dread";
+                dreadBadge.style.fontSize = 12;
+                dreadBadge.pickingMode = PickingMode.Position;
+                dreadBadge.style.paddingLeft = dreadBadge.style.paddingRight = Kit.Compact ? 6 : 7;
+                dreadBadge.style.paddingTop = dreadBadge.style.paddingBottom = Kit.Touch ? 3 : 2;
+                dreadBadge.style.borderTopWidth = dreadBadge.style.borderBottomWidth = dreadBadge.style.borderLeftWidth = dreadBadge.style.borderRightWidth = 1;
+                dreadBadge.style.borderTopColor = dreadBadge.style.borderBottomColor = dreadBadge.style.borderLeftColor = dreadBadge.style.borderRightColor = Palette.Alpha(dreadColor, 0.7f);
+                dreadBadge.style.backgroundColor = Palette.Alpha(dreadColor, 0.08f);
+                dreadBadge.tooltip = enoughDread
+                    ? $"Dread reserved: {dread} of {Balance.FinalDread} needed for the final rite."
+                    : $"Dread reserved: {dread} of {Balance.FinalDread}. Need {Balance.FinalDread - dread} more before beginning the final rite.";
+                _marginChips.Add(dreadBadge);
+            }
+
+            _siteDetail.Clear();
+            bool showDetail = _selectedSiteSlot >= 0 && _selectedSiteSlot < Balance.RequiredSites;
+            Kit.SetVisible(_siteDetail, showDetail);
+            if (showDetail)
+            {
+                if (_selectedSiteSlot < margin.Sites.Count)
+                {
+                    SiteMargin site = margin.Sites[_selectedSiteSlot];
+                    Label detail = Kit.Body(Notes.SiteMarginDetail(s, site), 13, Palette.Text, Fonts.Italic);
+                    detail.style.flexGrow = 1;
+                    detail.style.flexShrink = 1;
+                    _siteDetail.Add(detail);
+                    string targetRegion = site.Region;
+                    Action openFile = () => Select(targetRegion);
+                    Button open = Kit.Link("OPEN FILE", openFile);
+                    open.userData = openFile;
+                    open.style.color = Palette.Cult;
+                    open.style.flexShrink = 0;
+                    _siteDetail.Add(open);
+                }
+                else
+                {
+                    Label detail = Kit.Body(Notes.UnfundedSiteDetail(_selectedSiteSlot + 1), 13, Palette.Muted, Fonts.Italic);
+                    detail.style.flexGrow = 1;
+                    detail.style.flexShrink = 1;
+                    _siteDetail.Add(detail);
+                }
             }
         }
 

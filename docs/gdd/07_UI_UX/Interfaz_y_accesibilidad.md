@@ -1,6 +1,6 @@
 # Interfaz, aprendizaje y accesibilidad
 
-**Versión:** 0.7 · **Fecha:** 2026-11-21 · **Estado:** interfaz de 0.3.5–0.4.0 rehecha en Unity UI Toolkit (0.5.0), corregida en legibilidad (0.5.1) y ampliada en onboarding y reintento (0.6.0, ola 1); usabilidad por validar con personas, en teléfono físico y en el ejecutable para Steam.
+**Versión:** 0.8 · **Fecha:** 2026-11-21 · **Estado:** interfaz de 0.3.5–0.4.0 rehecha en Unity UI Toolkit (0.5.0), corregida en legibilidad (0.5.1) y ampliada en onboarding, reintento, margen del rito, cierre anticipado y sello de ocultar (0.6.0, olas 1 y 2); usabilidad por validar con personas, en teléfono físico y en el ejecutable para Steam.
 
 ## Flujo implementado
 
@@ -136,5 +136,14 @@ Respuesta a la revisión de gameplay (F1 y F2), sin automatizar decisiones ni co
 - **Pestañas del expediente.** La primera vez que se abre un expediente de región en partida activa, una nota breve bajo las pestañas explica qué agrupa **CULT**, **RITES** y **OMENS**; se registra en `settings.hints` (`file_tabs`) y cada pestaña mantiene además su tooltip descriptivo.
 - **Metas con fecha para las primeras partidas.** Una ficha discreta sobre el mapa guía cuatro metas encadenadas calculadas con el calendario de `Format`: tres células antes de enero de 1911, primer sacrificio, primer sitio antes de enero de 1917 (con la pista de que las regiones pequeñas sostienen sitios con facilidad) y tres sitios antes de enero de 1923. El jugador puede ocultarlas desde la propia ficha o alternarlas en el menú; el ajuste `hideGoals` se guarda en `SaveSettings` con compatibilidad hacia atrás para guardados anteriores. La ficha cede espacio automáticamente a amenazas, notas contextuales y etiquetas del mapa.
 - **Reintentar y hecho fechado.** La pantalla final añade **«Try this world again»** junto a **«New World»** para reiniciar con la misma semilla y la misma dificultad, e incluye un hecho fechado derivado del estado o de la crónica que explica el desenlace sin otorgar bonificaciones tras perder.
+
+## Margen del rito, cierre anticipado y ocultar (0.6.0, ola 2 — 2026-11-21)
+
+Respuesta a la revisión de gameplay (R1 y L1 en interfaz), derivada directamente de `Forecast.Margin`, `GameEngine.CanConcede` y `GameEngine.ConcealWorldCooldown`:
+
+- **Banda del margen del rito.** Vive integrada en la franja reservada del pronóstico sobre el libro mayor, sin cubrir el mapa ni romper el diseño compacto. Muestra los tres sitios requeridos como fichas compactas (seguidores/requisito cuando falta apoyo, estado de dispersión o letargo y meses pendientes), el Dread reservado sobre 100 (`DREAD X/100`) y la línea de calendario con `Format` (`Earliest rite · latest · margin`, o indicación de aceleración necesaria cuando `Margin < 0` con `Fits` verdadero). Al pasar el cursor (escritorio) o al tocar una ficha (escritorio y táctil) se despliega el detalle completo del sitio con seguidores sobre el requisito, apoyo/dispersión, meses restantes y acceso directo al expediente (`OPEN FILE`). Su presencia visual escala según el estado: discreta con margen holgado, resaltada en ámbar cuando el margen baja a 6 meses o menos (o hay un sitio detenido/urgencia), y crítica en rojo cuando el rito ya no cabe.
+- **Aviso cuando el rito ya no cabe.** Cuando `!Fits` y el rito no ha comenzado, la franja muestra el titular **«The stars will pass without you»** junto con la causa concreta (plazo superado, sitios insuficientes o retraso del tercer sitio sin aceleración disponible). El aviso también aparece en el diálogo de alineación.
+- **Cerrar la partida (`CanConcede`).** Solo cuando `GameEngine.CanConcede` es verdadero aparece el sello **«LET THE STARS PASS»** (en la franja y en el diálogo de alineación). Abre un diálogo de confirmación (**«Let the Stars Pass»** / **«Keep Watching»**) que pausa el reloj y, al confirmar, llama a `GameSession.Concede()`. La pantalla final distingue el cierre (**«The Stars Passed Unanswered»**) y deriva su propio hecho fechado en `Notes.DatedFact` para `ResultCode == "conceded"`.
+- **Sello de ocultar (`ConcealWorldCooldown`).** Mientras el efecto mundial de `Conceal the evidence` descansa, tanto su fila en el expediente como el panel de detalle muestran **«GLOBAL EFFECT IN N MO»** además del texto de la vista previa del motor.
 
 [Volver al índice](../README.md)
