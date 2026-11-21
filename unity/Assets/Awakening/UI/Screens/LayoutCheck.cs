@@ -205,6 +205,7 @@ namespace Awakening.UI
                     yield return ThreatRecovery(screen);
                 var kinds = new List<string> { "menu", "doctrine", "chronicle", "guide" };
                 if (game.State.Status == "alignment") kinds.Add("alignment");
+                if (GameEngine.CanConcede(game.State)) kinds.Add("concede");
                 if (GameEngine.IsOver(game.State)) kinds.Add("end");
                 foreach (string kind in kinds)
                 {

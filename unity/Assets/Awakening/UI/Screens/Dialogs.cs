@@ -62,6 +62,7 @@ namespace Awakening.UI
                 case "chronicle": Chronicle(); break;
                 case "guide": Guide(); break;
                 case "alignment": Alignment(); break;
+                case "concede": Concede(); break;
                 case "end": End(); break;
                 case "playtest": Playtest(); break;
             }
@@ -396,7 +397,16 @@ namespace Awakening.UI
             for (int i = sites; i < Balance.RequiredSites; i++) checks.Add(Check(false, "Unfunded site", "Fund a site in a small region"));
             checks.Add(Check(s.Dread >= Balance.FinalDread, "Dread", $"{Format.Count(s.Dread)} / {Balance.FinalDread}"));
             string reason = GameEngine.AwakeningReason(s);
-            if (reason != "") _content.Add(SheetUI.Body(reason, 16, Palette.Warn, Fonts.BodyBold));
+            bool canConcede = GameEngine.CanConcede(s);
+            if (canConcede)
+            {
+                RiteMargin margin = Forecast.Margin(s);
+                _content.Add(SheetUI.Body(Notes.RiteDoomedHeadline + ". " + Notes.RiteDoomedCause(s, margin), 16, Palette.Danger, Fonts.BodyBold));
+            }
+            else if (reason != "")
+            {
+                _content.Add(SheetUI.Body(reason, 16, Palette.Warn, Fonts.BodyBold));
+            }
             var begin = Primary("Begin the Final Rite · 100 Dread", () =>
             {
                 Close();
@@ -404,7 +414,43 @@ namespace Awakening.UI
                 if (_game.State.Status == "awakening") _game.SetSpeed(1);
             });
             begin.SetEnabled(reason == "");
-            Buttons(begin, Secondary("Not Yet", Close));
+            if (canConcede)
+            {
+                Action openConcede = () => Open("concede");
+                Button pass = Kit.Stamp("LET THE STARS PASS", openConcede, Accent.Danger);
+                pass.userData = openConcede;
+                pass.focusable = true;
+                pass.style.height = StyleKeyword.Auto;
+                pass.style.minHeight = 46;
+                pass.style.paddingLeft = pass.style.paddingRight = 14;
+                Buttons(begin, pass, Secondary("Not Yet", Close));
+            }
+            else Buttons(begin, Secondary("Not Yet", Close));
+        }
+
+        void Concede()
+        {
+            var s = _game.State;
+            RiteMargin margin = Forecast.Margin(s);
+            _width = 560;
+            Title("Let the Stars Pass", Palette.Danger);
+            _content.Add(SheetUI.Caption($"{Format.Date(s.ElapsedMonths)} · Alignment closes {Format.Date(Balance.Deadline)}"));
+            _content.Add(SheetUI.Body(Notes.RiteDoomedHeadline + ".", 18, Palette.Danger, Fonts.BodyBold));
+            _content.Add(SheetUI.Body(Notes.RiteDoomedCause(s, margin), 16, Palette.Text, Fonts.Italic));
+            _content.Add(SheetUI.Body("Closing the run now records a defeat and disperses the cult before the alignment ends. You can also stay and watch the remaining months pass.", 15, Palette.Muted));
+            Action confirmAction = () =>
+            {
+                Close();
+                _game.Concede();
+            };
+            Button confirm = Kit.Stamp("LET THE STARS PASS", confirmAction, Accent.Danger);
+            confirm.userData = confirmAction;
+            confirm.focusable = true;
+            confirm.style.height = StyleKeyword.Auto;
+            confirm.style.minHeight = 46;
+            confirm.style.paddingLeft = confirm.style.paddingRight = 16;
+            confirm.SetEnabled(GameEngine.CanConcede(s));
+            Buttons(Secondary("Keep Watching", Close), confirm);
         }
 
         static VisualElement Check(bool ok, string name, string detail)
@@ -429,6 +475,7 @@ namespace Awakening.UI
             var s = _game.State;
             bool won = s.Status == "won";
             bool aware = s.ResultReason != null && s.ResultReason.StartsWith("The world knows", StringComparison.Ordinal);
+            bool conceded = s.ResultCode == "conceded";
             var story = Notes.Ending(s);
             _width = won ? 700 : Kit.Compact ? 660 : 668;
             if (won)
@@ -442,7 +489,7 @@ namespace Awakening.UI
             }
             else
             {
-                Title(aware ? "The World Knows" : "The Alignment Has Passed", Palette.Danger);
+                Title(aware ? "The World Knows" : conceded ? "The Stars Passed Unanswered" : "The Alignment Has Passed", Palette.Danger);
                 _content.Add(SheetUI.Caption(Format.Date(s.ElapsedMonths)));
                 _content.Add(SheetUI.Body(story.Cause, 18, Palette.Text, Fonts.BodyBold));
                 if (!string.IsNullOrEmpty(story.Fact)) _content.Add(SheetUI.Body(story.Fact, 16, Palette.Muted, Fonts.Italic));

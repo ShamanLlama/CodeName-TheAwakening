@@ -474,6 +474,22 @@ namespace Awakening.UI
 
         public void Awaken() => Command(() => Session.Awaken());
 
+        public void Concede()
+        {
+            GameState before = State;
+            _commanding = true;
+            try
+            {
+                Session.Concede();
+            }
+            finally
+            {
+                _commanding = false;
+            }
+            Sfx.Play(ReferenceEquals(before, State) ? "refuse" : "end");
+            _lastStatus = State?.Status ?? "";
+        }
+
         /// <summary>A player command: the act sound when the run changed, the refusal sound when it did not.</summary>
         void Command(Action run)
         {
@@ -614,7 +630,7 @@ namespace Awakening.UI
             if (message.Contains("lies dormant") || message.StartsWith("The world senses the coming alignment", StringComparison.Ordinal)) return "threat";
             if (message.StartsWith("The stars align", StringComparison.Ordinal) || message.StartsWith("The final rite begins", StringComparison.Ordinal)) return "phase";
             if (message.StartsWith("Three surviving", StringComparison.Ordinal) || message.StartsWith("The world knows", StringComparison.Ordinal)
-                || message.StartsWith("The alignment has passed", StringComparison.Ordinal)) return "end";
+                || message.StartsWith("The alignment has passed", StringComparison.Ordinal) || message.StartsWith("The cult lets the stars pass", StringComparison.Ordinal)) return "end";
             return "info";
         }
 
@@ -695,10 +711,25 @@ namespace Awakening.UI
                     State = Awakening.Core.Dev.Playthrough.Play("early", "resume", 206);
                     ShowGame();
                     break;
+                case "tight":
+                    // Alignment opens with a small 2-month rite margin on this seed.
+                    State = Awakening.Core.Dev.Playthrough.Play("early", "dagon", 200);
+                    ShowGame();
+                    break;
+                case "doomed":
+                    // Alignment opens with the final rite no longer able to fit (CanConcede is true).
+                    State = Awakening.Core.Dev.Playthrough.Play("early", "drowned", 200);
+                    ShowGame();
+                    break;
+                case "conceded":
+                    State = GameEngine.Concede(Awakening.Core.Dev.Playthrough.Play("early", "drowned", 200));
+                    ShowGame();
+                    break;
                 default:
                     var months = new Dictionary<string, int> { ["mid"] = 96, ["late"] = 170, ["alignment"] = 200, ["won"] = Balance.Deadline, ["lost"] = Balance.Deadline };
-                    // With this strategy the "resume" seed awakens Cthulhu and "rlyeh" runs out of time.
-                    State = Awakening.Core.Dev.Playthrough.Play("early", scenario == "won" ? "resume" : "rlyeh", months.TryGetValue(scenario, out int m) ? m : 96);
+                    // With alignment-4, "resume" awakens Cthulhu and "drowned" loses at the deadline (month 224).
+                    string seed = scenario == "won" ? "resume" : scenario == "lost" ? "drowned" : "rlyeh";
+                    State = Awakening.Core.Dev.Playthrough.Play("early", seed, months.TryGetValue(scenario, out int m) ? m : 96);
                     ShowGame();
                     break;
             }
@@ -709,7 +740,7 @@ namespace Awakening.UI
                 Lab.StartRun(Capture(GameEngine.CreateGameState("normal", State.Seed)));
                 Lab.EmitEvent("run_finished", new Dictionary<string, object>
                 {
-                    ["outcome"] = State.Status, ["reason"] = State.Status == "won" ? "awakened" : "deadline",
+                    ["outcome"] = State.Status, ["reason"] = State.ResultCode ?? (State.Status == "won" ? "awakened" : "deadline"),
                 }, Capture(State), "ended");
                 ((GameScreen)_screen).OpenDialog("end");
             }
