@@ -11,7 +11,7 @@ namespace Awakening.Core.Tests
     public class PlaytestStoreTests
     {
         [Fact]
-        public void RealGodotRecordLoadsUnchangedAndResumesItsRun()
+        public void RealGodotRecordKeepsPendingBatchesAndStartsANewAdapterCapture()
         {
             string path = Path.Combine(AppContext.BaseDirectory, "Fixtures", "godot-playtest.json");
             var stored = (Dictionary<string, object>)JsonReader.Parse(File.ReadAllText(path));
@@ -24,7 +24,9 @@ namespace Awakening.Core.Tests
             var state = State(); state.Seed = "godot-stored-fixture";
             Assert.Equal(stored["signature"], PlaytestCapture.Signature(state));
             Assert.True(c.Restore()); c.Resume(state);
-            Assert.Equal(stored["active"], c.Data["active"]);
+            Assert.NotEqual(stored["active"], c.Data["active"]);
+            Assert.Equal("awakening-3", O(c.Active(), "context")["adapter"]);
+            Assert.Equal("partial", O(c.Active(), "context")["coverage"]);
             Assert.Equal(body, Item(c.Data, "jobs", 0)["body"]);
             Assert.Equal(0, N(O(c.Active(), "clock"), "elapsed_ms"));
         }
@@ -58,7 +60,7 @@ namespace Awakening.Core.Tests
                 s => Run(s)["endpoint"] = "http://example.invalid/api/playtests/v1/batches/",
                 s => O(Run(s), "context")["run_id"] = PlaytestCapture.Identifier(),
                 s => O(Run(s), "context")["schema_version"] = "2.0",
-                s => O(Run(s), "context")["adapter"] = "awakening-3",
+                s => O(Run(s), "context")["adapter"] = "awakening-4",
                 s => O(Run(s), "context")["participation_version"] = "other",
                 s => O(Run(s), "context")["coverage"] = "unknown",
                 s => O(Run(s), "context")["tester_id"] = false,
