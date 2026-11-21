@@ -16,8 +16,8 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
 
 | Versión | Fecha | Commit | Ruleset | Adaptador | Ronda GTC | Estado |
 | --- | --- | --- | --- | --- | --- | --- |
-| 0.6.0 | 2026-11-21 | `675e2a7` | `alignment-4` | `awakening-3` | «0.6.0 playtest por invitación · ocultar con plazo y margen del rito» (pendiente) | Pendiente de publicación |
-| 0.5.2 | 2026-11-18 | `880e836` | `alignment-3` | `awakening-2` | «0.5.2 playtest por invitación · interfaz legible», abierta del 2026-11-19 al 2026-12-03 (UTC) | En itch.io (Restricted con contraseña) |
+| 0.6.0 | 2026-11-21 | `675e2a7`; exportada desde `68b0249` | `alignment-4` | `awakening-3` | «0.6.0 playtest por invitación · ocultar con plazo y margen del rito», abierta del 2026-11-21 al 2026-12-05 (UTC) | En itch.io (Restricted con contraseña) |
+| 0.5.2 | 2026-11-18 | `880e836` | `alignment-3` | `awakening-2` | «0.5.2 playtest por invitación · interfaz legible», cerrada el 2026-11-21 (UTC) sin partidas | Reemplazada por 0.6.0 |
 | 0.5.1 | 2026-11-18 | `e1d5441` | `alignment-3` | `awakening-2` | «0.5.1 playtest por invitación · interfaz legible», cerrada el 2026-11-19 (UTC) con 1 partida | Reemplazada por 0.5.2 |
 | 0.5.0 | 2026-11-18 | `a25f916` | `alignment-3` | `awakening-2` | «0.5.0 playtest por invitación · versión Unity», cerrada el 2026-11-19 (UTC) con 1 partida | Reemplazada por 0.5.1 |
 | 0.4.0 | 2026-11-13 | `528c1f2` | `alignment-3` | `awakening-2` | «0.4.0 playtest por invitación · tres respuestas a cada amenaza», cerrada el 2026-11-18 con 1 partida | Reemplazada por 0.5.0 (último build Godot; rama `godot`) |
@@ -79,6 +79,15 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
   - Cuántas partidas se cierran con «LET THE STARS PASS».
   - Abandonos antes del mes 24.
 - **Límites:** sin prueba con personas ni en teléfono físico todavía; las capturas son del ejecutable de desarrollo Linux. Mysticism sigue sin efecto: se diseña con el árbol en 0.7.0.
+- **GTC (2026-11-21 UTC):**
+  - Primero se desplegó GTC `01460a4`, con el contrato `awakening-3`, el resumen del Lab y la migración `0010`.
+  - Después se creó la build «The Awakening 0.6.0 · alignment-4 · Unity» (`68b0249`, adaptador `awakening-3`) con su resumen en «cambios de esta build».
+  - La ronda se abrió en pausa. Con la pausa activa, un lote de ejemplo `awakening-3` enviado a producción respondió `503 collection_paused`: el contrato pasó la validación del esquema, que corre antes que la pausa. La build se probó en el host y la ronda se habilitó; cierra el 2026-12-05.
+  - La ronda 0.5.2 se cerró sin partidas recibidas.
+- **Publicación:**
+  - Upload `20723516` en itch.io, único archivo jugable: `the-awakening-0.6.0-pilot.zip`, 8,9 MB, exportado desde un checkout limpio de `68b0249`.
+  - Los archivos alojados son idénticos al export, y la configuración descomprimida tiene los IDs de la ronda nueva. La build arranca sin errores de consola, sin enviar nada antes de responder y con el guardado listo.
+  - La página pasa a «Novedad de 0.6.0 / New in 0.6.0», con duración de 15–30 minutos, la regla nueva de ocultar y los datos nuevos que se envían: amenazas y una foto anual de recursos.
 
 ### 0.5.2 — botones con su propia tinta al tocarlos
 
