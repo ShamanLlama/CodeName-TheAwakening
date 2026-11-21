@@ -49,7 +49,8 @@ namespace Awakening.Core.Dev
                 return GameEngine.PerformAction(state, "scatter", id).State;
             return state;
         }
-        public static GameState Play(string strategy, string seed, int stopMonth = Balance.Deadline)
+        /// <param name="onMonth">Optional observer, called with the state after each month's orders and before the month passes.</param>
+        public static GameState Play(string strategy, string seed, int stopMonth = Balance.Deadline, Action<GameState> onMonth = null)
         {
             var s = GameEngine.PlaceStartingFoothold(GameEngine.CreateGameState("normal", seed), Farm).State;
             Action<string, string> act = (id, region) =>
@@ -99,6 +100,7 @@ namespace Awakening.Core.Dev
                     if (s.Dread < owed && r.Population.Followers - Balance.SacrificeFollowers >= need + 120) act("sacrifice", id);
                 }
                 if (s.Status == "alignment" && Derived.ReadySites(s) >= 3) s = GameEngine.StartAwakening(s).State;
+                onMonth?.Invoke(s);
                 s = GameEngine.AdvanceSimulation(s, 1);
             }
             return s;
