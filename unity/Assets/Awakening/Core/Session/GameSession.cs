@@ -224,6 +224,21 @@ namespace Awakening.Core.Session
             Apply(GameEngine.StartAwakening(State), "awakening_started", new Dictionary<string, object>());
         }
 
+        /// <summary>End the run as a loss once the final rite can no longer fit (GameEngine.CanConcede).</summary>
+        public void Concede()
+        {
+            LabTouch();
+            if (State == null || !GameEngine.CanConcede(State)) return;
+            GameState before = State;
+            State = GameEngine.Concede(State);
+            LabTransition(before);
+            LabSync();
+            LastResult = SaveData.ResultFor(State);
+            Commit();
+            LogEntry last = State.Log[State.Log.Count - 1];
+            Events?.Invoke(new List<GameEvent> { new GameEvent { Id = last.Id, Month = last.Month, Message = last.Message } });
+        }
+
         public void SetSpeed(int speed)
         {
             LabTouch();
@@ -527,7 +542,7 @@ namespace Awakening.Core.Session
                 Lab.EmitEvent("run_finished", new Dictionary<string, object>
                 {
                     ["outcome"] = State.Status,
-                    ["reason"] = State.Status == "won" ? "awakened" : State.Awareness >= 100 ? "world_awareness" : "deadline",
+                    ["reason"] = State.ResultCode ?? (State.Status == "won" ? "awakened" : State.Awareness >= 100 ? "world_awareness" : "deadline"),
                 }, Capture(State));
                 return;
             }

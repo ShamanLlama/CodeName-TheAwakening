@@ -48,6 +48,29 @@ namespace Awakening.Core.Tests
             public List<Dictionary<string, object>> Events => A(Game.Lab.Data, "staging").Cast<Dictionary<string, object>>().Select(e => O(e, "event")).ToList();
         }
 
+        [Fact]
+        public void ConcedingEndsTheRunOnlyWhenTheRiteNoLongerFits()
+        {
+            var rig = new SessionRig(); var game = rig.Game;
+            rig.Start();
+            var early = game.State;
+            game.Concede();
+            Assert.Same(early, game.State);
+            Assert.DoesNotContain(rig.Events, e => Equals(e["type"], "run_finished"));
+
+            game.Advance(Balance.LatestRiteStart + 1 - game.State.ElapsedMonths);
+            Assert.False(GameEngine.IsOver(game.State));
+            Assert.True(GameEngine.CanConcede(game.State));
+            game.Concede();
+            Assert.Equal("lost", game.State.Status);
+            Assert.Equal("conceded", game.State.ResultCode);
+            var terminal = Assert.Single(rig.Events, e => Equals(e["type"], "run_finished"));
+            Assert.Same(rig.Events.Last(), terminal);
+            Assert.Equal("lost", O(terminal, "data")["outcome"]);
+            Assert.Equal("conceded", O(terminal, "data")["reason"]);
+            GoldenTraces.RequireEqual(SaveData.ResultFor(game.State), game.LastResult);
+        }
+
         // Protects actual command emission, including dynamic costs and refused decisions; capture-only tests supply costs by hand.
         [Theory]
         [MemberData(nameof(GoldenTests.Traces), MemberType = typeof(GoldenTests))]
