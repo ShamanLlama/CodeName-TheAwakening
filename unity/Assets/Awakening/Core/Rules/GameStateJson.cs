@@ -35,6 +35,8 @@ namespace Awakening.Core.Rules
                 ["log"] = value.Log.Select(e => (object)ToJson(e)).ToList(),
                 ["nextLogId"] = value.NextLogId,
                 ["resultReason"] = value.ResultReason,
+                ["worldConcealReadyAt"] = value.WorldConcealReadyAt,
+                ["resultCode"] = value.ResultCode,
                 ["telemetry"] = ToJson(value.Telemetry),
             };
         }
@@ -61,6 +63,9 @@ namespace Awakening.Core.Rules
                 Log = ((List<object>)Get(value, "log")).Select(e => ReadLogEntry((Dictionary<string, object>)e)).ToList(),
                 NextLogId = (int)Convert.ToDouble(Get(value, "nextLogId"), System.Globalization.CultureInfo.InvariantCulture),
                 ResultReason = (string)Get(value, "resultReason"),
+                // Absent before alignment-4: the world effect is available and no ending code was recorded.
+                WorldConcealReadyAt = Get(value, "worldConcealReadyAt") == null ? 0 : (int)Convert.ToDouble(Get(value, "worldConcealReadyAt"), System.Globalization.CultureInfo.InvariantCulture),
+                ResultCode = (string)Get(value, "resultCode"),
                 Telemetry = ReadTelemetry((Dictionary<string, object>)Get(value, "telemetry")),
             };
         }

@@ -33,7 +33,8 @@ namespace Awakening.Core.Save
     public static class SaveData
     {
         public const int SaveVersion = 2;
-        public static readonly string[] RetiredRulesets = { "alignment-1", "alignment-2" };
+        public static readonly string[] RetiredRulesets = { "alignment-1", "alignment-2", "alignment-3" };
+        public static readonly string[] ResultCodes = { "awakened", "world_awareness", "deadline", "conceded" };
         public const string RetiredNotice = "Your unfinished run used older rules (%s) and cannot continue under %s. Settings and playtest records are kept; start a new run.";
         public static SaveEnvelope DefaultSave() => new SaveEnvelope();
         static Dictionary<string, object> Record(object value) => value as Dictionary<string, object>;
@@ -83,13 +84,18 @@ namespace Awakening.Core.Save
                 || !Number(Get(v, "dread"), Balance.DreadCap) || !Number(Get(v, "awareness"), 100)
                 || Get(v, "specialization") != null && !OneOf(v["specialization"], GameData.SpecializationIds)
                 || !Integer(Get(v, "finalProgress"), Balance.FinalMonths) || !Integer(Get(v, "nextLogId"))
-                || Get(v, "resultReason") != null && !(v["resultReason"] is string) || Record(Get(v, "regions")) == null) return false;
+                || Get(v, "resultReason") != null && !(v["resultReason"] is string) || Record(Get(v, "regions")) == null
+                || Get(v, "worldConcealReadyAt") != null && !Integer(v["worldConcealReadyAt"], Balance.Deadline + Balance.ConcealWorldMonths)
+                || Get(v, "resultCode") != null && !OneOf(v["resultCode"], ResultCodes)) return false;
             string status = (string)v["status"];
             double month = N(v["elapsedMonths"]);
+            object code = Get(v, "resultCode");
+            if (code != null && (status == "won") != Equals(code, "awakened") || code != null && status != "won" && status != "lost") return false;
+            bool conceded = Equals(code, "conceded");
             if (status == "placing" && month != 0 || status == "playing" && month >= Balance.PreparationMonths
                 || new[] { "alignment", "awakening", "won" }.Contains(status) && month < Balance.PreparationMonths
                 || status == "won" && N(v["finalProgress"]) != Balance.FinalMonths
-                || status == "lost" && month != Balance.Deadline && N(v["awareness"]) < 100
+                || status == "lost" && month != Balance.Deadline && N(v["awareness"]) < 100 && !conceded
                 || new[] { "won", "lost" }.Contains(status) && N(v["speed"]) != 0) return false;
             foreach (string id in GameData.RegionIds)
             {

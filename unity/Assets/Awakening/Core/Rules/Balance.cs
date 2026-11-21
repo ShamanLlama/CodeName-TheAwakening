@@ -4,7 +4,7 @@ namespace Awakening.Core.Rules
 {
     public static class Balance
     {
-        public const string Ruleset = "alignment-3";
+        public const string Ruleset = "alignment-4";
         public const int PreparationMonths = 200;
         public const int AlignmentMonths = 24;
         public const int FinalMonths = 12;
@@ -49,6 +49,8 @@ namespace Awakening.Core.Rules
         public const double AwarenessDrag = 150.0;
         public const double ConcealAwareness = 3.0;
         public const double ConcealAwarenessPrice = 0.5;
+        /// <summary>Months the world-awareness part of concealment rests after it is used, across every region.</summary>
+        public const int ConcealWorldMonths = 6;
         public const double SiteUpkeep = 1.0;
         public const double FinaleSitePressure = 0.15;
         public const int FinaleWarningMonths = 24;

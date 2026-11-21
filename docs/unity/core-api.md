@@ -22,11 +22,11 @@ The source of truth for behaviour is the Godot build in `godot/` (0.4.0, ruleset
 | `rng.gd` | `Rng` (already ported: `SeedToState`, `Next`, `NextInt`) |
 | `js.gd` | `static class Js`: `RoundHalfUp(double)`, `Num(double)`, `Fixed(double, int)` |
 | state dictionaries | `GameState`, `RegionState`, `Population`, `Site`, `Threat`, `Opportunity`, `Figure`, `LogEntry`, `Telemetry` (below) |
-| `game_engine.gd` | `static class GameEngine`: `IsActive`, `IsOver`, `CreateGameState(difficulty, seed)`, `PlaceStartingFoothold(state, regionId)`, `CounterCost(state, region)`, `SilenceCost`, `AwarenessCost(actionId, region)`, `ConcealCost(state)`, `SiteDreadCost(state)`, `PreviewAction(state, actionId, regionId)`, `PerformAction(state, actionId, regionId)`, `ChooseSpecialization(state, choice)`, `SetGameSpeed(state, speed)`, `AwakeningReason(state)`, `StartAwakening(state)`, `AdvanceSimulation(state, months)` |
+| `game_engine.gd` | `static class GameEngine`: `IsActive`, `IsOver`, `CreateGameState(difficulty, seed)`, `PlaceStartingFoothold(state, regionId)`, `CounterCost(state, region)`, `SilenceCost`, `AwarenessCost(actionId, region)`, `ConcealCost(state)`, `ConcealWorldCooldown(state)`, `SiteDreadCost(state)`, `PreviewAction(state, actionId, regionId)`, `PerformAction(state, actionId, regionId)`, `ChooseSpecialization(state, choice)`, `SetGameSpeed(state, speed)`, `AwakeningReason(state)`, `StartAwakening(state)`, `CanConcede(state)`, `Concede(state)`, `AdvanceSimulation(state, months)` (from alignment-4: `ConcealWorldCooldown`, `CanConcede`, `Concede`) |
 | `derived.gd` | `static class Derived`: `ClampPct`, `TotalFollowers`, `LivePopulation`, `Recruitable`, `Capacity`, `SiteRequirement`, `Supported`, `CultShare`, `AwarenessDrag`, `ReadySites`, `Calendar`, `RegionIncome`, `InfluencePerMonth`, `RecruitmentPerMonth`, `SiteUpkeep`, `NetInfluencePerMonth`, `SiteLabel`, `AddLog`, `Recruit`, `LoseFollowers` |
 | `director.gd` | `static class Director`: `Random`, `ScheduleThreat`, `ResolveWorld`, `SiteHunt`, `Tick` |
 | `threats.gd` | `static class Threats`: `Consequences(region)` → `ThreatConsequences` (`Followers`, `Remaining`, `DestroysCell`, `PreparationLost`, `IncomeLost`, `ExposureAdded`, `InterruptsSite`), `Describe(region)` |
-| `forecast.gd` | `static class Forecast`: `Ritual(state)` → `RitualForecast` (`Urgent`, `Message`) |
+| `forecast.gd` | `static class Forecast`: `Ritual(state)` → `RitualForecast` (`Urgent`, `Message`); `Margin(state)` → `RiteMargin` (`LatestStart`, `EarliestStart`, `Margin`, `Fits`, `Started`, `Sites` of `SiteMargin`), C#-only since alignment-4 |
 
 Results:
 
@@ -42,7 +42,7 @@ public sealed class GameState {
     public int Version = 2; public string Ruleset; public string Status; public string Difficulty; public string Seed;
     public uint RngState; public int ElapsedMonths; public int Speed;
     public double Influence, Dread, Awareness; public string Specialization; public int FinalProgress;
-    public RegionMap Regions; public List<LogEntry> Log; public int NextLogId; public string ResultReason; public Telemetry Telemetry;
+    public RegionMap Regions; public List<LogEntry> Log; public int NextLogId; public string ResultReason; public int WorldConcealReadyAt; public string ResultCode; public Telemetry Telemetry;
     public GameState Clone();
 }
 // RegionMap: indexer by region id, enumerates in GameData.RegionIds order.
@@ -77,4 +77,4 @@ If the Godot code shows a field is fractional where this table says `int` (or th
 
 ## Development tools: `Awakening.Core.Dev`
 
-`Playthrough` (scripted policy, `godot/dev/playthrough.gd`), `Measure` (`godot/dev/measure.gd`) and `GoldenTraces` (record/replay of `godot/tests/golden/*.json.gz`). A console project under `core-tests/` runs `Measure` and regenerates goldens without Unity.
+`Playthrough` (scripted policy, `godot/dev/playthrough.gd`), `Measure` (`godot/dev/measure.gd`) and `GoldenTraces` (record/replay of golden traces). Since alignment-4 the current-ruleset traces live in `core-tests/golden/`, regenerated from the Godot command scripts with `dotnet run --project core-tests/Tools -- regenerate-goldens core-tests/golden`; the alignment-3 originals in `godot/tests/golden/` stay unchanged and are replayed up to the first concealment that alignment-4 resolves differently. A console project under `core-tests/` runs `Measure` and regenerates goldens without Unity.

@@ -32,7 +32,8 @@ namespace Awakening.Core.Dev
         {
             double floor = r.Site.Invested ? 40.0 : r.Public ? 20.0 : 0.0;
             if (r.Exposure > Math.Max(30.0, floor + 10.0)) return "evidence";
-            if (state.Awareness >= 50 && state.Influence >= GameEngine.ConcealCost(state) + 40) return "awareness";
+            // Concealing for awareness only pays while its world effect is ready (alignment-4).
+            if (state.Awareness >= 50 && GameEngine.ConcealWorldCooldown(state) == 0 && state.Influence >= GameEngine.ConcealCost(state) + 40) return "awareness";
             return "";
         }
         public static GameState Respond(GameState state, string id)
