@@ -129,7 +129,7 @@ namespace Awakening.Core.Tests
             Assert.All(jobs, job =>
             {
                 var body = Body(job);
-                Assert.Equal("awakening-2", body["adapter"]);
+                Assert.Equal("awakening-3", body["adapter"]);
                 Assert.All(A(body, "events"), e => Assert.True(PlaytestCapture.ValidEvent(e)));
             });
             string output = Environment.GetEnvironmentVariable("AWAKENING_PLAYTEST_BATCH_OUTPUT");
@@ -138,6 +138,97 @@ namespace Awakening.Core.Tests
                 Directory.CreateDirectory(output);
                 for (int i = 0; i < jobs.Count; i++) File.WriteAllText(Path.Combine(output, $"batch-session-{file.Replace(".json.gz", "")}-{i + 1:00}.json"), (string)jobs[i]["body"]);
             }
+        }
+
+        [Theory]
+        [InlineData("counter")]
+        [InlineData("scatter")]
+        [InlineData("silence")]
+        public void ThreatResponsesReportTheLegalChoicesBeforeSpending(string response)
+        {
+            var r = new SessionRig(); r.Start(); var g = r.Game;
+            g.State.Influence = 200; g.State.Dread = 200;
+            g.State.Regions["africa"].Population.Followers = Derived.SiteRequirement(g.State.Regions["africa"]) + 100;
+            g.Act("prepare", "africa");
+            var spawn = O(Assert.Single(r.Events, e => Equals(e["type"], "threat_spawned")), "data");
+            Assert.Equal("africa", spawn["region"]); Assert.Equal("occult", spawn["kind"]);
+            Assert.Equal(g.State.Regions["africa"].Threat.DueMonth, N(spawn, "due_month"));
+            var expected = new[] { "counter", "scatter", "silence" }.Where(a => GameEngine.PreviewAction(g.State, a, "africa").Ok).ToList();
+            g.Act(response, "africa");
+            var resolved = O(Assert.Single(r.Events, e => Equals(e["type"], "threat_resolved")), "data");
+            Assert.Equal(response, resolved["response"]);
+            Assert.Equal(expected, A(resolved, "legal_responses").Cast<string>());
+            Assert.All(O(resolved, "losses").Values, v => Assert.Equal(0, Convert.ToDouble(v)));
+            Assert.Null(g.State.Regions["africa"].Threat);
+        }
+
+        [Fact]
+        public void ExpiredThreatRecordsActualLossesDespiteSameMonthGrowthAndNoAffordableCounter()
+        {
+            var r = new SessionRig(); r.Start(); var g = r.Game;
+            var region = g.State.Regions["africa"];
+            region.Population.Followers = 150; region.Site.Invested = true; region.Site.Progress = 20;
+            region.Threat = new Threat { Kind = "occult", Severity = 2, DueMonth = 1 };
+            g.State.Influence = 0; g.State.Dread = 0;
+            var expected = Threats.Consequences(region);
+            g.Advance(1);
+            var data = O(Assert.Single(r.Events, e => Equals(e["type"], "threat_resolved")), "data");
+            Assert.Equal("ignored", data["response"]);
+            Assert.Equal(new[] { "scatter" }, A(data, "legal_responses").Cast<string>());
+            Assert.Equal(expected.Followers, N(O(data, "losses"), "followers"), 8);
+            Assert.Equal(expected.PreparationLost, N(O(data, "losses"), "preparation_months"));
+            Assert.Equal(expected.IncomeLost, N(O(data, "losses"), "income_per_month"), 8);
+        }
+
+        [Fact]
+        public void IgnoredThreatReportsTheWholeSiteWhenItsCellIsDestroyed()
+        {
+            var r = new SessionRig(); r.Start(); var g = r.Game;
+            var region = g.State.Regions["africa"];
+            region.Population.Followers = 1; region.Site.Invested = true; region.Site.Progress = 30;
+            region.Threat = new Threat { Kind = "raid", Severity = 3, DueMonth = 1 };
+            g.Advance(1);
+            var losses = O(O(Assert.Single(r.Events, e => Equals(e["type"], "threat_resolved")), "data"), "losses");
+            Assert.Equal(1, N(losses, "followers")); Assert.Equal(1, N(losses, "cells"));
+            Assert.Equal(1, N(losses, "sites")); Assert.Equal(30, N(losses, "preparation_months"));
+        }
+
+        [Fact]
+        public void LongAdvancesKeepEveryAnnualSnapshotAndThreatLifecycleWithoutChangingTheEngine()
+        {
+            var r = new SessionRig(); r.Start(); var g = r.Game;
+            var expected = GameEngine.AdvanceSimulation(g.State, 48);
+            g.Advance(48);
+            GoldenTraces.RequireEqual(GoldenTraces.Snapshot(expected, 1, true), GoldenTraces.Snapshot(g.State, 1, true));
+            var snapshots = r.Events.Where(e => Equals(e["type"], "month_snapshot")).ToList();
+            Assert.Equal(new[] { 12, 24, 36, 48 }, snapshots.Select(e => (int)N(e, "game_month")));
+            Assert.Equal(g.State.Awareness, N(O(snapshots.Last(), "data"), "awareness"));
+            Assert.Equal(Derived.TotalFollowers(g.State), N(O(snapshots.Last(), "data"), "followers"));
+            var spawns = r.Events.Where(e => Equals(e["type"], "threat_spawned")).ToList();
+            var resolutions = r.Events.Where(e => Equals(e["type"], "threat_resolved")).ToList();
+            Assert.NotEmpty(spawns); Assert.NotEmpty(resolutions);
+            Assert.All(resolutions, e => Assert.Contains(spawns, s => N(s, "sequence") < N(e, "sequence") && Equals(O(s, "data")["due_month"], O(e, "data")["due_month"])));
+        }
+
+        [Fact]
+        public void SpeedEventsIncludeAutomaticPausesAndTerminalIsAlwaysLast()
+        {
+            var r = new SessionRig(); r.Start(); var g = r.Game;
+            g.SetSpeed(1); g.SetSpeed(1); g.SetSpeed(2);
+            g.State.ElapsedMonths = 199;
+            g.Advance(3);
+            Assert.Equal(200, g.State.ElapsedMonths);
+            var speeds = r.Events.Where(e => Equals(e["type"], "speed_changed")).ToList();
+            Assert.Equal(2, speeds.Count);
+            Assert.Equal(2, N(O(speeds.Last(), "data"), "previous"));
+            Assert.Equal(0, N(O(speeds.Last(), "data"), "new"));
+            Assert.True(r.Events.FindIndex(e => Equals(e["type"], "phase_changed")) < r.Events.IndexOf(speeds.Last()));
+            g.SetSpeed(1); g.State.ElapsedMonths = 215; g.State.Awareness = 100;
+            g.Advance(1);
+            Assert.Equal("run_finished", r.Events.Last()["type"]);
+            Assert.Equal("month_snapshot", r.Events[r.Events.Count - 3]["type"]);
+            Assert.Equal("alignment", r.Events[r.Events.Count - 3]["phase"]);
+            Assert.Equal("world_awareness", O(r.Events.Last(), "data")["reason"]);
         }
 
         static void AssertTransitions(GameState before, GameState after, List<Dictionary<string, object>> events, ref bool firstSiteSeen)

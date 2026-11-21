@@ -230,7 +230,9 @@ namespace Awakening.Core.Session
             GameState next = GameEngine.SetGameSpeed(State, speed);
             // Godot compares dictionaries by value: choosing the current speed is a no-op.
             if (ReferenceEquals(next, State) || next.Speed == State.Speed) return;
+            GameState before = State;
             State = next;
+            LabSpeedChanged(before);
             _elapsed = 0;
             LabSync();
             LabCheckpoint("menu_changed");
@@ -251,9 +253,17 @@ namespace Awakening.Core.Session
         {
             LabTouch();
             GameState before = State;
-            State = GameEngine.AdvanceSimulation(State, months);
+            // Observe each month: a long advance can both spawn and expire a threat.
+            // Preserve the engine's stop at alignment even though it is still active.
+            for (int month = 0; month < Math.Min(months, Balance.Deadline); month++)
+            {
+                GameState previous = State;
+                State = GameEngine.AdvanceSimulation(State, 1);
+                if (ReferenceEquals(State, previous)) break;
+                LabTransition(previous);
+                if (GameEngine.IsOver(State) || previous.Status == "playing" && State.Status == "alignment") break;
+            }
             if (ReferenceEquals(State, before)) return;
-            LabTransition(before);
             LabSync();
             var fresh = State.Log.Where(e => e.Id >= before.NextLogId).Select(e => new GameEvent { Id = e.Id, Month = e.Month, Message = e.Message }).ToList();
             if (before.Status != State.Status && GameEngine.IsOver(State))
@@ -272,7 +282,7 @@ namespace Awakening.Core.Session
                 State = result.State;
                 if (kind != "starting_region_selected") payload["spent"] = Spent(before, State);
                 Lab.EmitEvent(kind, payload, Capture(State));
-                LabTransition(before);
+                LabTransition(before, kind == "action_performed" ? (string)payload["action"] : null);
                 LabSync();
                 Commit();
                 LogEntry last = State.Log[State.Log.Count - 1];
@@ -448,10 +458,70 @@ namespace Awakening.Core.Session
             Commit();
         }
 
-        void LabTransition(GameState before)
+        string ObservationPhase(GameState before) => GameEngine.IsOver(State) ? before.Status : State.Status;
+
+        void LabSpeedChanged(GameState before)
+        {
+            if (before.Speed != State.Speed)
+                Lab.EmitEvent("speed_changed", new Dictionary<string, object> { ["previous"] = before.Speed, ["new"] = State.Speed }, Capture(State), ObservationPhase(before));
+        }
+
+        static bool SameThreat(Threat a, Threat b) => a == null ? b == null : b != null && a.Kind == b.Kind && a.Severity == b.Severity && a.DueMonth == b.DueMonth;
+
+        void LabThreats(GameState before, string response)
+        {
+            foreach (string id in GameData.RegionIds)
+            {
+                RegionState previous = before.Regions[id], current = State.Regions[id];
+                if (SameThreat(previous.Threat, current.Threat)) continue;
+                if (previous.Threat != null)
+                {
+                    string answer = response == "counter" || response == "scatter" || response == "silence" ? response : "ignored";
+                    var legal = new List<object>();
+                    foreach (string action in new[] { "counter", "scatter", "silence" })
+                        if (GameEngine.PreviewAction(before, action, id).Ok) legal.Add(action);
+                    var consequences = Threats.Consequences(previous);
+                    bool ignored = answer == "ignored";
+                    var data = ThreatData(id, previous.Threat);
+                    data["response"] = answer;
+                    data["legal_responses"] = legal;
+                    // Loss counters exclude recruitment in this tick; preparation uses the
+                    // consequence because upkeep/progress also changes during the month.
+                    data["losses"] = new Dictionary<string, object>
+                    {
+                        ["followers"] = ignored ? Math.Max(0, current.Population.Losses - previous.Population.Losses) : 0,
+                        ["preparation_months"] = ignored ? (consequences.DestroysCell && previous.Site.Invested ? previous.Site.Progress : consequences.PreparationLost) : 0,
+                        ["income_per_month"] = ignored ? consequences.IncomeLost : 0,
+                        ["cells"] = ignored && consequences.DestroysCell ? 1 : 0,
+                        ["sites"] = ignored && consequences.DestroysCell && previous.Site.Invested ? 1 : 0,
+                    };
+                    Lab.EmitEvent("threat_resolved", data, Capture(State), ObservationPhase(before));
+                }
+                if (current.Threat != null)
+                    Lab.EmitEvent("threat_spawned", ThreatData(id, current.Threat), Capture(State), ObservationPhase(before));
+            }
+        }
+
+        static Dictionary<string, object> ThreatData(string region, Threat threat) => new Dictionary<string, object>
+        {
+            ["region"] = region, ["kind"] = threat.Kind, ["severity"] = threat.Severity, ["due_month"] = threat.DueMonth,
+        };
+
+        void LabTransition(GameState before, string response = null)
         {
             if (before.Status == "playing" && State.Status == "alignment")
                 Lab.EmitEvent("phase_changed", new Dictionary<string, object> { ["from_phase"] = "playing" }, Capture(State));
+            LabThreats(before, response);
+            if (State.ElapsedMonths != before.ElapsedMonths && State.ElapsedMonths % 12 == 0)
+                Lab.EmitEvent("month_snapshot", new Dictionary<string, object>
+                {
+                    ["awareness"] = State.Awareness, ["influence"] = State.Influence, ["dread"] = State.Dread,
+                    ["followers"] = Derived.TotalFollowers(State),
+                    ["cells"] = State.Regions.Values.Count(r => r.Population.Followers > 0),
+                    ["funded_sites"] = State.Regions.Values.Count(r => r.Site.Invested),
+                    ["ready_sites"] = Derived.ReadySites(State),
+                }, Capture(State), ObservationPhase(before));
+            LabSpeedChanged(before);
             if (GameEngine.IsOver(State))
             {
                 Lab.EmitEvent("run_finished", new Dictionary<string, object>

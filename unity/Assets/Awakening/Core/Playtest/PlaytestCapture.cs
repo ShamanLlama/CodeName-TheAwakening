@@ -20,8 +20,8 @@ namespace Awakening.Core.Playtest
         public const int MaxSessions = 64;
         public const int MaxBodyBytes = 65536;
         public const int BatchEvents = 32;
-        public const string Adapter = "awakening-2";
-        public static readonly string[] StoredAdapters = { "awakening-1", "awakening-2" };
+        public const string Adapter = "awakening-3";
+        public static readonly string[] StoredAdapters = { "awakening-1", "awakening-2", "awakening-3" };
         public static readonly string[] ClockKeys = { "elapsed_ms", "simulation_ms", "planning_ms", "background_ms", "excluded_ms" };
         static readonly Regex IdPattern = new Regex("^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$", RegexOptions.CultureInvariant);
         readonly Func<double> _unixSeconds;
@@ -176,7 +176,7 @@ namespace Awakening.Core.Playtest
         {
             if (!Confirmed || !Configured() || Corrupt || SessionLive || state.IsOver) return;
             var run = Active();
-            if (run.Count == 0 || Flag(run, "closed") || Flag(run, "stopped") || !Equals(Obj(run, "context")["round_id"], Config["round_id"]) || !Equals(Obj(run, "context")["build_id"], Config["build_id"]) || Str(Data, "signature") != Signature(state))
+            if (run.Count == 0 || Flag(run, "closed") || Flag(run, "stopped") || Str(Obj(run, "context"), "adapter") != Adapter || !Equals(Obj(run, "context")["round_id"], Config["round_id"]) || !Equals(Obj(run, "context")["build_id"], Config["build_id"]) || Str(Data, "signature") != Signature(state))
             {
                 StartRun(state, false);
                 return;
@@ -437,7 +437,7 @@ namespace Awakening.Core.Playtest
         {
             if (!(value is Dictionary<string, object> entry) || !ValidId(Get(entry, "event_id")) || !Integer(Get(entry, "sequence"), MaxSequence) || Num(entry, "sequence") < 1 || !Integer(Get(entry, "game_month"), 224)) return false;
             if (!In(Get(entry, "phase"), "placing", "playing", "alignment", "awakening", "ended") || !(Get(entry, "data") is Dictionary<string, object>) || !(Get(entry, "clock") is Dictionary<string, object> clock)) return false;
-            if (!In(Get(entry, "type"), "run_started", "capture_started", "session_started", "starting_region_selected", "action_performed", "doctrine_selected", "awakening_started", "phase_changed", "checkpoint_reached", "time_checkpoint", "capture_gap", "run_finished", "run_abandoned")) return false;
+            if (!In(Get(entry, "type"), "run_started", "capture_started", "session_started", "starting_region_selected", "action_performed", "doctrine_selected", "awakening_started", "phase_changed", "checkpoint_reached", "time_checkpoint", "capture_gap", "run_finished", "run_abandoned", "threat_spawned", "threat_resolved", "month_snapshot", "speed_changed")) return false;
             return ValidClock(clock);
         }
         static bool ValidClock(Dictionary<string, object> clock)

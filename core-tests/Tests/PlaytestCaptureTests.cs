@@ -13,6 +13,22 @@ namespace Awakening.Core.Tests
     public class PlaytestCaptureTests
     {
         [Fact]
+        public void NewEventKindsSurviveSaveAndKeepTheQueueBounded()
+        {
+            var r = new Rig(); r.Start();
+            foreach (string kind in new[] { "threat_spawned", "threat_resolved", "month_snapshot", "speed_changed" })
+                r.Capture.EmitEvent(kind, M(), r.State);
+            var saved = Saved(r.Capture, r.State);
+            var restored = new PlaytestCapture(); restored.Configure(Configuration(), saved);
+            Assert.False(restored.Corrupt);
+            Assert.Equal("awakening-3", O(restored.Active(), "context")["adapter"]);
+            for (int n = 0; n < PlaytestCapture.MaxEvents; n++) r.Capture.EmitEvent("speed_changed", M("previous", 0, "new", 1), r.State);
+            Assert.False(r.Capture.Capturing());
+            Assert.True(r.Capture.PendingEvents() <= PlaytestCapture.MaxEvents);
+            Assert.Equal("capture_gap", O(r.Capture.Active(), "last_event")["type"]);
+        }
+
+        [Fact]
         public void ConsentPrecedesIdsAndStartEvents()
         {
             var r = new Rig(false);
