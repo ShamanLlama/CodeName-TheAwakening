@@ -9,11 +9,11 @@ live in [`GameData.cs`](../../unity/Assets/Awakening/Core/Rules/GameData.cs). No
 folder overrides them. The snapshots below are dated and will drift; when they disagree
 with the code, the code is right and this file is stale.
 
-**Checked 2026-11-18 against game 0.5.1 (Unity, `alignment-3`):** the latest snapshotted value of
+**Checked 2026-11-21 against game 0.6.0 (Unity, `alignment-4`):** the latest snapshotted value of
 every constant matches `Balance.cs` and `GameData.cs` (older values, such as `concealAwareness`
 1 in the 2026-09-14 snapshot, are superseded by a later snapshot), and
-`dotnet run --project core-tests/Tools -- measure --seeds=48` reproduces the 103/144 bot wins
-of the `alignment-3` snapshot (early 21, late 48, hub 34).
+`dotnet run --project core-tests/Tools -- measure --seeds=48` gives the 80/144 bot wins
+of the `alignment-4` snapshot (early 5, late 45, hub 30).
 
 Balance changed three times in a single working session during the tuning pass that
 produced the current build. Duplicating numbers across a dozen prose documents is how the
@@ -28,7 +28,32 @@ alone silently changes difficulty:
 | `preparationMonths` | Director cadences, `threatWarningMonths`, difficulty/doctrine warning bonuses, per-month drift rates | Otherwise threats-per-run and drift-per-run scale with the calendar and difficulty moves with it |
 | `siteSupportShare` | Test fixtures that set follower counts | Fixtures assume a support threshold |
 | `raidLossShare` / `threatLossShare` | `raidLossFloor` / `threatLossFloor` | A high flat floor makes small regions disproportionately fragile |
-| `awarenessPerCapita` | `concealAwareness` and the conceal cooldown | Together they set the maximum sustainable cult size |
+| `awarenessPerCapita` | `concealAwareness` and `ConcealWorldMonths` | Together they set the maximum sustainable cult size |
+
+## Snapshot — 2026-11-21 (`alignment-4`, Unity 0.6.0)
+
+Fuente de verdad: `Balance.cs`. Solo se listan los valores nuevos o cambiados desde `alignment-3`.
+
+| Constante | Valor | Controla |
+| --- | --- | --- |
+| `Ruleset` | `alignment-4` | Ruleset que registran los saves y los eventos de playtest; los saves de `alignment-3` se retiran |
+| `ConcealWorldMonths` | 6 | Meses que descansa el −3 de awareness mundial de `conceal` después de usarse, en todas las regiones. Mientras descansa, ocultar cuesta las 20 de Influence base y solo limpia la exposición local. El cooldown regional sigue en 12 meses |
+
+Los campos nuevos del estado son `WorldConcealReadyAt` (mes desde el que el efecto mundial
+vuelve a estar listo) y `ResultCode` (`awakened`, `world_awareness`, `deadline` o
+`conceded`). Cerrar la partida no tiene constante propia: se habilita cuando
+`Forecast.Margin` dice que el rito ya no cabe.
+
+Acoplamiento: `ConcealWorldMonths` con `SilenceSeverityAwareness` (decide si el precio de
+silenciar todavía se puede borrar) y con `AwarenessDrag` (el lastre es lo que ahora hunde
+al culto público).
+
+Medición con bot (Normal, 48 seeds por estrategia; la política oculta por awareness solo
+cuando el efecto mundial está listo): 103/144 → 80/144 frente a `alignment-3` (early 21 → 5,
+late 48 → 45, hub 34 → 30). Con la política anterior da 79/144. La regla de respaldo era bajar
+a 4 meses si las victorias caían por debajo de 80; con 4 meses serían 86/144 (8, 46, 32) y
+con 3 meses, 91/144 (11, 47, 33). Detalle en
+[Experiencia y loops](02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-4--2026-11-21).
 
 ## Snapshot — 2026-11-12 (`alignment-3`, Godot 0.4.0; unchanged in Unity 0.5.x)
 
@@ -53,8 +78,7 @@ PascalCase (`SCATTER_MONTHS` → `ScatterMonths`). Only the values added or chan
 Coupling: `SILENCE_SEVERITY_AWARENESS` with `CONCEAL_AWARENESS` — conceal removes 3
 awareness per use, so a player with spare Influence can erase the price of silencing.
 The designer's first human run (2026-11-13, Normal, Harbinger) won with 12 silences, 46
-conceals and final awareness 11; candidate fix for `alignment-4`: a world cooldown on
-conceal's global effect.
+conceals and final awareness 11. `alignment-4` adds a world cooldown on conceal's global effect.
 
 Bot measurement (Normal, 48 seeds per strategy): 95/144 → 103/144 wins against
 `alignment-2` (early 17 → 21, late 43 → 48, hub 35 → 34).

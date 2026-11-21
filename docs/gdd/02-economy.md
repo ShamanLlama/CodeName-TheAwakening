@@ -1,5 +1,7 @@
 # 02 — Economy
 
+> **`alignment-4` (2026-11-21):** `conceal` cuesta 20 + la mitad de la awareness solo cuando también baja la awareness mundial, lo que puede hacer una vez cada 6 meses en todo el mundo. El resto del tiempo cuesta 20 de Influence y solo limpia la exposición local. Véase [Experiencia y loops](02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-4--2026-11-21).
+>
 > **`alignment-3` (2026-11-12):** Silenciar una amenaza cuesta 20 de Dread por severidad (13 con Harbinger); dispersar es gratis pero la célula no recluta ni ingresa durante 8 meses. Véase [Experiencia y loops](02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-3--2026-11-12).
 >
 > **`alignment-2` (2026-11-02):** Cada sitio financiado cuesta 1 Influence al mes; `conceal` cuesta 20 + la mitad de la awareness. Véase [Experiencia y loops](02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-2--2026-11-02). El resto de este capítulo describe `alignment-1`.
