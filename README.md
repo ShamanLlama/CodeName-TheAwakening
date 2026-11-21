@@ -1,92 +1,97 @@
 # The Awakening of Cthulhu
 
-A single-player world-map strategy game by Lucid Labworks Studio. Build cults, spend Influence, sacrifice followers for Dread, and prepare Cthulhu's awakening before the stars pass out of alignment.
+A single-player world-map strategy game by Lucid Labworks Studio. You are the hidden will behind a cult spread across eight world regions. Grow congregations, spend Influence, sacrifice followers for Dread, and prepare three ritual sites before the stars pass out of alignment, or before the world works out what you are.
 
-The game is built in Godot 4.7, mainly for the browser on itch.io, with Linux and Windows desktop builds. Every graphic and sound is generated in code. The design source of truth is the [GDD](docs/gdd/README.md).
+The game is set in a lamp-lit cult archive from 1908 to 1926: the map is an old sea chart, each region is a case file, and threats arrive as press cuttings. Every graphic and sound is generated in code.
 
-This repository holds two versions:
+## Status
 
-- `godot/`: the game. Setup, tests and export are in [godot/README.md](godot/README.md).
-- `src/`: the original React and TypeScript web prototype. Its rules engine is still the reference that the Godot rules are tested against. The prototype as it was before the port is kept on the [`old-web`](https://github.com/ShamanLlama/CodeName-TheAwakening/tree/old-web) branch.
+- **Version 0.5.1**, in development. Rules `alignment-3`. Changes per build are in the [version log](docs/playtests/versiones.md).
+- **Engine:** Unity 6.3 LTS (6000.3.25f1) since 0.5.0. Versions 0.2.0–0.4.0 were made in Godot 4.7. They stay in `godot/` and on the `godot` branch until that version is retired.
+- **Release:** a free, short, complete game, released mainly on **Steam** as a desktop build (Linux now, Windows later).
+- **Beta:** the web build is on itch.io by invitation. Each build gets its own round in GTC Playtest Lab, and data is recorded only with the player's consent. The itch.io page is for testing, not the release.
 
-## Play
+The design, the decisions taken and the open questions are in the [GDD](docs/gdd/README.md), written in Spanish.
 
-Requires Godot 4.7 on your `PATH`.
+## Playing
 
-~~~bash
-godot --path godot
-~~~
+1. Choose a difficulty, optionally enter a world seed, and click **Begin**. The first time, the game asks whether you want to join the playtest. Both choices let you play.
+2. Click a region on the map, then **Begin Here** to found your first cult.
+3. Click any region to open its case file. Actions are grouped under **CULT**, **RITES** and **OMENS**. With a mouse, hover over an action to see its cost, risk and why it is unavailable, then click it. On a touch screen, the first tap explains the action and a button below performs it.
+4. Threats appear as cuttings at the top left. Each one has three answers: **OBSTRUCT**, **SCATTER** and **SILENCE**.
+5. Click the ledger line at the bottom to open the chronicle.
 
-1. Choose a difficulty, optionally enter a world seed, and click **BEGIN**.
-2. Read the guide, click a region on the map, then click **BEGIN HERE** to place your first cult.
-3. Click any region to open its panel. Its actions are grouped under **CULT**, **RITES** and **OMENS**. Hover an action to see its effect, risk, and why it is unavailable.
-4. Threats stack at the top left. Click **OBSTRUCT** on a card to counter one.
-5. Click the event line in the bottom bar to open the chronicle.
-
-Space pauses, 1 and 2 set the speed, and Esc closes the region panel or opens the menu. Immediate actions work while paused. The game saves after actions and monthly updates, and reloading resumes the run. Play pauses when the window loses focus. Use **Menu → Export playtest report** to save a run report for feedback.
-
-Debug builds, including runs from the editor, add playtest controls to the menu that advance 1, 12 or 120 months. They advance recruitment, threats and deadlines, and grant no resources.
-
-## Rules
-
-- Cult strength is your living followers. They recruit automatically and generate Influence.
-- Influence funds recruitment, expansion, concealment, investigations, and prominent-person conversions.
-- Sacrificing 40 local followers grants 25 Dread, reducing future income. It also shrinks the cult, which slows world awareness.
-- Public worship doubles recruitment before other modifiers; backlash temporarily reduces that benefit.
-- Deniers resist ordinary recruitment. Manifestations create believers, who can also strengthen opposition.
-- Each ritual site must be supported by a quarter of its region's population, so a site in Oceania needs 75 followers and one in South Asia needs 450. Populous regions recruit well but host rituals badly.
-- Sites cost 40 Influence and 60, 100, then 160 Dread, and take 24 supported months to prepare.
-- World awareness rises with the share of humanity that follows you. It throttles income and recruitment as it climbs, and at 100% the world hunts every cell and the run ends. A large cult is a liability.
-- Obstructing a threat costs 30 Influence per severity level and burns that region's connections for 12 months, so you cannot defend everywhere. Concealing evidence is the only way to push awareness back down.
-- Generic celebrities and politicians appear as opportunities. Secret celebrities earn Influence; secret politicians delay new threats. Public revelation grants recruits and local ritual progress once, but ends their secret benefit and triggers backlash.
-- One permanent doctrine further changes recruitment, infiltration, or sacrifice rewards.
-- Reserve 100 Dread for the final rite.
-- After 200 months the alignment opens and the game pauses. Start the final rite, then maintain three sites for 12 months within the 24-month window.
-- Missing the deadline loses the run. Interrupted rites retain progress, but the calendar keeps advancing.
-
-A campaign takes about 7 minutes at 1×, excluding pauses. These are initial playtest values, not final balance.
-
-## What to test
-
-Try an early public cult, a late public surge, and a public stronghold supported by hidden cells. Tell us where you started, your seed and difficulty, when the game felt slow or unclear, and which actions seemed too strong or too costly.
-
-The exported report records sacrifices, spending, revelations, threats, regional snapshots and the result. It does not record real session time, so please note roughly how long you played. The first human run and the changes it prompted are recorded in the [implementation status](docs/implementation-checklist.md#human-playtest--seed-ff53a4ca-2026-09-06).
-
-## Develop
-
-Install the Node tooling once (Node.js 22 or newer). It runs the prototype, its tests, and the rule-parity recordings.
-
-~~~bash
-npm install
-~~~
-
-| Command | What it does |
+| Key | Action |
 |---|---|
-| `npm run godot:test` | Runs the Godot rule, save and parity tests |
-| `npm run godot:web` | Exports the web build to `godot/build/web/` |
-| `npm test` | Runs the TypeScript rule tests, and fails if the parity recordings are stale |
-| `npm run golden` | Re-records the parity recordings after a TypeScript rule change |
-| `npm run lint`, `npm run typecheck` | Checks the TypeScript code |
-| `npm run dev` | Runs the web prototype in the browser |
-| `npm run e2e`, `npm run build` | Browser tests and production build for the web prototype |
+| Space | Pause or resume |
+| 1, 2 | Normal or fast speed |
+| Esc | Close the case file or open the menu |
+| Tab / Shift+Tab | Next or previous region |
+| C, D, H | Chronicle, doctrine, guide |
+| R | Show the whole world again |
+| N | Dismiss the current note |
 
-To change a rule, change it in `src/game/` first, run `npm run golden`, port the change to `godot/core/`, then run `npm run godot:test`. The parity tests replay nine recorded TypeScript runs in Godot and require identical results. See [Rule parity](godot/README.md#rule-parity).
+Actions take no time, so pausing to plan is expected. The game pauses when the window loses focus and saves after every action and month. **Continue** resumes the run. Interface size (100–200 %) and reduced motion are in the menu. The menu also exports the local save and the playtest record.
 
-Desktop export commands and the itch.io upload steps are in [godot/README.md](godot/README.md#export).
+Development builds add playtest controls to the menu that advance 1, 12 or 120 months, without granting resources.
 
-### Layout
+## How it plays
+
+- **Followers** are the cult. They recruit on their own, earn Influence, and carry ritual sites.
+- **Influence** pays for recruiting, opening cells in neighbouring regions, hiding evidence, answering threats and converting prominent figures.
+- **Dread** comes from sacrifice (40 followers for 25 Dread) and omens. It pays for sites, manifestations and silencing.
+- **Awareness** is how much the world knows. It grows with the share of humanity that follows you and slows income and recruitment. At 100 the run is lost. Every action that raises it shows the amount in its price. Concealing evidence lowers it, at a price that rises with awareness.
+- **Ritual sites** cost 40 Influence and 60, then 100, then 160 Dread, plus 1 Influence a month. Each needs 24 supported months to prepare. A site is supported while a quarter of its region's population follows you: 75 followers in Oceania, 450 in South Asia.
+- **Threats** grow out of exposure, public worship, sites and awareness. You can answer each one in three ways, each paid in a different currency:
+  - **Obstruct:** 30 Influence per severity, and no further obstructing in that region for a year.
+  - **Scatter:** free, but the cell hides for 8 months without recruiting, earning or advancing its site.
+  - **Silence:** 20 Dread per severity, and world awareness rises.
+- **Omens and figures:** nightmares and eclipses give Dread or speed up a site. Converted celebrities and politicians help in secret until you reveal them.
+- **One doctrine per run** specialises the cult: Congregation (recruitment), Hidden hand (threats) or Harbinger (Dread).
+- **The end:** after 200 months (September 1924) the alignment opens and the game pauses. With 100 Dread and three prepared, supported sites, begin the final rite and hold the sites for 12 months within the 24-month window. From that point, threats hunt your sites.
+
+A run is about seven and a half minutes at 1×, plus pauses. The target is 15–30 minute sessions. The values are still being tuned with playtests. Exact numbers are in [`Balance.cs`](unity/Assets/Awakening/Core/Rules/Balance.cs) and [`GameData.cs`](unity/Assets/Awakening/Core/Rules/GameData.cs).
+
+## Development
+
+You need:
+
+- the .NET 8 SDK for the rule tests;
+- Unity 6000.3.25f1 (6.3 LTS) to build and play from the editor.
+
+Only LTS versions are used, and nothing marked experimental.
+
+```bash
+dotnet test core-tests/Tests                                       # rules, saves, playtest capture
+dotnet run --project core-tests/Tools -- measure --seeds=48        # bot win rates per strategy
+```
+
+The rules in `unity/Assets/Awakening/Core/` do not depend on Unity, so they are tested with plain .NET. Builds, screenshots, the 60-combination layout check and web load measurement are in [unity/README.md](unity/README.md).
+
+Every change to the game goes with its playtest record, in the same change:
+
+- raise `bundleVersion` in `unity/ProjectSettings/ProjectSettings.asset`: minor for rules or balance, patch for UI or text;
+- a rule or balance change needs a new ruleset;
+- a change to actions, regions, doctrines or events needs a new playtest adapter;
+- add an entry to the [version log](docs/playtests/versiones.md).
+
+The details are in [CLAUDE.md](CLAUDE.md). A rule change also updates the GDD.
+
+## Repository
 
 | Path | Contents |
 |---|---|
-| `godot/core/` | Godot rules: balance, data, RNG, engine, threats, saves |
-| `godot/map/`, `godot/ui/` | Map projection and drawing, screens, panels, dialogs, sound |
-| `godot/tests/` | Headless test runner and the recorded parity runs |
-| `src/data/balance.ts` | Reference calendar, economy and ritual values |
-| `src/game/` | Reference rules: commands, monthly simulation, threat director, saves |
-| `src/tests/` | TypeScript rule tests, scripted playthroughs and the parity recorder |
-| `scripts/build-earth-map.mjs` | Regenerates the map geometry for both versions |
-| `docs/` | GDD, implementation plan and status, playtest notes |
+| `unity/Assets/Awakening/Core/` | Rules, saves, playtest capture and the game session, with no Unity dependencies |
+| `unity/Assets/Awakening/Platform/` | Browser and desktop saves, playtest transport |
+| `unity/Assets/Awakening/UI/` | Screens, case files, dialogs, the chart, palette and sound |
+| `core-tests/` | `dotnet` tests and tools (bot measurement, recorded traces) |
+| `docs/gdd/` | Game design document |
+| `docs/playtests/` | Version log and playtest records |
+| `docs/unity/` | Port plan and verification |
+| `godot/` | Godot 0.4.0 version, kept as a reference |
+| `src/` | Original React/TypeScript prototype, historical only |
+| `scripts/` | Map geometry, WebGL template and web load measurement |
 
-The map uses Natural Earth's public-domain country outlines, grouped into the eight gameplay regions. [Map source and attribution](src/assets/NATURAL_EARTH.md) covers the pinned release and how to regenerate the geometry.
+## Credits
 
-[Implementation status](docs/implementation-checklist.md) records what was checked, and [the implementation plan](docs/implementation-plan.md) explains the design-to-code changes. Human playtests are still needed to establish pacing, difficulty, comprehension and replay appeal.
+A game by Lucid Labworks Studio. The map uses [Natural Earth](unity/Assets/Awakening/Licenses/NATURAL_EARTH.md) public-domain outlines. The fonts are IM Fell English, Old Standard TT and Courier Prime, under the SIL Open Font License ([licences](unity/Assets/Awakening/Licenses/)). The GDD adapts the GDD templates of Game Time Continuum, with permission.

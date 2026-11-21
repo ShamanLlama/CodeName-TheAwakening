@@ -1,6 +1,6 @@
 # Interfaz, aprendizaje y accesibilidad
 
-**Versión:** 0.5 · **Fecha:** 2026-11-06 · **Estado:** revisión de UX/UI en 0.3.5 (tamaño de interfaz, layout compacto, notas de primera vez, motivos de bloqueo, final con causa, mapa con zoom); usabilidad por validar con personas y en teléfono físico.
+**Versión:** 0.6 · **Fecha:** 2026-11-18 · **Estado:** interfaz de 0.3.5–0.4.0 rehecha en Unity UI Toolkit (0.5.0) y corregida en legibilidad (0.5.1); usabilidad por validar con personas, en teléfono físico y en el ejecutable para Steam.
 
 ## Flujo implementado
 
@@ -15,7 +15,7 @@ a la crónica. Las acciones regionales se agrupan en **CULT**, **RITES** y **OME
 Los tooltips explican efectos, riesgos y motivos de bloqueo.
 
 La pausa permite actuar. Espacio pausa, 1 y 2 cambian velocidad y Esc cierra el panel
-o abre menú. Perder el foco pausa la partida. Al comenzar el rito, Godot reanuda a
+o abre menú. Perder el foco pausa la partida. Al comenzar el rito, el juego reanuda a
 velocidad normal. El menú incluye guía, sonido y exportación del reporte de playtest.
 
 ## Principios propuestos
@@ -30,7 +30,7 @@ para prepararlo y completar el rito, considerando las aceleraciones disponibles.
 
 ## Teléfonos y pantallas táctiles (0.3.4, 2026-11-03)
 
-El diseño base es 1600×900 y se reduce entero a cualquier pantalla, también en el teléfono. En el panel de región, las acciones y su explicación van antes de las estadísticas. Con ratón, pasar sobre una acción la explica y hacer clic la ejecuta. En pantallas táctiles (`Kit.touch`) un toque solo abre la explicación bajo esa acción, con un botón para ejecutarla; otro toque la cierra. El panel se desplaza arrastrando, un arrastre no pulsa el botón bajo el dedo, y la barra de desplazamiento es más ancha y visible.
+El diseño base es 1600×900 y se reduce entero a cualquier pantalla, también en el teléfono. En el panel de región, las acciones y su explicación van antes de las estadísticas. Con ratón, pasar sobre una acción la explica y hacer clic la ejecuta. En pantallas táctiles (`Kit.Touch`) un toque solo abre la explicación bajo esa acción, con un botón para ejecutarla; otro toque la cierra. El panel se desplaza arrastrando, un arrastre no pulsa el botón bajo el dedo, y la barra de desplazamiento es más ancha y visible.
 
 Intentos descartados tras probarlos en un teléfono físico (2026-11-03):
 
@@ -43,7 +43,7 @@ Se volvió a la escala original y solo se conservó el panel táctil con desplaz
 
 Respuesta a una evaluación con nota 6,5/10. Lo que cambia para el jugador:
 
-- **Por qué no puedo:** cada acción no disponible muestra en su fila el obstáculo real («NO CELL HERE», «NO THREAT», «NEED 30 INF», «IN 4 MO»). Si falta la célula, la amenaza o el omen, eso se dice antes que el precio. Los motivos se derivan en `ui/notes.gd` sin tocar el motor.
+- **Por qué no puedo:** cada acción no disponible muestra en su fila el obstáculo real («NO CELL HERE», «NO THREAT», «NEED 30 INF», «IN 4 MO»). Si falta la célula, la amenaza o el omen, eso se dice antes que el precio. Los motivos se derivan en `UI/Text/Notes.cs` (antes `ui/notes.gd`) sin tocar el motor.
 - **Aprender jugando:** la guía inicial queda en cinco frases. El resto llega como notas de una frase la primera vez que aparece cada situación. Ninguna pausa el reloj, cada una se ve una vez por dispositivo y se guarda en `settings.hints`.
 - **Cerrar la partida:** la derrota explica la causa principal y da uno o dos consejos concretos. La victoria tiene su propia hoja.
 - **Mapa:** contorno de región, etiquetas que no se tapan, zoom con rueda o pellizco y arrastre. R o «Whole world» vuelve a la vista completa.
@@ -55,11 +55,15 @@ Respuesta a una evaluación con nota 6,5/10. Lo que cambia para el jugador:
 La orientación actual a ratón y tooltips necesita revisión para otras formas de
 entrada. La paleta usa colores semánticos y el mapa contiene efectos animados;
 no se ha comprobado equivalencia sin color, reducción de movimiento, lectura con
-tecnologías de asistencia ni recorrido completo con teclado en Godot.
+tecnologías de asistencia ni recorrido completo con teclado. La versión Unity no tiene
+todavía equivalente al nombre accesible que Godot daba a los controles para el lector de
+pantalla de escritorio (`accessibility_name`): es una regresión del port por resolver
+antes de Steam.
 
-El texto visible está en inglés. Idiomas de publicación, escalado de texto elegido por
-el jugador, mandos y garantías de accesibilidad siguen abiertos. Los requisitos del
-antiguo prompt web no prueban que estas capacidades estén presentes en el port.
+El texto visible está en inglés. Idiomas de publicación, mandos (habituales en Steam) y
+garantías de accesibilidad siguen abiertos; el escalado lo elige el jugador desde 0.3.5.
+Los requisitos del antiguo prompt web no prueban que estas capacidades estén presentes en
+el port.
 
 ## Prueba de comprensión propuesta
 
@@ -68,8 +72,8 @@ apoyo, use la pausa y diga por qué aumenta awareness. Después pedir que antici
 si su plan llegará a tiempo. Registrar dudas y errores antes de explicarle la regla.
 Repetir las tareas críticas con sonido desactivado y revisar dependencia del color.
 
-Fuentes: [pantalla](../../../godot/ui/game_screen.gd), [panel regional](../../../godot/ui/region_panel.gd),
-[diálogos](../../../godot/ui/dialogs.gd) y [controles](../../../README.md).
+Fuentes: [pantalla](../../../unity/Assets/Awakening/UI/Screens/GameScreen.cs), [panel regional](../../../unity/Assets/Awakening/UI/Screens/RegionPanel.cs),
+[diálogos](../../../unity/Assets/Awakening/UI/Screens/Dialogs.cs), [notas](../../../unity/Assets/Awakening/UI/Text/Notes.cs) y [controles](../../../README.md).
 
 ## `alignment-3` — 2026-11-12
 
@@ -84,5 +88,43 @@ Fuentes: [pantalla](../../../godot/ui/game_screen.gd), [panel regional](../../..
 
 Comprobado con `dev/layout_check.gd` en los perfiles de 0.3.5; véase el
 [registro de versiones](../../playtests/versiones.md).
+
+## Port a Unity (0.5.0, 2026-11-18)
+
+Misma composición, textos y comportamiento que 0.4.0, rehechos en UI Toolkit. Para el
+jugador cambian tres cosas:
+
+- **Tooltips propios.** UI Toolkit no muestra tooltips fuera del editor, así que el juego
+  dibuja los suyos tras una breve pausa, como Godot. En táctil no hay tooltips: un toque
+  abre la explicación, como antes.
+- **Lector de pantalla.** Sin equivalente todavía (véase «Barreras por comprobar»).
+- **Escritorio.** El ejecutable nativo usa el diseño de ratón aunque Linux declare
+  pantalla táctil; el web conserva la detección táctil.
+
+Comprobado con `unity/shots.sh --check-ui 1` y `unity/layout-check.sh` (60 combinaciones);
+detalle en [verificación del port](../../unity/verificacion.md).
+
+## Legibilidad y recortes (0.5.1, 2026-11-18)
+
+Correcciones vistas en capturas de la build de desarrollo 0.5.0; sin cambios de reglas.
+
+- **Mapa.** Nombres y cuentas atrás con una copia de papel detrás de la tinta; seguidores
+  en fichas de papel opaco. La región seleccionada o bajo el puntero recupera tinta plena y
+  un subrayado. Las etiquetas esquivan los avisos y quedan dentro de la vista; si no caben
+  cerca de su región, esperan en lugar de alejarse de ella.
+- **Amenazas.** La columna muestra hasta dos amenazas completas en escritorio y una en
+  compacto, con «+N more threats · review» para las restantes. Si falta espacio pasa a una
+  tarjeta breve que remite al expediente, y recupera el detalle cuando vuelve el espacio.
+- **Pronóstico.** Ocupa una franja reservada sobre el libro mayor, fuera del centro del
+  mapa, y se oculta al abrir una hoja modal.
+- **Bloqueos.** Las compras y respuestas no disponibles pierden el relleno activo, pero
+  conservan tinta legible y el motivo del bloqueo.
+- **Expediente y libro mayor.** Estadísticas y People quedan en un pie fijo en escritorio;
+  en compacto se desplazan con una indicación de que quedan notas. El ticker de la crónica
+  se limita a dos líneas, con el texto completo en el tooltip y en la hoja Chronicle;
+  durante la alineación cede su espacio al botón del rito.
+
+Comprobado con `unity/layout-check.sh` (60/60) y capturas a 1600×900 y 844×390 táctil;
+sin prueba en teléfono físico. Detalle en el [registro de versiones](../../playtests/versiones.md).
 
 [Volver al índice](../README.md)

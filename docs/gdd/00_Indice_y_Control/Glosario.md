@@ -1,6 +1,6 @@
 # Glosario de trabajo
 
-**Versión:** 0.2 · **Fecha:** 2026-11-12 · **Estado:** referencia del prototipo.
+**Versión:** 0.3 · **Fecha:** 2026-11-18 · **Estado:** referencia del juego actual.
 
 Los términos españoles ayudan a conversar sobre el diseño; no fijan todavía una
 localización de la interfaz.
@@ -27,6 +27,6 @@ localización de la interfaz.
 | Obstruct | Obstruir (`counter`): detener una amenaza con Influence; quema las conexiones de la región 12 meses |
 | Scatter | Dispersar (`scatter`): la célula se oculta 8 meses; la amenaza no encuentra a nadie y la célula no recluta, no ingresa ni sostiene su sitio |
 | Silence | Silenciar (`silence`): detener una amenaza con Dread; las desapariciones suman awareness |
-| `alignment-3` | Identificador del conjunto de reglas actual (juego 0.4.0), distinto de la versión documental. `alignment-1` y `alignment-2` son los anteriores |
+| `alignment-3` | Identificador del conjunto de reglas actual (juegos 0.4.0–0.5.1), distinto de la versión documental. `alignment-1` y `alignment-2` son los anteriores |
 
 [Volver al índice](../README.md)

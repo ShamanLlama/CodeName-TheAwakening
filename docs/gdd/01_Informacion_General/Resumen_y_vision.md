@@ -1,6 +1,6 @@
 # Resumen y visión
 
-**Versión:** 0.2 · **Fecha:** 2026-10-28 · **Estado:** base implementada y objetivos confirmados; detalles de dirección pendientes.
+**Versión:** 0.3 · **Fecha:** 2026-11-18 · **Estado:** base implementada en Unity y objetivos confirmados; detalles de dirección pendientes.
 
 ## Concepto en una frase
 
@@ -15,10 +15,13 @@ su despertar antes de que termine la alineación astral o la humanidad descubra 
   real, pausa y economía de crecimiento.
 - **Cámara y escala:** vista global de ocho regiones; gestión abstracta de población,
   sin unidades individuales controlables.
-- **Base jugable:** Godot 4.7, reglas `alignment-1`. Existe un prototipo React/TypeScript
-  que se conserva como referencia de reglas.
-- **Plataformas del proyecto actual:** navegador orientado a itch.io, con exportaciones
-  Linux y Windows. Esto no prueba que exista un lanzamiento público.
+- **Base jugable:** Unity 6.3 LTS desde el juego 0.5.0 (2026-11-18), reglas `alignment-3`.
+  Las versiones 0.2.0–0.4.0 se hicieron en Godot 4.7 y se conservan como referencia; el
+  prototipo React/TypeScript es un antecedente histórico.
+- **Plataformas:** la salida principal será **Steam**, con un ejecutable de escritorio
+  (Linux hoy; Windows después). La build web en **itch.io** sirve para pruebas y para
+  compartir la beta de forma sencilla y controlada, con acceso restringido, y aprovechar
+  GTC Playtest Lab. Ninguna de las dos es todavía un lanzamiento público.
 - **Duración actual:** unos siete minutos de simulación a 1× sin pausas; el tiempo
   total de sesión todavía no se ha medido en esta revisión.
 
@@ -51,7 +54,8 @@ alargar el calendario o añadir contenido: primero se documenta el funcionamient
 La identidad del jugador, la voz narrativa y el tono específico del horror siguen
 pendientes. No se ha fijado una prioridad relativa entre las tres dimensiones.
 
-Tampoco están definidos aquí el público, el precio, el presupuesto ni la fecha de salida.
+El juego será gratuito, corto y completo (D08). Tampoco están definidos aquí el público,
+el presupuesto ni la fecha de salida.
 Véanse [decisiones pendientes](../00_Indice_y_Control/Decisiones_pendientes.md).
 
 ## Comprobación propuesta
@@ -60,7 +64,7 @@ Dar esta ficha a una persona nueva y pedirle que explique qué hará, qué inten
 conseguir y por qué crecer puede perjudicarla. Comparar su expectativa con una partida.
 Esta revisión no ha realizado esa prueba.
 
-Fuentes: [README](../../../README.md), [Overview](../01-overview.md) y
-[Godot](../../../godot/README.md).
+Fuentes: [README](../../../README.md), [Overview](../01-overview.md),
+[README de Unity](../../../unity/README.md) y [registro de versiones](../../playtests/versiones.md).
 
 [Volver al índice](../README.md)

@@ -1,10 +1,10 @@
 # Base técnica y límites
 
-**Versión:** 0.2 · **Fecha:** 2026-11-18 · **Estado:** referencia de la arquitectura desde 0.5.0 (port a Unity).
+**Versión:** 0.3 · **Fecha:** 2026-11-18 · **Estado:** referencia de la arquitectura desde 0.5.0 (port a Unity).
 
 ## Motor y módulos
 
-Desde 0.5.0 el juego está en `unity/`, con Unity 6.3 LTS (6000.3.25f1), C# y UI Toolkit. Exporta WebGL para itch.io y un ejecutable de escritorio (Linux por ahora) pensado para Steam. Las reglas son las mismas de 0.4.0 (`alignment-3`); el port no cambió el diseño. La versión Godot 4.7 (0.2.0–0.4.0) sigue en `godot/` como referencia y en la rama `godot`. El prototipo React/TypeScript de `src/` dejó de ser referencia en `alignment-2`.
+Desde 0.5.0 el juego está en `unity/`, con Unity 6.3 LTS (6000.3.25f1), C# y UI Toolkit. La salida principal es Steam, con un ejecutable de escritorio (Linux por ahora). La exportación WebGL para itch.io sirve para las pruebas de la beta con GTC Playtest Lab ([D12](../00_Indice_y_Control/Decisiones_pendientes.md)). Las reglas son las mismas de 0.4.0 (`alignment-3`); el port no cambió el diseño. La versión Godot 4.7 (0.2.0–0.4.0) sigue en `godot/` como referencia y en la rama `godot`. El prototipo React/TypeScript de `src/` dejó de ser referencia en `alignment-2`.
 
 | Módulo | Responsabilidad |
 | --- | --- |
@@ -20,7 +20,7 @@ Una acción se previsualiza y valida en el motor antes de ejecutarse. El nuevo e
 
 La población se distribuye entre ajenos, negadores, creyentes, seguidores y pérdidas. Su suma conserva la capacidad regional. Modificar seguidores sin trasladar población rompe también el cálculo de apoyo de los sitios.
 
-Los parámetros generales están en [Balance](../../../unity/Assets/Awakening/Core/Rules/Balance.cs); acciones, regiones y dificultades en [GameData](../../../unity/Assets/Awakening/Core/Rules/GameData.cs). Un cambio de reglas se hace en Core, se regeneran las trazas (`core-tests/Tools`, `regenerate-goldens`) y se registra un ruleset nuevo.
+Los parámetros generales están en [Balance](../../../unity/Assets/Awakening/Core/Rules/Balance.cs); acciones, regiones y dificultades en [GameData](../../../unity/Assets/Awakening/Core/Rules/GameData.cs). Un cambio de reglas se hace en Core, se regeneran las trazas (`core-tests/Tools`, `regenerate-goldens`) y se registra un ruleset nuevo. El bot mide el balance con `dotnet run --project core-tests/Tools -- measure --seeds=48`; con `alignment-3` da 103/144 victorias, igual que Godot.
 
 El guardado es el mismo sobre `save-v2` de Godot. En el navegador se guarda en la misma base IndexedDB y con la misma clave que usaba la build Godot, así que la build Unity hereda ajustes, tutorial, consentimiento y registros pendientes. En escritorio va a `save-v2.json` bajo `Application.persistentDataPath`. No hay backend, cuenta ni sincronización de partidas.
 

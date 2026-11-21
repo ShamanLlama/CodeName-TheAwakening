@@ -1,15 +1,15 @@
 # Dirección de audio
 
-**Versión:** 0.1 · **Fecha:** 2026-10-28 · **Estado:** efectos implementados; dirección sonora final abierta.
+**Versión:** 0.2 · **Fecha:** 2026-11-18 · **Estado:** efectos implementados; dirección sonora final abierta.
 
 ## Base actual
 
-Godot sintetiza efectos al iniciar: clic, acción, rechazo, amenaza, presagio, sitio y
-final. El sonido usa tonos y envolventes generados por código; no depende de archivos
+El juego sintetiza efectos al iniciar: clic, acción, rechazo, amenaza, presagio, sitio y
+final. Desde 0.5.0 lo hace Unity con los mismos sonidos que la versión Godot. El sonido usa tonos y envolventes generados por código; no depende de archivos
 de audio externos. El menú permite silenciar y ajustar volumen.
 
-La implementación de [Sfx](../../../godot/ui/sfx.gd) define esos sonidos y mantiene
-cuatro reproductores. Esto limita cuántos efectos pueden sonar a la vez. No hay
+La implementación de [Sfx](../../../unity/Assets/Awakening/UI/Audio/Sfx.cs) define esos
+sonidos y mantiene cuatro reproductores. Esto limita cuántos efectos pueden sonar a la vez. No hay
 música ni voz en ese catálogo; no se asumen como entregables comprometidos.
 
 ## Función propuesta

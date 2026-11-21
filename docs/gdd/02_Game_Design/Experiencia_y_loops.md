@@ -1,6 +1,6 @@
 # Experiencia, loops y sistemas
 
-**Versión:** 0.4 · **Fecha:** 2026-11-12 · **Estado:** síntesis de `alignment-3` (juego 0.4.0); pilares sin cambios.
+**Versión:** 0.5 · **Fecha:** 2026-11-18 · **Estado:** síntesis de `alignment-3` (juegos 0.4.0–0.5.1, Godot y Unity); pilares sin cambios.
 
 ## Pilares de la base actual
 
@@ -117,7 +117,9 @@ Se probó que las amenazas se tiraran cada 3 meses en lugar de 4 para compensar 
 nuevas: el bot bajó de 103 a 59 victorias en 144 partidas. Se descartó; la cadencia no cambia.
 
 **Medición (bot, no humanos).** `godot --headless --path godot -s res://dev/measure.gd`,
-Normal, misma semilla por partida. La política usa las respuestas nuevas así: obstruye en
+Normal, misma semilla por partida. En Unity se reproduce con
+`dotnet run --project core-tests/Tools -- measure --seeds=48`, que da las mismas cifras
+(comprobado el 2026-11-18). La política usa las respuestas nuevas así: obstruye en
 regiones con sitio; si no puede, silencia cuando hay un sitio o la célula en peligro y sobra
 Dread; dispersa células sin sitio cuando el golpe cuesta más que los meses ocultos.
 
@@ -156,9 +158,11 @@ El conjunto actual tiene catorce acciones: `recruit`, `expand`, `sacrifice`, `re
 `convert` y `reveal_figure`. Sus condiciones y costes están en los datos y en `previewAction`;
 las referencias detalladas del índice explican cada sistema.
 
-Una doctrina por partida especializa reclutamiento (**Congregation**), infiltración
-(**Hidden hand**, obstruir cuesta un tercio menos) o terror ritual (**Harbinger**,
-silenciar cuesta un tercio menos). La progresión consiste en ampliar
+Una doctrina por partida especializa reclutamiento (**Congregation**, +35 % de
+reclutamiento automático), infiltración (**Hidden hand**, las amenazas llegan 2 meses
+después y obstruir cuesta un tercio menos) o terror ritual (**Harbinger**, el sacrificio
+da 35 de Dread, manifestar cuesta 15 y silenciar un tercio menos). Se compra una vez,
+por 40 de Influence. La progresión consiste en ampliar
 la red, financiar sitios y alcanzar el final; no se documenta un sistema actual de
 desbloqueos permanentes entre partidas.
 
@@ -173,8 +177,8 @@ Observar si una persona cambia su plan después de un sacrificio o amenaza y pue
 explicar la relación entre seguidores, ingreso y apoyo ritual. Registrar qué acciones
 ignora y por qué. Las simulaciones anteriores no demuestran comprensión humana.
 
-Fuentes: [balance](../../../godot/core/balance.gd), [acciones](../../../godot/core/game_data.gd),
-[motor](../../../godot/core/game_engine.gd), [director](../../../godot/core/director.gd),
+Fuentes: [balance](../../../unity/Assets/Awakening/Core/Rules/Balance.cs), [acciones](../../../unity/Assets/Awakening/Core/Rules/GameData.cs),
+[motor](../../../unity/Assets/Awakening/Core/Rules/GameEngine.cs), [director](../../../unity/Assets/Awakening/Core/Rules/Director.cs),
 [registro de versiones](../../playtests/versiones.md), [razones del diseño](../08-rationale.md)
 y [problemas abiertos](../09-open-problems.md).
 

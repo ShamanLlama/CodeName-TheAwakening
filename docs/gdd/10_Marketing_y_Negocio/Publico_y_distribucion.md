@@ -1,13 +1,20 @@
 # Público, distribución y negocio
 
-**Versión:** 0.1 · **Fecha:** 2026-10-28 · **Estado:** hipótesis; decisiones comerciales por definir.
+**Versión:** 0.2 · **Fecha:** 2026-11-18 · **Estado:** plataformas y oferta decididas; público por validar.
 
-## Lo que sabemos del proyecto
+## Plataformas y oferta decididas
 
-La implementación apunta a jugar en navegador mediante itch.io y permite exportar
-para Linux y Windows. El flujo actual utiliza ratón/teclado y textos en inglés.
-No se encontró en las fuentes revisadas una decisión vigente de precio, lanzamiento,
-objetivo de ingresos, campaña, publisher o financiación.
+- **Steam es la salida principal** (D12, 2026-11-17). El port a Unity 6.3 LTS (0.5.0) se
+  hizo para tener un ejecutable de escritorio para Steam; hoy se exporta para Linux y
+  Windows queda para después. La integración con Steamworks está pendiente.
+- **itch.io (web) es el canal de pruebas.** La build web permite compartir la beta de
+  forma sencilla y controlada: página restringida con contraseña, invitaciones y una
+  ronda de GTC Playtest Lab por build, con consentimiento explícito para la captura.
+  No es el lanzamiento.
+- **Oferta:** juego gratuito, corto y completo; no es una demo ni un producto de pago (D08).
+
+El flujo actual usa ratón/teclado o pantalla táctil, con textos en inglés. No hay
+decisión de idiomas, fecha de lanzamiento, campaña, publisher o financiación.
 
 ## Hipótesis de audiencia para validar
 
@@ -20,16 +27,13 @@ una segmentación aprobada. Edad, regiones, idiomas y canales están por definir
 qué esperan hacer y observar una partida. Revisar si el tema y las decisiones
 atraen a las mismas personas y si quieren volver a jugar por motivos identificables.
 
-## Oferta y distribución pendientes
+## Distribución pendiente
 
-Definir si el objetivo es un juego breve gratuito, una demo, un producto de pago
-u otra entrega. Confirmar plataformas prioritarias, idiomas y qué parte de la
-experiencia debe justificar volver a jugar o comprar. No fijar precio ni proyección
-de ventas sin ese contexto y evidencia posterior.
-
-Una exportación configurada no demuestra publicación, aceptación en una tienda ni
-compatibilidad verificada en todos los dispositivos. Requisitos de tienda y condiciones
-de lanzamiento se comprobarán cuando exista una decisión de publicación concreta.
+Quedan por definir los idiomas, la fecha, los requisitos de la página de Steam
+(capturas, tráiler, descripción, clasificación) y qué parte de la experiencia debe
+justificar volver a jugar. Una exportación configurada no demuestra publicación,
+aceptación en la tienda ni compatibilidad verificada en todos los equipos. Steamworks,
+logros o guardado en la nube no se comprometen hasta decidir la publicación.
 
 Se mantienen juntos público, posicionamiento y negocio hasta que haya decisiones
 suficientes para separar fichas. Las preguntas están en D07–D08 del

@@ -1,6 +1,6 @@
 # Mapa estratégico y ritmo de partida
 
-**Versión:** 0.2 · **Fecha:** 2026-10-28 · **Estado:** mapa y calendario implementados; objetivo de 15–30 minutos confirmado.
+**Versión:** 0.3 · **Fecha:** 2026-11-18 · **Estado:** mapa y calendario implementados; objetivo de 15–30 minutos confirmado.
 
 ## Función del mapa
 
@@ -10,7 +10,8 @@ la acción de expansión permite reconstruir sin esa exigencia de vecindad, siem
 que queden recursos y población elegible. No hay una secuencia de niveles.
 
 Las capacidades son abstracciones de juego. La tabla es una fotografía de los datos
-al 2026-10-28; no describe población ni instituciones reales.
+al 2026-10-28, comprobada sin cambios el 2026-11-18; no describe población ni
+instituciones reales.
 
 | Región visible | ID | Peso poblacional | Seguidores para apoyar un sitio hoy |
 | --- | --- | ---: | ---: |
@@ -24,9 +25,9 @@ al 2026-10-28; no describe población ni instituciones reales.
 | Oceania | `oceania` | 3 | 75 |
 
 La capacidad parte del peso regional y el requisito ritual se calcula sobre ella.
-Las adyacencias y los rasgos se mantienen en [regiones](../../../src/data/regions.ts)
-y su equivalente [GameData](../../../godot/core/game_data.gd), evitando duplicar el
-grafo completo en prosa. La geometría usa [Natural Earth](../../../godot/data/NATURAL_EARTH.md).
+Las adyacencias y los rasgos se mantienen en [GameData](../../../unity/Assets/Awakening/Core/Rules/GameData.cs),
+evitando duplicar el grafo completo en prosa. La geometría usa
+[Natural Earth](../../../unity/Assets/Awakening/Licenses/NATURAL_EARTH.md).
 
 Las regiones de mayor población ofrecen reservas de reclutamiento y exigen conservar
 más seguidores para un sitio. Escepticismo e instituciones cambian la población
@@ -45,7 +46,7 @@ Fotografía actual: 200 meses de preparación, 24 de alineación y 12 meses acum
 para completar el rito. Cada sitio requiere 24 meses apoyados. A 1× un mes dura dos
 segundos reales, de modo que el límite completo supone 448 segundos de simulación.
 Las pausas aumentan el tiempo real de sesión. Los valores se consultan en
-[balance](../../../src/data/balance.ts).
+[Balance](../../../unity/Assets/Awakening/Core/Rules/Balance.cs).
 
 La alineación impide ganar antes de su apertura, aunque los sitios estén listos.
 Interrumpir el rito conserva su progreso mientras el calendario sigue corriendo.

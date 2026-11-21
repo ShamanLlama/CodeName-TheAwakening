@@ -1,6 +1,6 @@
 # Dirección visual
 
-**Versión:** 0.2 · **Fecha:** 2026-10-30 · **Estado:** dirección de época confirmada; legibilidad por validar.
+**Versión:** 0.3 · **Fecha:** 2026-11-18 · **Estado:** dirección de época confirmada; legibilidad por validar.
 
 ## Lenguaje visual actual
 
@@ -9,8 +9,11 @@ iluminado por una lámpara, entre 1908 y 1926. El mapa es una carta de navegaci�
 mar oscuro dentro de un marco con doble filete, tierra en pergamino manchado, rosa de los
 vientos y la marca de R'lyeh en el Pacífico Sur. Cada panel es un documento: expediente
 (región), recortes de prensa (amenazas), telegramas (avisos), libro mayor (barra inferior)
-y hojas impresas con marco (diálogos). Godot dibuja todo mediante código; el grano del
-papel es un shader sin texturas.
+y hojas impresas con marco (diálogos). Todo se dibuja mediante código, sin texturas
+incluidas en la build: en Unity el mapa se traza con `Painter2D`, y el grano del papel y la
+luz de la lámpara se generan al iniciar como texturas en memoria. En Godot (0.2.0–0.4.0)
+eran shaders; el aspecto es el mismo, con métrica de fuentes y textura del papel algo
+distintas.
 
 El calendario muestra fechas reales: la partida empieza en enero de 1908, la alineación
 se abre en septiembre de 1924 y se cierra en septiembre de 1926, alrededor del 23 de marzo
@@ -24,7 +27,11 @@ para el texto y Courier Prime para los datos mecanografiados.
 La paleta asigna un acento por significado, con una tinta para el papel y un tono claro
 para lo oscuro: verdín para el culto, sangre de buey para el peligro, violeta para
 presagios y Dread, ocre para advertencias. Los valores exactos pertenecen a
-[Palette](../../../godot/ui/palette.gd).
+[Palette](../../../unity/Assets/Awakening/UI/Kit/Palette.cs).
+
+Legibilidad (0.5.1): los nombres y cuentas atrás del mapa llevan una copia de papel
+detrás de la tinta, y los seguidores, fichas de papel opaco; las manchas grandes del papel
+se atenuaron. Los botones y las cifras usan Old Standard o Courier Prime.
 
 ## Función visual propuesta
 
@@ -48,7 +55,8 @@ la plantilla documental y este juego pertenece a Lucid Labworks Studio.
 Pedir a una persona que localice el peligro más urgente y un sitio interrumpido.
 Revisar color, tamaño y animación según el resultado.
 
-Fuentes: [mapa](../../../godot/map/world_map.gd), [paleta](../../../godot/ui/palette.gd),
-[README Godot](../../../godot/README.md) y licencias tipográficas en [fonts](../../../godot/fonts/).
+Fuentes: [mapa](../../../unity/Assets/Awakening/UI/Map/WorldMap.cs), [paleta](../../../unity/Assets/Awakening/UI/Kit/Palette.cs),
+[papel](../../../unity/Assets/Awakening/UI/Kit/PaperGrain.cs), [README de Unity](../../../unity/README.md) y licencias
+tipográficas en [Licenses](../../../unity/Assets/Awakening/Licenses/).
 
 [Volver al índice](../README.md)

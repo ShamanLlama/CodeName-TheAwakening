@@ -1,6 +1,6 @@
 # The Awakening of Cthulhu — GDD
 
-**Versión documental:** 0.2 · **Fecha:** 2026-10-28 · **Estado:** documentación de la implementación en curso.
+**Versión documental:** 0.3 · **Fecha:** 2026-11-18 · **Estado:** documentación de la implementación en curso; contrastada con el juego 0.5.1 (Unity, `alignment-3`).
 
 Este es el GDD de trabajo del juego de Lucid Labworks Studio. Adapta las plantillas de
 Game Time Continuum y aprovecha la documentación de reglas existente. La implementación
@@ -9,10 +9,14 @@ Los objetivos confirmados son partidas de **15–30 minutos** y una mezcla de
 **estrategia, narrativa y horror**. Se distinguen del estado actual, con unos siete
 minutos de simulación a 1× más pausas. Las propuestas y las decisiones pendientes se
 identifican expresamente; esta etapa no compromete un rediseño ni funcionalidades nuevas.
+Desde 0.5.0 el juego está en **Unity 6.3 LTS**. La salida principal será **Steam**
+(escritorio); la build web de itch.io sirve para las pruebas y para compartir la beta
+de forma sencilla y controlada con GTC Playtest Lab.
 
 El documento se trabaja en español. Los términos de interfaz y los identificadores
-del código se conservan en inglés cuando ayudan a localizar una regla. El juego actual
-está en Godot; React/TypeScript es el prototipo de referencia de sus reglas.
+del código se conservan en inglés cuando ayudan a localizar una regla. Las reglas viven
+en `unity/Assets/Awakening/Core/`. La versión Godot (0.2.0–0.4.0) se conserva como
+referencia, y el prototipo React/TypeScript de `src/` es solo un antecedente histórico.
 
 ## Por dónde empezar
 
@@ -31,9 +35,9 @@ Para modificar una regla, consulta después su referencia detallada.
 | 05 — Arte | [Dirección visual](05_Arte/Direccion_visual.md) | Lenguaje visual del prototipo; dirección final abierta |
 | 06 — Audio | [Dirección de audio](06_Audio/Direccion_de_audio.md) | Efectos existentes y función sonora propuesta |
 | 07 — UI/UX | [Interfaz y accesibilidad](07_UI_UX/Interfaz_y_accesibilidad.md) | Flujo actual, información crítica y validación pendiente |
-| 08 — Programación y Technical Design | [Base técnica](08_Programacion_y_Technical_Design/Base_tecnica.md) | Motor, reglas, guardado y validación |
+| 08 — Programación y Technical Design | [Base técnica](08_Programacion_y_Technical_Design/Base_tecnica.md) | Motor Unity, reglas, guardado y validación |
 | 09 — Producción | [Alcance y validación](09_Produccion/Alcance_y_validacion.md) | Inventario actual, riesgos y siguientes comprobaciones |
-| 10 — Público y negocio | [Público y distribución](10_Marketing_y_Negocio/Publico_y_distribucion.md) | Hipótesis de audiencia y decisiones comerciales abiertas |
+| 10 — Público y negocio | [Público y distribución](10_Marketing_y_Negocio/Publico_y_distribucion.md) | Steam como salida principal, itch.io para la beta e hipótesis de audiencia |
 
 ## Referencia detallada de la implementación
 
@@ -43,7 +47,10 @@ los integra sin duplicar sus reglas. Los cambios de `alignment-2` (2026-11-02) y
 [Experiencia y loops](02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-3--2026-11-12)
 y en las fotografías de valores de [07 — Balance](07-balance.md); los capítulos afectados
 llevan una nota al inicio. Están en inglés y describen la base implementada,
-no el alcance comprometido de una futura versión.
+no el alcance comprometido de una futura versión. Las funciones que citan
+(`tickDirector`, `advanceSimulation`…) son del prototipo TypeScript; en Unity tienen
+su equivalente en `unity/Assets/Awakening/Core/Rules/`
+(`Director.Tick`, `GameEngine.AdvanceSimulation`…).
 
 | Documento | Pregunta que resuelve |
 | --- | --- |

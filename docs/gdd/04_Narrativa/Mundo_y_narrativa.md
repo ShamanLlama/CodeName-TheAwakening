@@ -1,6 +1,6 @@
 # Mundo y narrativa sistémica
 
-**Versión:** 0.2 · **Fecha:** 2026-10-28 · **Estado:** mezcla de estrategia, narrativa y horror confirmada; voz y tono por definir.
+**Versión:** 0.3 · **Fecha:** 2026-11-18 · **Estado:** mezcla de estrategia, narrativa y horror confirmada; sucesos escritos admitidos (D04); voz y tono por definir.
 
 ## Premisa y conflicto actuales
 
@@ -28,10 +28,11 @@ que muestre cómo queda el mundo después del resultado.
 Dirección busca una mezcla de **estrategia, narrativa y horror**. La primera tarea
 es documentar cómo la implementación actual combina decisiones, eventos y crónica.
 La intención no equivale a una validación de que el prototipo ya logre esa mezcla.
-Tampoco define todavía si el desarrollo narrativo seguirá siendo sistémico o
-incorporará sucesos escritos, personajes o arcos; esas opciones están abiertas.
+Desde el 2026-11-12 (D04) se admiten sucesos escritos además de la crónica sistémica;
+todavía no hay ninguno implementado. Personajes y arcos siguen abiertos.
 
-Definir quién es el jugador dentro de la ficción, época, relación con el mundo real,
+La época está fijada en 1908–1926, con calendario real (D09). Falta definir quién es
+el jugador dentro de la ficción, la relación con el mundo real,
 grado de fidelidad a los mitos, voz del narrador, humor y representación del sacrificio.
 También decidir si el horror debe sentirse principalmente en decisiones, textos,
 imagen, sonido o una combinación.
@@ -50,7 +51,8 @@ Después de una partida, pedir a la persona que relate un suceso que recuerde y 
 papel que cree haber interpretado. Contrastar esa respuesta con el tono que se elija.
 No comprometer diálogos ramificados, escenas ni personajes antes de definir su función.
 
-Fuentes: [premisa](../01-overview.md), [eventos](../../../src/data/events.ts) y
-[crónica y diálogos de interfaz](../../../godot/ui/dialogs.gd).
+Fuentes: [premisa](../01-overview.md), [amenazas y oportunidades](../../../unity/Assets/Awakening/Core/Rules/GameData.cs),
+[textos de la crónica](../../../unity/Assets/Awakening/Core/Rules/Director.cs) y
+[diálogos de interfaz](../../../unity/Assets/Awakening/UI/Screens/Dialogs.cs).
 
 [Volver al índice](../README.md)

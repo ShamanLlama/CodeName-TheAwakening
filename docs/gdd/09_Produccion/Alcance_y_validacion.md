@@ -1,13 +1,18 @@
 # Alcance, riesgos y validación
 
-**Versión:** 0.2 · **Fecha:** 2026-10-28 · **Estado:** documentación de lo implementado como primera etapa; producción final por definir.
+**Versión:** 0.3 · **Fecha:** 2026-11-18 · **Estado:** documentación de lo implementado como primera etapa; producción final por definir.
 
 ## Base disponible
 
 Existe un ciclo completo de partida con mapa de ocho regiones, economía, población,
 acciones, amenazas, oportunidades, tres doctrinas, rituales, condiciones de resultado,
-guardado, guía, crónica y reporte de playtest. Godot es la versión jugable actual.
+guardado, guía, crónica y reporte de playtest. Desde 0.5.0 la versión jugable es la de
+Unity 6.3 LTS; la de Godot (0.4.0) se conserva en la rama `godot` hasta retirarla.
 Los registros previos de pruebas se conservan en el repositorio.
+
+La beta se prueba en itch.io por invitación, con rondas de GTC Playtest Lab por build. La
+salida principal prevista es Steam; la integración con Steamworks y los requisitos de la
+tienda quedan para después de la paridad del port.
 
 No hay compromiso nuevo de contenido por copiar una ficha de la plantilla.
 Presupuesto, capacidad del equipo, responsables por área, fecha y definición de
@@ -15,8 +20,9 @@ la primera entrega publicable se confirmarán con dirección.
 
 ## Secuencia propuesta de trabajo
 
-1. Documentar y contrastar lo implementado en Godot y `alignment-1`, antes de
-   proponer cambios. Esta prioridad fue confirmada por dirección.
+1. Documentar y contrastar lo implementado antes de proponer cambios. Esta prioridad
+   fue confirmada por dirección (D01); se hizo con `alignment-1` en Godot y se mantiene
+   al día con cada ruleset.
 2. Medir después sesiones reales frente al objetivo confirmado de 15–30 minutos y
    observar la mezcla de estrategia, narrativa y horror. Precisar el cómputo de pausas.
 3. Si se decide abrir una etapa de diseño, elegir un problema observable y comparar
@@ -32,7 +38,7 @@ la referencia histórica del trabajo realizado.
 
 | Riesgo o incertidumbre | Evidencia y límite | Próxima comprobación propuesta |
 | --- | --- | --- |
-| Oportunidades poco utilizadas | El GDD registra verbos ignorados en playtests anteriores | Observar descubrimiento y utilidad en la interfaz Godot actual |
+| Oportunidades poco utilizadas | Ignoradas en los playtests de `alignment-1`; usadas 2–5 veces por partida en 0.3.x | Observar descubrimiento y utilidad en la interfaz Unity actual |
 | Doctrinas o dificultades desiguales | El GDD conserva dudas después del rebalance | Comparar estrategias apropiadas para cada doctrina y dificultad |
 | Awareness difícil de entender | La regla puede castigar crecimiento que parece beneficioso | Preguntar al jugador por su causa antes de la derrota |
 | Final poco legible | Preparación, apoyo y ventanas temporales interactúan | Comprobar si el jugador anticipa una interrupción y una fecha límite |
@@ -47,7 +53,8 @@ y las hipótesis originales están en [Open problems](../09-open-problems.md).
 
 El [informe de septiembre](../../playtests/endgame-balance-2026-09-06.md) mide políticas
 automatizadas sobre una base de 600 meses y otros costes. No describe la economía
-actual de 200 meses. El [rationale](../08-rationale.md) documenta cambios posteriores.
+actual de 200 meses. Las rondas del Lab con Godot (0.2.0–0.4.0) y con Unity (desde 0.5.0)
+usan las mismas reglas solo cuando comparten ruleset; el registro de versiones lo indica. El [rationale](../08-rationale.md) documenta cambios posteriores.
 Los resultados automatizados permiten comprobar comportamientos y explorar balance;
 no reemplazan pruebas humanas de comprensión, ritmo o atractivo.
 

@@ -2,9 +2,18 @@
 
 ## Policy
 
-**`src/data/balance.ts` is the single source of truth.** Nothing in this folder overrides
-it. The snapshot below is dated and will drift; when it disagrees with the code, the code
-is right and this file is stale.
+**[`unity/Assets/Awakening/Core/Rules/Balance.cs`](../../unity/Assets/Awakening/Core/Rules/Balance.cs)
+is the single source of truth** (since game 0.5.0; before that `godot/core/balance.gd`, and
+before `alignment-2` `src/data/balance.ts`). Regions, actions, doctrines and difficulties
+live in [`GameData.cs`](../../unity/Assets/Awakening/Core/Rules/GameData.cs). Nothing in this
+folder overrides them. The snapshots below are dated and will drift; when they disagree
+with the code, the code is right and this file is stale.
+
+**Checked 2026-11-18 against game 0.5.1 (Unity, `alignment-3`):** the latest snapshotted value of
+every constant matches `Balance.cs` and `GameData.cs` (older values, such as `concealAwareness`
+1 in the 2026-09-14 snapshot, are superseded by a later snapshot), and
+`dotnet run --project core-tests/Tools -- measure --seeds=48` reproduces the 103/144 bot wins
+of the `alignment-3` snapshot (early 21, late 48, hub 34).
 
 Balance changed three times in a single working session during the tuning pass that
 produced the current build. Duplicating numbers across a dozen prose documents is how the
@@ -21,11 +30,13 @@ alone silently changes difficulty:
 | `raidLossShare` / `threatLossShare` | `raidLossFloor` / `threatLossFloor` | A high flat floor makes small regions disproportionately fragile |
 | `awarenessPerCapita` | `concealAwareness` and the conceal cooldown | Together they set the maximum sustainable cult size |
 
-## Snapshot — 2026-11-12 (`alignment-3`, Godot, game 0.4.0)
+## Snapshot — 2026-11-12 (`alignment-3`, Godot 0.4.0; unchanged in Unity 0.5.x)
 
-Source of truth: `godot/core/balance.gd`. Only the values added or changed since
+Source of truth at the time: `godot/core/balance.gd`; now `Balance.cs` with the same names in
+PascalCase (`SCATTER_MONTHS` → `ScatterMonths`). Only the values added or changed since
 `alignment-2` are listed. Reproduce the bot measurement with
-`godot --headless --path godot -s res://dev/measure.gd -- --seeds=48`.
+`dotnet run --project core-tests/Tools -- measure --seeds=48` (in Godot it was
+`godot --headless --path godot -s res://dev/measure.gd -- --seeds=48`).
 
 | Constant | Value | Controls |
 | --- | --- | --- |
@@ -146,7 +157,7 @@ Derived support requirements, by region weight:
 
 ## Difficulty
 
-`src/data/difficulties.ts`. Three multipliers, no special cases.
+`GameData.Difficulties`. Three multipliers, no special cases.
 
 | | Recruitment | Threat pressure | Warning months |
 | --- | --- | --- | --- |
@@ -156,12 +167,12 @@ Derived support requirements, by region weight:
 
 ## Doctrines
 
-`src/data/abilities.ts`. One per run, bought once, permanent.
+`GameData.Specializations`. One per run, bought once for 40 Influence, permanent.
 
 | Doctrine | Effect |
 | --- | --- |
 | Congregation | +35% automatic recruitment |
-| Hidden Hand | Longer threat warnings; obstruction costs ⅔ |
-| Harbinger | Larger Dread yield from sacrifice; cheaper manifestations |
+| Hidden Hand | Threats arrive 2 months later; obstruction costs ⅔ |
+| Harbinger | Sacrifice yields 35 Dread (not 25); manifestation costs 15 Dread (not 20); silencing costs 13 Dread per severity (not 20) |
 
 Doctrine balance is **not settled** — see [09 — Open problems](09-open-problems.md).
