@@ -1,5 +1,7 @@
 # 04 — Visibility and awareness
 
+> **`alignment-4` (2026-11-21):** `conceal` sigue quitando hasta 25 de exposición en su región, con 12 meses de cooldown regional, pero su −3 de awareness mundial descansa 6 meses en todo el mundo después de usarse (`WorldConcealReadyAt`). Mientras descansa, ocultar cuesta solo las 20 de Influence base y limpia solo la evidencia local. El freno de la sección "The only brake" ya no escala con el número de células: como mucho, 6 puntos de awareness por año en lugar de 24 con 8 células. Véase [Experiencia y loops](02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-4--2026-11-21).
+>
 > **`alignment-3` (2026-11-12):** `reveal` suma +5 de awareness solo la primera vez que una región se hace pública, `silence` suma +3 por severidad y toda acción informa la awareness que suma como parte de su precio. Véase [Experiencia y loops](02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-3--2026-11-12).
 >
 > **`alignment-2` (2026-11-02):** `conceal` quita 3 de awareness por 20 + la mitad de la awareness actual, y se puede usar en el mínimo de exposición si hay awareness. "The only brake" ya no tiene un techo fijo: el límite es la Influence. Véase [Experiencia y loops](02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-2--2026-11-02). El resto de este capítulo describe `alignment-1`.

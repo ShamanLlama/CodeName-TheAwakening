@@ -32,7 +32,8 @@ namespace Awakening.Core.Dev
         {
             double floor = r.Site.Invested ? 40.0 : r.Public ? 20.0 : 0.0;
             if (r.Exposure > Math.Max(30.0, floor + 10.0)) return "evidence";
-            if (state.Awareness >= 50 && state.Influence >= GameEngine.ConcealCost(state) + 40) return "awareness";
+            // Concealing for awareness only pays while its world effect is ready (alignment-4).
+            if (state.Awareness >= 50 && GameEngine.ConcealWorldCooldown(state) == 0 && state.Influence >= GameEngine.ConcealCost(state) + 40) return "awareness";
             return "";
         }
         public static GameState Respond(GameState state, string id)
@@ -49,7 +50,8 @@ namespace Awakening.Core.Dev
                 return GameEngine.PerformAction(state, "scatter", id).State;
             return state;
         }
-        public static GameState Play(string strategy, string seed, int stopMonth = Balance.Deadline)
+        /// <param name="onMonth">Optional observer, called with the state after each month's orders and before the month passes.</param>
+        public static GameState Play(string strategy, string seed, int stopMonth = Balance.Deadline, Action<GameState> onMonth = null)
         {
             var s = GameEngine.PlaceStartingFoothold(GameEngine.CreateGameState("normal", seed), Farm).State;
             Action<string, string> act = (id, region) =>
@@ -99,6 +101,7 @@ namespace Awakening.Core.Dev
                     if (s.Dread < owed && r.Population.Followers - Balance.SacrificeFollowers >= need + 120) act("sacrifice", id);
                 }
                 if (s.Status == "alignment" && Derived.ReadySites(s) >= 3) s = GameEngine.StartAwakening(s).State;
+                onMonth?.Invoke(s);
                 s = GameEngine.AdvanceSimulation(s, 1);
             }
             return s;

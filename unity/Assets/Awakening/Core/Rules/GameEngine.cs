@@ -61,13 +61,20 @@ namespace Awakening.Core.Rules
                 default: return 0.0;
             }
         }
-        public static int ConcealCost(GameState state) => GameData.Actions["conceal"].Influence + (int)Js.RoundHalfUp(state.Awareness * Balance.ConcealAwarenessPrice);
+        /// <summary>Months until concealment lowers world awareness again; 0 when it is available.</summary>
+        public static int ConcealWorldCooldown(GameState state) => Math.Max(0, state.WorldConcealReadyAt - state.ElapsedMonths);
+        /// <summary>Whether a conceal now would also lower world awareness.</summary>
+        static bool ConcealsWorld(GameState state) => ConcealWorldCooldown(state) == 0 && state.Awareness > 0;
+        public static int ConcealCost(GameState state) => GameData.Actions["conceal"].Influence
+            + (ConcealWorldCooldown(state) > 0 ? 0 : (int)Js.RoundHalfUp(state.Awareness * Balance.ConcealAwarenessPrice));
         public static int SiteDreadCost(GameState state)
         {
             int funded = 0;
             foreach (string id in GameData.RegionIds) if (state.Regions[id].Site.Invested) funded++;
             return Balance.SiteDreadCosts[Math.Min(funded, Balance.SiteDreadCosts.Length - 1)];
         }
+        /// <summary>Preparation months the region's current eclipse and secret figure could still add to a site.</summary>
+        internal static int Acceleration(RegionState r) => (r.Opportunity != null && r.Opportunity.Kind == "eclipse" ? 8 : 0) + (r.Figure != null && !r.Figure.Revealed ? Balance.FigureSiteProgress : 0);
         internal static int Cooldown(RegionState r, string id) => r.Cooldowns.TryGetValue(id, out int value) ? value : 0;
         public static ActionPreview PreviewAction(GameState state, string id, string regionId)
         {
@@ -94,11 +101,13 @@ namespace Awakening.Core.Rules
             if (reason.Length == 0 && id == "expand" && Derived.TotalFollowers(state) > 0 && !HasAdjacentCell(state, regionId)) reason = "Requires a cult in an adjacent region.";
             if (reason.Length == 0 && id == "reveal" && r.Public) reason = "Worship is already public.";
             if (reason.Length == 0 && id == "hide" && !r.Public) reason = "This cult is already underground.";
-            if (reason.Length == 0 && id == "conceal" && r.Exposure <= EvidenceFloor(r) && state.Awareness <= 0) reason = "Nothing to conceal. Public rites remain visible.";
+            if (reason.Length == 0 && id == "conceal" && r.Exposure <= EvidenceFloor(r) && !ConcealsWorld(state))
+                reason = state.Awareness <= 0 ? "Nothing to conceal. Public rites remain visible."
+                    : F("Nothing to conceal here. The world effect returns in {0} months.", ConcealWorldCooldown(state));
             if (reason.Length == 0 && id == "manifest" && p.Deniers + p.Unaware < 1) reason = "Everyone here already believes.";
             if (reason.Length == 0 && id == "prepare" && r.Site.Invested) reason = "This site's preparation is already funded.";
             if (reason.Length == 0 && id == "prepare" && !Derived.Supported(r)) reason = "Maintain at least " + Js.Num(Derived.SiteRequirement(r)) + " local followers.";
-            int acceleration = (r.Opportunity != null && r.Opportunity.Kind == "eclipse" ? 8 : 0) + (r.Figure != null && !r.Figure.Revealed ? Balance.FigureSiteProgress : 0);
+            int acceleration = Acceleration(r);
             int preparationLeft = Balance.Deadline - state.ElapsedMonths - Balance.FinalMonths;
             if (reason.Length == 0 && id == "prepare" && preparationLeft < Balance.SiteMonths - acceleration)
                 reason = F("Too late: preparation needs {0} more months and the final rite needs {1}, but only {2} remain.", Balance.SiteMonths - acceleration, Balance.FinalMonths, Math.Max(0, Balance.Deadline - state.ElapsedMonths));
@@ -132,8 +141,14 @@ namespace Awakening.Core.Rules
                     break;
                 case "counter": risk = F("No further obstruction here for {0} months.", a.Cooldown); break;
                 case "conceal":
-                    effect = "−" + Js.Fixed(Math.Min(25.0, Math.Max(0.0, r.Exposure - EvidenceFloor(r))), 0) + " Exposure, −" + Js.Fixed(Math.Min(Balance.ConcealAwareness, state.Awareness), 0)
-                        + " world awareness. The price rises with awareness.";
+                    string local = "−" + Js.Fixed(Math.Min(25.0, Math.Max(0.0, r.Exposure - EvidenceFloor(r))), 0) + " Exposure";
+                    if (ConcealsWorld(state))
+                    {
+                        effect = local + ", −" + Js.Fixed(Math.Min(Balance.ConcealAwareness, state.Awareness), 0) + " world awareness. The price rises with awareness.";
+                        risk = F("The world effect then rests for {0} months in every region.", Balance.ConcealWorldMonths);
+                    }
+                    else if (state.Awareness > 0) effect = local + F(" only. The world effect returns in {0} months.", ConcealWorldCooldown(state));
+                    else effect = local + ".";
                     break;
                 case "manifest": risk = "+15 Exposure and +8 awareness. New believers can strengthen resistance."; break;
                 case "prepare":
@@ -186,7 +201,11 @@ namespace Awakening.Core.Rules
                 case "hide": r.Public = false; break;
                 case "conceal":
                     r.Exposure = Math.Max(EvidenceFloor(r), r.Exposure - 25);
-                    next.Awareness = Derived.ClampPct(next.Awareness - Balance.ConcealAwareness);
+                    if (ConcealsWorld(state))
+                    {
+                        next.Awareness = Derived.ClampPct(next.Awareness - Balance.ConcealAwareness);
+                        next.WorldConcealReadyAt = next.ElapsedMonths + Balance.ConcealWorldMonths;
+                    }
                     break;
                 case "manifest":
                     var p = r.Population;
@@ -297,6 +316,18 @@ namespace Awakening.Core.Rules
             Derived.AddLog(next, "The final rite begins. Maintain three supported sites for 12 months.");
             return Success(next);
         }
+        public const string ConcededReason = "The cult lets the stars pass unanswered. Its cells scatter into rumor, and in R'lyeh the dreamer sleeps on.";
+        /// <summary>The player may end the run as a loss once the final rite can no longer be completed and has not begun.</summary>
+        public static bool CanConcede(GameState state) => IsActive(state) && state.Status != "awakening" && !Forecast.Margin(state).Fits;
+        public static GameState Concede(GameState state)
+        {
+            if (!CanConcede(state)) return state;
+            var next = state.Clone();
+            next.Status = "lost"; next.Speed = 0; next.ResultCode = "conceded";
+            next.ResultReason = ConcededReason;
+            Derived.AddLog(next, next.ResultReason);
+            return next;
+        }
         public static GameState AdvanceSimulation(GameState state, double months)
         {
             if (!IsActive(state) || double.IsNaN(months) || double.IsInfinity(months) || months < 1) return state;
@@ -331,21 +362,21 @@ namespace Awakening.Core.Rules
                 if (next.Status == "awakening" && Derived.ReadySites(next) >= Balance.RequiredSites) next.FinalProgress++;
                 if (next.FinalProgress >= Balance.FinalMonths)
                 {
-                    next.Status = "won"; next.Speed = 0;
+                    next.Status = "won"; next.Speed = 0; next.ResultCode = "awakened";
                     next.ResultReason = "Three surviving ritual sites opened the way. Cthulhu awakens.";
                     Derived.AddLog(next, next.ResultReason);
                     break;
                 }
                 if (next.Awareness >= 100)
                 {
-                    next.Status = "lost"; next.Speed = 0;
+                    next.Status = "lost"; next.Speed = 0; next.ResultCode = "world_awareness";
                     next.ResultReason = "The world knows. Every cell is hunted and the rite dies with them.";
                     Derived.AddLog(next, next.ResultReason);
                     break;
                 }
                 if (next.ElapsedMonths >= Balance.Deadline)
                 {
-                    next.Status = "lost"; next.Speed = 0;
+                    next.Status = "lost"; next.Speed = 0; next.ResultCode = "deadline";
                     next.ResultReason = F("The alignment has passed. {0}/3 sites supported; final rite {1}/12 months.", Derived.ReadySites(next), next.FinalProgress);
                     Derived.AddLog(next, next.ResultReason);
                     break;

@@ -1,6 +1,6 @@
 # Experiencia, loops y sistemas
 
-**Versión:** 0.5 · **Fecha:** 2026-11-18 · **Estado:** síntesis de `alignment-3` (juegos 0.4.0–0.5.1, Godot y Unity); pilares sin cambios.
+**Versión:** 0.6 · **Fecha:** 2026-11-21 · **Estado:** síntesis de `alignment-4` (juego 0.6.0, Unity); pilares sin cambios.
 
 ## Pilares de la base actual
 
@@ -38,15 +38,16 @@ en pausa.
 | Crecimiento | Reclutar en secreto o hacer público el culto | Más seguidores frente a evidencia y oposición |
 | Expansión | Abrir una célula en una región conectada | Nuevo potencial económico y ritual; más frentes |
 | Sacrificio | Consumir seguidores y elegir dónde hacerlo | Dread inmediato; menos ingreso y posible pérdida de apoyo |
-| Contención | Ocultar evidencia; ante cada amenaza, obstruir, dispersar, silenciar o aceptar el golpe | Menor presión, awareness o daño evitado, a cambio de Influence, meses de la célula, Dread y awareness, o seguidores |
+| Contención | Ocultar evidencia; ante cada amenaza, obstruir, dispersar, silenciar o aceptar el golpe | Menor presión o daño evitado, a cambio de Influence, meses de la célula, Dread y awareness, o seguidores. Ocultar baja la awareness mundial solo una vez cada 6 meses: entre medio, limpia solo la evidencia local |
 | Creencia | Manifestar lo imposible | Más población reclutable; mayor atención y resistencia |
 | Oportunidades | Aprovechar un presagio o convertir una figura | Dread, aceleración o beneficio secreto; coste y plazo |
 | Mantenimiento | Cuándo financiar cada sitio y cuánta Influence reservar | Margen de calendario frente a 1 Influence/mes por sitio durante toda la partida |
-| Final | Conservar sitios listos, pagarlos y recuperar interrupciones | Avance del rito frente al calendario y a la caza de sitios |
+| Final | Conservar sitios listos, pagarlos y recuperar interrupciones; si el rito ya no cabe, cerrar la partida | Avance del rito frente al calendario y a la caza de sitios. El margen del rito (último inicio menos inicio más temprano) dice cuántos meses se pueden perder |
 
 Sacrificar reduce el crecimiento futuro de awareness al reducir el culto; no elimina
 el conocimiento ya acumulado. La acción de ocultar evidencia sí puede reducirlo, a un
-precio que sube con la awareness.
+precio que sube con la awareness y como mucho una vez cada 6 meses en todo el mundo
+(`alignment-4`).
 
 ## Cambios de `alignment-2` — 2026-11-02
 
@@ -151,6 +152,60 @@ enfriamiento mundial para el efecto global de `conceal`.
 por partida: si una respuesta pasa del 80 % o no llega al 5 %, no hay decisión. Preguntar si
 entendieron por qué subió la awareness antes de perder.
 
+## Cambios de `alignment-4` — 2026-11-21
+
+**Problema.** Ocultar (`conceal`) borraba la awareness mundial en ráfagas. Cada región tenía
+su propio cooldown de 12 meses, así que con el juego en pausa se podía ocultar una vez por
+célula en el mismo mes: todos los runs completos del Lab muestran meses con 5 a 8
+ocultamientos, también con `alignment-2`. Con 8 células eran hasta 24 puntos de awareness
+por año. El precio en awareness de silenciar dejaba de pesar, y el reloj que mata se
+desactivaba expandiéndose, contra el pilar 1. Además, cuando el rito ya no cabía, el
+jugador no lo sabía y seguía gastando hasta el mes 224 (run a5ac6dbf: 7 sacrificios y
+8 ocultamientos en el mes 213).
+
+**Objetivo.** Que la awareness se gestione en vez de borrarse, cambiando una sola regla de
+balance para poder aislar su efecto. Y que una partida perdida pueda cerrarse en cuanto se
+sabe que está perdida.
+
+| Cambio | Regla | Pilar que refuerza | Condición de legibilidad |
+| --- | --- | --- | --- |
+| Efecto mundial de ocultar con plazo propio | Ocultar sigue siendo regional: −25 de exposición local, 12 meses de cooldown por región. Su −3 de awareness mundial tiene ahora un **cooldown mundial de 6 meses** (`WorldConcealReadyAt`). Mientras se recupera, ocultar cuesta solo las 20 de Influence base y no baja la awareness. Ocultar sin awareness no gasta el efecto mundial | 1: crecer vuelve a costar; 2: frente a una amenaza, silenciar ya no sale gratis | La vista previa dice cuándo vuelve el efecto mundial y, si está listo, que después descansa 6 meses. El sello muestra «GLOBAL EFFECT IN N MO» (`GameEngine.ConcealWorldCooldown`). Con la exposición en su piso y el efecto en reposo, la razón es «Nothing to conceal here. The world effect returns in N months.» |
+| Margen del rito | `Forecast.Margin` calcula, con los sitios financiados, el inicio más temprano del rito, el último inicio posible (mes 212) y el margen entre ambos, además de los meses que le faltan a cada sitio, si tiene apoyo y si su célula está dispersa | 4: el jugador lee el plazo antes de perderlo | Dato derivado, sin regla nueva; la banda de margen llega con la interfaz de 0.6.0 |
+| Cerrar la partida | Cuando el rito ya no puede completarse antes del mes 224 y no empezó, el jugador puede cerrar la partida como derrota (`GameEngine.Concede`, código `conceded`). Para decidirlo se cuentan los eclipses y figuras secretas presentes y los sitios que aún podrían financiarse ese mes, pero no presagios futuros. Todo final guarda su código: `awakened`, `world_awareness`, `deadline` o `conceded` | 4: una derrota con causa clara, sin minutos vacíos | El aviso «ya no cabe» y el botón de cierre llegan con la interfaz de 0.6.0 |
+
+Se descartó sacar el efecto mundial a una acción nueva («Burn the archives»): era más clara,
+pero sumaba un verbo y un adaptador sin aislar mejor el cambio.
+
+**Medición (bot, no humanos).** `dotnet run --project core-tests/Tools -- measure --seeds=48`,
+Normal, 48 seeds por estrategia. La política solo oculta por awareness cuando el efecto
+mundial está listo; con la política anterior, `alignment-4` da 79/144 (early 5, late 45,
+hub 29).
+
+| Estrategia | Victorias | Derrotas (awareness · calendario) | Awareness final (mediana) | Ocultamientos por partida | Mes de victoria (mediana) |
+| --- | --- | --- | --- | --- | --- |
+| Early public | 21 → 5 | 0 · 27 → 4 · 39 | 59 → 82 | 20 → 17 | 212 → 214 |
+| Late public | 48 → 45 | 0 · 0 → 2 · 1 | 64 → 73 | 13 → 13 | 212 → 212 |
+| Hub | 34 → 30 | 13 · 1 → 16 · 2 | 90 → 90 | 9 → 10 | 214 → 212 |
+| Total | 103/144 → 80/144 | | | | |
+
+El criterio previo era bajar el cooldown a 4 meses si las victorias caían por debajo de
+80/144. Quedaron en 80, en el límite, así que se mantienen 6 meses. Con 4 meses serían 86/144
+(early 8, late 46, hub 32), y con 3 meses, 91/144 (11, 47, 33). El bot tiene como mucho 4
+células y nunca ocultó en 4 regiones el mismo mes, ni antes ni después (máximo 2), así que
+la meta de 0 meses con 4 o más ocultamientos solo puede comprobarse con jugadores.
+
+**Riesgos.** La estrategia early public se hunde (21 → 5). Pierde sobre todo por calendario:
+con la awareness más alta, el lastre de reclutamiento deja sitios sin apoyo al llegar la
+alineación. Ni siquiera 4 meses la recupera (8/48), así que el plazo de ocultar no es la
+palanca para el culto público. Si los jugadores lo confirman, revisar el backlash o el
+lastre antes de aflojar ocultar. La diferencia entre 79 y 80 victorias está dentro del ruido
+de 48 seeds.
+
+**Comprobación con jugadores.** Con la telemetría de `awakening-3`: meses con 4 o más
+ocultamientos (meta 0), ocultar por debajo del 15 % de las acciones, awareness final de las
+victorias entre 35 y 75, y órdenes después del mes 212 sin rito iniciado (meta 0). Preguntar
+si entendieron por qué perdieron y si cerrar la partida les pareció justo.
+
 ## Acciones y progresión actuales
 
 El conjunto actual tiene catorce acciones: `recruit`, `expand`, `sacrifice`, `reveal`,
@@ -164,10 +219,13 @@ después y obstruir cuesta un tercio menos) o terror ritual (**Harbinger**, el s
 da 35 de Dread, manifestar cuesta 15 y silenciar un tercio menos). Se compra una vez,
 por 40 de Influence. La progresión consiste en ampliar
 la red, financiar sitios y alcanzar el final; no se documenta un sistema actual de
-desbloqueos permanentes entre partidas.
+desbloqueos permanentes entre partidas. El árbol de talentos vivirá dentro de cada partida
+(D05) y llega en 0.7.0.
 
 Se gana completando el rito dentro de la ventana con suficientes sitios listos y
-apoyados. Se pierde por conocimiento global máximo o por agotar el calendario.
+apoyados. Se pierde por conocimiento global máximo o por agotar el calendario. Desde
+`alignment-4`, el jugador también puede cerrar la partida como derrota cuando el rito ya
+no cabe y no empezó.
 El progreso del rito se conserva durante interrupciones; un sitio puede perder
 preparación por amenazas y se destruye si su célula pierde todos los seguidores.
 

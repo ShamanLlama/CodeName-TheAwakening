@@ -24,6 +24,10 @@ namespace Awakening.Core.Rules
         public List<LogEntry> Log = new List<LogEntry>();
         public int NextLogId;
         public string ResultReason;
+        /// <summary>Month from which concealment lowers world awareness again (0 = available).</summary>
+        public int WorldConcealReadyAt;
+        /// <summary>Null while the run is active; then "awakened", "world_awareness", "deadline" or "conceded".</summary>
+        public string ResultCode;
         public Telemetry Telemetry = new Telemetry();
 
         public GameState Clone()
@@ -217,4 +221,29 @@ namespace Awakening.Core.Rules
         public bool InterruptsSite;
     }
     public sealed class RitualForecast { public bool Urgent; public string Message; }
+    /// <summary>Whether the final rite still fits before the deadline, derived from the current sites.</summary>
+    public sealed class RiteMargin
+    {
+        /// <summary>Last month the final rite can begin and still finish (Balance.LatestRiteStart).</summary>
+        public int LatestStart;
+        /// <summary>First month the rite could begin with the funded sites if each keeps progressing; -1 with fewer than three funded sites.</summary>
+        public int EarliestStart;
+        /// <summary>LatestStart - EarliestStart; negative means the plan is late. Meaningless when EarliestStart is -1.</summary>
+        public int Margin;
+        /// <summary>The rite can still be completed before Balance.Deadline, counting accelerations available now (or, once started, the months left).</summary>
+        public bool Fits;
+        public bool Started;
+        /// <summary>The funded sites, fewest months left first.</summary>
+        public List<SiteMargin> Sites = new List<SiteMargin>();
+    }
+    public sealed class SiteMargin
+    {
+        public string Region;
+        /// <summary>Months until this site is prepared if it keeps progressing, including months the flock stays scattered.</summary>
+        public int MonthsLeft;
+        public bool Supported;
+        public bool Scattered;
+        public int Followers;
+        public int Required;
+    }
 }

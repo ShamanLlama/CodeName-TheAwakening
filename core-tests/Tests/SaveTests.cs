@@ -75,27 +75,31 @@ namespace Awakening.Core.Tests
             Assert.Contains("alignment-1", notice); Assert.Contains(Balance.Ruleset, notice);
             Assert.Null(decoded.RetiredRuleset); Assert.Equal("", SaveData.TakeRetiredNotice(decoded));
             Assert.DoesNotContain("retiredRuleset", SaveData.EncodeSave(decoded));
-            s.Ruleset = "alignment-2";
-            var previous = SaveData.DecodeSave(SaveData.EncodeSave(save)); Assert.NotNull(previous); Assert.Null(previous.State);
-            Assert.Contains("alignment-2", SaveData.TakeRetiredNotice(previous));
+            foreach (string older in new[] { "alignment-2", "alignment-3" })
+            {
+                s.Ruleset = older;
+                var previous = SaveData.DecodeSave(SaveData.EncodeSave(save)); Assert.NotNull(previous); Assert.Null(previous.State);
+                Assert.Contains(older, SaveData.TakeRetiredNotice(previous));
+            }
             s.Ruleset = "unknown-9";
             Assert.Null(SaveData.DecodeSave(SaveData.EncodeSave(save)));
         }
         [Fact]
-        public void RealGodotSaveLoadsAndContinuesTheSameRun()
+        public void RealGodotAlignment3SaveRetiresItsRunAndKeepsSettings()
         {
-            // Emitted by Godot 4.7.2: Playthrough.play("early", "resume", 60), saved with
-            // JSON.stringify(SaveData.default_save()), then advanced another 30 months.
-            string path = Path.Combine(GoldenTests.GoldenDirectory, "..", "..", "..", "core-tests", "Tests", "Fixtures", "godot-save-continuation.json");
+            // Emitted by Godot 4.7.2 under alignment-3: Playthrough.play("early", "resume", 60), saved with
+            // JSON.stringify(SaveData.default_save()). alignment-4 cannot continue it, like alignment-2 runs before it.
+            string path = Path.Combine(GoldenTests.RepoRoot, "core-tests", "Tests", "Fixtures", "godot-save-continuation.json");
             var fixture = (Dictionary<string, object>)JsonReader.Parse(File.ReadAllText(path));
             var decoded = SaveData.DecodeSave((string)fixture["save"]);
             Assert.NotNull(decoded);
-            Assert.Equal(60, decoded.State.ElapsedMonths);
+            Assert.Null(decoded.State);
             Assert.Equal(33.5, decoded.Settings.Volume);
             Assert.Equal(1.3, decoded.Settings.UiScale);
             Assert.True(decoded.Settings.ReducedMotion);
             Assert.Equal(new[] { "first-site" }, decoded.Settings.Hints);
-            GoldenTraces.RequireEqual(fixture["after"], GameStateJson.ToJson(GameEngine.AdvanceSimulation(decoded.State, 30)), "Godot save continuation");
+            Assert.Equal("Your unfinished run used older rules (alignment-3) and cannot continue under alignment-4. Settings and playtest records are kept; start a new run.",
+                SaveData.TakeRetiredNotice(decoded));
         }
         [Fact]
         public void OlderSettingsGainIndependentInterfaceDefaults()

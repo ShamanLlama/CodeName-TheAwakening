@@ -1,5 +1,7 @@
 # 06 — Ritual sites and the endgame
 
+> **`alignment-4` (2026-11-21):** `Forecast.Margin` deriva el margen del rito: el inicio más temprano con los sitios financiados (cada uno con sus meses de preparación pendientes y los meses que su célula siga dispersa, sin contar aceleraciones), el último inicio posible (mes 212) y la diferencia. Si el rito ya no puede completarse antes del mes 224 y no empezó, el jugador puede cerrar la partida como derrota (`GameEngine.Concede`, código `conceded`). Para eso se cuentan los eclipses y figuras secretas presentes y los sitios nuevos que todavía podrían terminarse, pero no presagios que aún no aparecieron. Antes, una partida así seguía hasta el mes 224. Véase [Experiencia y loops](02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-4--2026-11-21).
+>
 > **`alignment-3` (2026-11-12):** Un sitio cuya célula está dispersa queda detenido 8 meses: no avanza ni cuenta para el rito. Dispersar la célula de un sitio tiene ese precio. Véase [Experiencia y loops](02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-3--2026-11-12).
 >
 > **`alignment-2` (2026-11-02):** Los sitios cuestan 1 Influence al mes; sin pago quedan inactivos y no avanzan ni sostienen el rito. Desde el mes 200 la presión de amenazas sobre sitios sube +0,15, con aviso en el mes 176. Véase [Experiencia y loops](02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-2--2026-11-02). El resto de este capítulo describe `alignment-1`.

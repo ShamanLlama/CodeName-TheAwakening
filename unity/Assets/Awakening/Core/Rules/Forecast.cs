@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 
 namespace Awakening.Core.Rules
 {
@@ -18,6 +19,48 @@ namespace Awakening.Core.Rules
             {
                 result.Urgent = true;
                 result.Message += " Site upkeep exceeds income.";
+            }
+            return result;
+        }
+        /// <summary>Months a scattered flock still keeps its site from progressing.</summary>
+        static int ScatterDelay(GameState state, RegionState r) => r.Scattered ? Math.Max(0, r.ScatteredUntil - state.ElapsedMonths - 1) : 0;
+        /// <summary>
+        /// The final rite's margin. EarliestStart and Margin assume each funded site keeps progressing with no acceleration.
+        /// Fits is the optimistic test used to allow conceding: it counts the eclipses and secret figures present now
+        /// and new sites funded this month, but not omens that have not appeared yet.
+        /// </summary>
+        public static RiteMargin Margin(GameState state)
+        {
+            var result = new RiteMargin { LatestStart = Balance.LatestRiteStart, EarliestStart = -1, Started = state.Status == "awakening" };
+            var best = new List<int>();
+            foreach (string id in GameData.RegionIds)
+            {
+                var r = state.Regions[id];
+                int delay = ScatterDelay(state, r);
+                if (r.Site.Invested)
+                {
+                    int left = Math.Max(0, Balance.SiteMonths - r.Site.Progress);
+                    result.Sites.Add(new SiteMargin
+                    {
+                        Region = id, MonthsLeft = delay + left, Supported = Derived.Supported(r), Scattered = r.Scattered,
+                        Followers = (int)Math.Floor(r.Population.Followers), Required = (int)Derived.SiteRequirement(r)
+                    });
+                    best.Add(delay + Math.Max(0, left - GameEngine.Acceleration(r)));
+                }
+                else best.Add(delay + Balance.SiteMonths - GameEngine.Acceleration(r));
+            }
+            result.Sites = result.Sites.OrderBy(site => site.MonthsLeft).ToList();
+            if (result.Sites.Count >= Balance.RequiredSites)
+            {
+                result.EarliestStart = Math.Max(Balance.PreparationMonths, state.ElapsedMonths + result.Sites[Balance.RequiredSites - 1].MonthsLeft);
+                result.Margin = result.LatestStart - result.EarliestStart;
+            }
+            if (GameEngine.IsOver(state)) result.Fits = state.Status == "won";
+            else if (result.Started) result.Fits = Balance.Deadline - state.ElapsedMonths >= Balance.FinalMonths - state.FinalProgress;
+            else
+            {
+                best.Sort();
+                result.Fits = Math.Max(Balance.PreparationMonths, state.ElapsedMonths + best[Balance.RequiredSites - 1]) <= result.LatestStart;
             }
             return result;
         }
