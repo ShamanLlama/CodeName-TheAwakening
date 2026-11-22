@@ -718,6 +718,11 @@ namespace Awakening.UI
             _dread.text = Format.Count(s.Dread);
             _followers.text = Format.Count(Derived.TotalFollowers(s));
             RefreshTalents(s, placing, over);
+            if (Kit.Compact && _invokableId != "" && _talentsNote.text == "")
+            {
+                _talentsNote.text = "INVOKE READY";
+                _talentsNote.style.color = Palette.Omen;
+            }
 
             LogEntry last = s.Log.Count > 0 ? s.Log[s.Log.Count - 1] : null;
             SetTicker(last);
@@ -968,7 +973,8 @@ namespace Awakening.UI
                 ? GameData.InvokableTalentIds.FirstOrDefault(id => GameEngine.HasTalent(s, id) && GameEngine.InvokeReason(s, id) == "") ?? ""
                 : "";
             _invokableId = readyCapstone;
-            Kit.SetVisible(_capstoneBox, readyCapstone != "");
+            // Phones keep the ledger narrow: the invocation lives in the talent tree and the ledger only flags it.
+            Kit.SetVisible(_capstoneBox, readyCapstone != "" && !Kit.Compact);
             if (readyCapstone != "")
             {
                 TalentDefinition cap = GameData.Talents[readyCapstone];
@@ -1059,7 +1065,7 @@ namespace Awakening.UI
             else
             {
                 _rite.text = procession
-                    ? (Kit.Compact ? $"Procession ({riteMonths}m)" : $"Begin Procession · {riteMonths} mo")
+                    ? (Kit.Compact ? "Procession" : $"Begin Procession · {riteMonths} mo")
                     : (Kit.Compact ? "Begin Rite" : "Begin the Final Rite");
                 _rite.tooltip = procession
                     ? $"The Great Procession ready ({GameEngine.ProcessionRegions(s)} public regions). Spend 100 Dread and hold three sites for {riteMonths} months."
