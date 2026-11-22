@@ -4,16 +4,17 @@
 
 **[`unity/Assets/Awakening/Core/Rules/Balance.cs`](../../unity/Assets/Awakening/Core/Rules/Balance.cs)
 is the single source of truth** (since game 0.5.0; before that `godot/core/balance.gd`, and
-before `alignment-2` `src/data/balance.ts`). Regions, actions, doctrines and difficulties
+before `alignment-2` `src/data/balance.ts`). Regions, actions, talents and difficulties
 live in [`GameData.cs`](../../unity/Assets/Awakening/Core/Rules/GameData.cs). Nothing in this
 folder overrides them. The snapshots below are dated and will drift; when they disagree
 with the code, the code is right and this file is stale.
 
-**Checked 2026-11-21 against game 0.6.0 (Unity, `alignment-4`):** the latest snapshotted value of
+**Checked 2026-11-21 against game 0.7.0 (Unity, `alignment-5`):** the latest snapshotted value of
 every constant matches `Balance.cs` and `GameData.cs` (older values, such as `concealAwareness`
 1 in the 2026-09-14 snapshot, are superseded by a later snapshot), and
-`dotnet run --project core-tests/Tools -- measure --seeds=48` gives the 80/144 bot wins
-of the `alignment-4` snapshot (early 5, late 45, hub 30).
+`dotnet run --project core-tests/Tools -- measure --seeds=48` gives the 95/144 bot wins
+of the `alignment-5` snapshot (early 29, late 38, terror 28). Add `--difficulty=easy` or
+`--difficulty=hard` for the other modes (143/144 and 17/144).
 
 Balance changed three times in a single working session during the tuning pass that
 produced the current build. Duplicating numbers across a dozen prose documents is how the
@@ -25,10 +26,46 @@ alone silently changes difficulty:
 
 | If you change… | Also change… | Because |
 | --- | --- | --- |
-| `preparationMonths` | Director cadences, `threatWarningMonths`, difficulty/doctrine warning bonuses, per-month drift rates | Otherwise threats-per-run and drift-per-run scale with the calendar and difficulty moves with it |
+| `preparationMonths` | Director cadences, `threatWarningMonths`, difficulty/talent warning bonuses, per-month drift rates | Otherwise threats-per-run and drift-per-run scale with the calendar and difficulty moves with it |
 | `siteSupportShare` | Test fixtures that set follower counts | Fixtures assume a support threshold |
 | `raidLossShare` / `threatLossShare` | `raidLossFloor` / `threatLossFloor` | A high flat floor makes small regions disproportionately fragile |
-| `awarenessPerCapita` | `concealAwareness` and `ConcealWorldMonths` | Together they set the maximum sustainable cult size |
+| `awarenessPerCapita` | `concealAwareness`, `ConcealWorldMonths`, `BuryAwareness` and the burial step | Together they set the maximum sustainable cult size |
+| `TalentBaseCost` / `TalentCostStep` | The seal months of each difficulty | Together they decide when a policy can afford its second node; that timing, not the total price, decided whether public worship works |
+| `FinaleSitePressure` | `FinaleWarningMonths`, `RestoreMonthCost` | The site hunt is what restoring and the Hidden hand answer |
+
+## Snapshot — 2026-11-21 (`alignment-5`, Unity 0.7.0)
+
+Fuente de verdad: `Balance.cs` y `GameData.cs`. Solo se listan los valores nuevos o cambiados desde `alignment-4`.
+
+| Constante | Valor | Controla |
+| --- | --- | --- |
+| `Ruleset` | `alignment-5` | Los saves de `alignment-4` se retiran con aviso; los ajustes se conservan |
+| `TalentBaseCost` / `TalentCostStep` | 40 / 30 | Precio del primer talento y lo que sube con cada uno: 40, 70, 100, 130, 160 (190 el sexto, en Easy) |
+| `SwellingFlockRecruitment` | 0,35 | Raíz de Congregation (antes la doctrina) |
+| `OpenWorshipRecruitment` | 2,5 | Multiplicador de reclutamiento público con Open worship (`PublicRecruitment` sigue en 2) |
+| `MartyrDreadPerFollower` | 1/3 | Dread por seguidor perdido ante una amenaza con Martyrs, redondeado |
+| `FaithAmongFaithsShare` | 0,5 | Parte de la awareness por tamaño del culto que queda con A faith among faiths |
+| `QuietFriendsWarning` | 2 | Meses de aviso extra de la raíz de Hidden hand (antes la doctrina) |
+| `SleeperScatterMonths` | 5 | Meses dispersa con Sleeper cells (`ScatterMonths` sigue en 8) |
+| `BoughtPressAwareness` | 8 | Awareness que baja enterrar con Bought press; el paso de precio se reduce a la mitad, redondeado |
+| `RedAltarsSacrificeDread` / `RedAltarsManifestDread` | 35 / 15 | Raíz de Harbinger (antes la doctrina); silenciar sigue en `SilenceSeverityDreadTerror` 13 |
+| `MuteWitnessesSeverityAwareness` | 2 | Awareness por severidad al silenciar con Mute witnesses (3 sin el nodo) |
+| `ScapegoatSeverityAwareness` | 1 | Awareness que baja por severidad cada amenaza que cae, con Scapegoats |
+| `OfferingAwareness` | 1 | Awareness que suma un sacrificio que termina una amenaza (Offerings to the deep) |
+| `BuryAwareness` / `BuryBaseCost` / `BuryExposure` / `BuryCooldown` | 5 / 50 / 8 / 6 | Enterrar el registro: awareness, precio inicial, exposición local y cooldown regional |
+| `RestoreMonthCost` / `RestoreExposure` | 30 / 10 | Restaurar el sitio: Influence por mes recuperado y exposición |
+| `OccultPreparationLoss` | 6 | Meses que quita una amenaza oculta ignorada en Normal y Hard (Easy: 4, en `DifficultyDefinition`) |
+| `MysticismPivot` | 50 | Mysticism neutro: manifestar suma `ManifestAwareness × (100 − (m − 50))/100` y convierte `× (100 + (m − 50))/100` |
+| `FinaleSitePressure` | 0,3 | Antes 0,15. Presión extra sobre sitios desde el mes 200 |
+
+Los campos nuevos del estado son `Talents` (ids tomados, en orden; reemplaza a
+`Specialization`), `BuryUses` y `Site.Recoverable`. Las dificultades suman
+`TalentSlotMonths`, `OccultPreparationLoss`, `BuryStep`, `ConcealWorldMonths` y `Rule`
+(véase [Difficulty](#difficulty)).
+
+Medición con bot (Normal, 48 seeds por estrategia, una política por rama): 80/144 → 95/144
+(early 5 → 29, late 45 → 38, terror 30 → 28). Easy 111 → 143 y Hard 27 → 17. Detalle y
+descartes en [Experiencia y loops](02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-5--2026-11-21).
 
 ## Snapshot — 2026-11-21 (`alignment-4`, Unity 0.6.0)
 
@@ -181,22 +218,28 @@ Derived support requirements, by region weight:
 
 ## Difficulty
 
-`GameData.Difficulties`. Three multipliers, no special cases.
+`GameData.Difficulties`. Three multipliers and, since `alignment-5`, four rules that change
+decisions. `DifficultyDefinition.Rule` states the rules in one line for the start screen.
 
-| | Recruitment | Threat pressure | Warning months |
-| --- | --- | --- | --- |
-| Easy | ×1.2 | ×0.75 | +2 |
-| Normal | ×1.0 | ×1.0 | +0 |
-| Hard | ×0.85 | ×1.25 | −1 |
+| | Recruitment | Threat pressure | Warning months | Talent seals (months) | Occult loss | Burial step | Conceal world rest |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Easy | ×1.2 | ×0.75 | +2 | 6 (24, 44, 64, 104, 144, 176) | 4 months | +15 | 6 months |
+| Normal | ×1.0 | ×1.0 | +0 | 5 (24, 64, 104, 144, 176) | 6 months | +25 | 6 months |
+| Hard | ×0.85 | ×1.25 | −1 | 4 (24, 72, 120, 168) | 6 months | +40 | 9 months |
 
-## Doctrines
+## Talents (replace the doctrines since `alignment-5`)
 
-`GameData.Specializations`. One per run, bought once for 40 Influence, permanent.
+`GameData.Branches` and `GameData.Talents`. Three branches of a root, two mutually exclusive
+middles and a capstone that needs the root and either middle. A seal opens at each month of
+the difficulty's `TalentSlotMonths`; each talent costs 30 Influence more than the last, from
+40. Permanent; no respecialization. The table of the twelve nodes is in
+[Experiencia y loops](02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-5--2026-11-21).
+The roots keep the old doctrines:
 
-| Doctrine | Effect |
+| Root (old doctrine) | Effect |
 | --- | --- |
-| Congregation | +35% automatic recruitment |
-| Hidden Hand | Threats arrive 2 months later; obstruction costs ⅔ |
-| Harbinger | Sacrifice yields 35 Dread (not 25); manifestation costs 15 Dread (not 20); silencing costs 13 Dread per severity (not 20) |
+| Swelling flock (Congregation) | +35% automatic recruitment |
+| Quiet friends (Hidden Hand) | Threats arrive 2 months later; obstruction costs ⅔ |
+| Red altars (Harbinger) | Sacrifice yields 35 Dread (not 25); manifestation costs 15 Dread (not 20); silencing costs 13 Dread per severity (not 20) |
 
-Doctrine balance is **not settled** — see [09 — Open problems](09-open-problems.md).
+Talent balance is **not settled with players** — see [09 — Open problems](09-open-problems.md).
