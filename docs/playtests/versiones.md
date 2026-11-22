@@ -16,7 +16,8 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
 
 | Versión | Fecha | Commit | Ruleset | Adaptador | Ronda GTC | Estado |
 | --- | --- | --- | --- | --- | --- | --- |
-| 0.6.0 | 2026-11-21 | `675e2a7`; exportada desde `68b0249` | `alignment-4` | `awakening-3` | «0.6.0 playtest por invitación · ocultar con plazo y margen del rito», abierta del 2026-11-21 al 2026-12-05 (UTC) | En itch.io (Restricted con contraseña) |
+| 0.7.0 | 2026-11-22 | `9a3055e` | `alignment-5` | `awakening-4` | «0.7.0 playtest por invitación · árbol de talentos y awareness gestionable», abierta del 2026-11-22 al 2026-12-06 (UTC) | En itch.io (Restricted con contraseña) |
+| 0.6.0 | 2026-11-21 | `675e2a7`; exportada desde `68b0249` | `alignment-4` | `awakening-3` | «0.6.0 playtest por invitación · ocultar con plazo y margen del rito», abierta del 2026-11-21 al 2026-12-05 (UTC) | Reemplazada por 0.7.0 |
 | 0.5.2 | 2026-11-18 | `880e836` | `alignment-3` | `awakening-2` | «0.5.2 playtest por invitación · interfaz legible», cerrada el 2026-11-21 (UTC) sin partidas | Reemplazada por 0.6.0 |
 | 0.5.1 | 2026-11-18 | `e1d5441` | `alignment-3` | `awakening-2` | «0.5.1 playtest por invitación · interfaz legible», cerrada el 2026-11-19 (UTC) con 1 partida | Reemplazada por 0.5.2 |
 | 0.5.0 | 2026-11-18 | `a25f916` | `alignment-3` | `awakening-2` | «0.5.0 playtest por invitación · versión Unity», cerrada el 2026-11-19 (UTC) con 1 partida | Reemplazada por 0.5.1 |
@@ -29,6 +30,73 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
 | 0.3.1 | 2026-11-02 | `2256c6c` | `alignment-2` | `awakening-1` | «0.3.1 playtest por invitación · decisiones económicas», cerrada el 2026-11-03 con 2 partidas | Reemplazada por 0.3.2 |
 | 0.3.0 | 2026-11-02 | `85f5905`; exportada desde `dbfb07f` | `alignment-2` | `awakening-1` | «0.3.0 playtest por invitación · decisiones económicas», cerrada el mismo día sin partidas | Reemplazada por 0.3.1 |
 | 0.2.0 | 2026-10-30 / 2026-10-31 | `ae38ec0`; adaptador E4–E6 en `6aa2419` | `alignment-1` | `awakening-1` | QA técnica E7 y «E7 piloto interno de gameplay» (abierta hasta 2026-11-09) | Reemplazada en itch.io por 0.3.0 el 2026-11-02 |
+
+### 0.7.0 — árbol de talentos, enterrar el registro y recuperar sitios
+
+- **Commit:** `9a3055e`, ramas `t3/alignment-five-ruleset`, `t3/emit-awakening-4-telemetry` y `t3/talent-tree-interface` integradas en `main`. La hicieron tres agentes: Claude Opus 5.5 (reglas y bot), GPT‑6.1 Sol (telemetría y Lab) y Gemini 4 Neon (interfaz). Claude integró y revisó.
+- **Motivo:** primera partida humana con 0.6.0 (2026-11-21, normal). Se perdió por awareness mundial en el mes 215 con el rito en marcha, que terminaba en el 217:
+  - una amenaza oculta ignorada en el mes 185, cuando solo se podía dispersar, quitó 6 meses al tercer sitio, y sin esa pérdida la partida se ganaba;
+  - terminó con unos 700 de Influence sin gastar.
+
+  El jugador dijo que no tenía en qué gastar, que la awareness solo bajaba ocultando y que un error le costó la partida. Se suman las decisiones del usuario: un árbol dentro de cada partida que no se completa en una sola, efecto para Mysticism y modos de dificultad que obliguen a pensar.
+- **Reglas (`alignment-5`):**
+  - **Árbol de talentos**, en lugar de la doctrina:
+    - Tres ramas, Congregation, Hidden hand y Harbinger, de 4 nodos cada una: raíz, dos medios excluyentes y remate. La raíz conserva el efecto de la doctrina anterior.
+    - Los sellos se abren por tiempo: 5 en Normal, 6 en Easy y 4 en Hard.
+    - Cada nodo cuesta más Influence que el anterior: 40, 70, 100, 130 y 160.
+    - No hay reespecialización. Detalle de los nodos en `docs/gdd/02_Game_Design/Experiencia_y_loops.md`.
+  - **Bury the record** (`bury`):
+    - −5 de awareness mundial (−8 con Bought press).
+    - Cuesta 50 de Influence más un paso por cada uso anterior: 15 en Easy, 25 en Normal y 40 en Hard.
+    - +8 de exposición local y 6 meses de descanso en esa región.
+    - No comparte el descanso mundial de ocultar.
+  - **Restore the site** (`restore`):
+    - Devuelve la mitad, redondeando hacia arriba, de los meses que quitó la última amenaza oculta ignorada; todos con Contingency.
+    - Cuesta 30 de Influence por mes y suma +10 de exposición.
+  - **`Threats.Options` y `Threats.Cornered`:** las respuestas posibles y por qué faltan las demás, desde que aparece la amenaza.
+  - **Mysticism:** manifestar genera `8 × (1 − (m − 50)/100)` de awareness y convierte × `(1 + (m − 50)/100)`. Va de 6 de awareness en África a 10 en Europa.
+  - **Por dificultad:** sellos y sus meses, pérdida por amenaza oculta (4 en Easy y 6 en el resto), paso de bury y descanso de ocultar (9 meses en Hard).
+  - **Caza de sitios:** desde el mes 200 sube de +0,15 a +0,3 por tirada. Sin ese cambio, el árbol dejaba el bot en 111/144.
+  - Las partidas sin terminar de `alignment-4` se retiran con aviso; los ajustes se conservan.
+- **Playtest (`awakening-4`):**
+  - Sale `doctrine_selected` y entra `talent_taken` (talento, rama, tier, sello y gasto).
+  - `action_performed` acepta `bury` y `restore`.
+  - `threat_spawned` suma las respuestas legales al aparecer y `cornered`.
+  - `threat_resolved` suma la respuesta `offering`, para la amenaza que termina un sacrificio con Offerings to the deep.
+  - `month_snapshot` suma talentos, sellos sin usar y usos de bury.
+  - Contrato en `GTC-page/gtc-web/contracts/playtests/awakening-4/`. El Lab resume ramas, sellos sin usar, bury, restore y amenazas acorraladas (migración `0011`).
+- **Interfaz:**
+  - **Hoja «Talents of the Cult»:** sellos (gastados, sin usar y futuros con fecha), precio del próximo nodo y estado de cada nodo, con la razón de exclusión o bloqueo. En teléfono se organiza en pestañas por rama.
+  - **Botón Talents** en el libro mayor, con el aviso «N SEALS UNBROKEN», y tecla T.
+  - **Bury the record** en CULT. **Restore the site** en RITES, que se destaca cuando hay meses recuperables.
+  - **Amenazas:** el recorte y la ficha muestran cada respuesta con su costo o su bloqueo, y la marca «CORNERED · ONLY SCATTER OR ENDURE».
+  - **Mysticism:** el expediente y la colocación muestran su efecto en una línea.
+  - **Inicio:** la pantalla muestra la regla de cada dificultad.
+- **Medición:**
+  - `dotnet test core-tests/Tests`: 225/225, antes 184.
+  - `UiChecks`: `UI_CHECKS_PASSED`. `unity/layout-check.sh`: 60/60.
+  - **Bot, 48 semillas por política** (`dotnet run --project core-tests/Tools -- measure --seeds=48`):
+
+    | Dificultad | Victorias (`alignment-4` → `alignment-5`) | early (Congregation, culto público) | late (Hidden hand) | terror (Harbinger) |
+    | --- | --- | --- | --- | --- |
+    | Normal | 80 → 95/144 | 5 → 29 | 45 → 38 | 30 → 28 |
+    | Easy | 111 → 143/144 | — | — | — |
+    | Hard | 27 → 17/144 | 0 | — | — |
+
+  - GTC: 141 pruebas y 9 omitidas por requerir PostgreSQL. El validador del contrato acepta 33 lotes válidos y comprueba 69 rechazos.
+- **Riesgos:**
+  - Easy es casi siempre victoria para el bot. Hard tiene una sola estrategia fuerte: el culto público no gana.
+  - Ninguna política del bot recorre Mute witnesses, Martyrs ni Sleeper cells; esos nodos solo están cubiertos por pruebas unitarias.
+  - La caza +0,3 endurece el final para todos.
+- **Qué mirar en esta ronda:**
+  - Reparto de ramas y nodos.
+  - Meses con sellos sin usar (mediana menor a 12).
+  - Influence al final de las partidas (objetivo: que no sobren cientos).
+  - Usos de bury y restore.
+  - Amenazas acorraladas y cuántas se ignoran.
+  - Causas de derrota.
+  - Pregunta: «¿qué descartaste?».
+- **Límites:** sin prueba con personas ni en teléfono físico todavía; las capturas son del ejecutable de desarrollo Linux.
 
 ### 0.6.0 — ocultar con plazo, margen del rito y primera partida guiada
 
