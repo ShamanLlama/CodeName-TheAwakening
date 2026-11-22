@@ -1,11 +1,11 @@
 # Alcance, riesgos y validación
 
-**Versión:** 0.3 · **Fecha:** 2026-11-18 · **Estado:** documentación de lo implementado como primera etapa; producción final por definir.
+**Versión:** 0.4 · **Fecha:** 2026-11-22 · **Estado:** documentación de lo implementado como primera etapa; producción final por definir.
 
 ## Base disponible
 
 Existe un ciclo completo de partida con mapa de ocho regiones, economía, población,
-acciones, amenazas, oportunidades, tres doctrinas, rituales, condiciones de resultado,
+acciones, amenazas, oportunidades, árbol de talentos de tres ramas con remates (desde 0.7.0 y 0.8.0), rituales, condiciones de resultado,
 guardado, guía, crónica y reporte de playtest. Desde 0.5.0 la versión jugable es la de
 Unity 6.3 LTS; la de Godot (0.4.0) se conserva en la rama `godot` hasta retirarla.
 Los registros previos de pruebas se conservan en el repositorio.
@@ -39,10 +39,10 @@ la referencia histórica del trabajo realizado.
 | Riesgo o incertidumbre | Evidencia y límite | Próxima comprobación propuesta |
 | --- | --- | --- |
 | Oportunidades poco utilizadas | Ignoradas en los playtests de `alignment-1`; usadas 2–5 veces por partida en 0.3.x | Observar descubrimiento y utilidad en la interfaz Unity actual |
-| Doctrinas o dificultades desiguales | El GDD conserva dudas después del rebalance | Comparar estrategias apropiadas para cada doctrina y dificultad |
+| Ramas o dificultades desiguales | Bot 0.8.0: Normal 22/31/27 de 48 por rama; Hard con una sola estrategia viable; tres nodos sin política de bot | Rondas con jugadores externos; reparto de ramas y remates en el Lab (`awakening-5`) |
 | Awareness difícil de entender | La regla puede castigar crecimiento que parece beneficioso | Preguntar al jugador por su causa antes de la derrota |
-| Final poco legible | Preparación, apoyo y ventanas temporales interactúan | Comprobar si el jugador anticipa una interrupción y una fecha límite |
-| Ritmo alejado de la intención | Objetivo de 15–30 minutos frente a unos siete de simulación más pausas, sin medición comparable de sesión real | Precisar el cómputo y medir sesión, lectura, pausas y periodos sin decisiones |
+| Final poco legible | En 0.7.0 el jugador no entendió que dispersar un sitio detiene el rito; 0.8.0 lo muestra | Comprobar con `rite_month` si los meses detenidos bajan y si el jugador lo entiende |
+| Ritmo alejado de la intención | Objetivo de 15–30 minutos con pausas incluidas (decisión del 2026-11-21). Partidas humanas: 14 minutos (0.6.0) y 22 minutos (0.7.0) | Seguir midiendo con el reloj del Lab (simulación y planificación) |
 | Mezcla de experiencia sin validar | Estrategia, narrativa y horror confirmados como objetivo; peso y efecto actuales sin comprobar | Registrar decisiones estratégicas y sucesos recordados, y preguntar por la sensación de horror |
 | Presentación y alcance abiertos | Arte procedural, narrativa y oferta sin decisión final | Resolver D04–D08 antes de producir contenido adicional |
 
@@ -59,9 +59,20 @@ Los resultados automatizados permiten comprobar comportamientos y explorar balan
 no reemplazan pruebas humanas de comprensión, ritmo o atractivo.
 
 **Registro propuesto para nuevas sesiones:** revisión del juego, semilla, dificultad,
-doctrina, región inicial, duración real, pausas, decisiones relevantes, acciones
+talentos y remates, región inicial, duración real, pausas, decisiones relevantes, acciones
 ignoradas, motivo de derrota/victoria y explicación del jugador. El reporte actual
 aporta acciones y estado; el tiempo real debe registrarse aparte.
+
+## Definición de «completo» (decisión del usuario, 2026-11-21)
+
+El juego está completo cuando:
+
+- el árbol de talentos está probado;
+- gente externa lo juega;
+- el balance se siente parejo;
+- hay varios caminos para ganar y varias formas de perder.
+
+El árbol tiene que dar opciones, ninguna partida puede completarlo y cada modo de dificultad tiene que hacer pensar al jugador. Easy no tiene que ganarse a la primera, pero no debe abrumar. Estado al 2026-11-22: árbol con remates en prueba (0.8.0), un solo jugador interno, sin rondas externas todavía.
 
 ## Criterio propuesto para cerrar esta primera revisión
 

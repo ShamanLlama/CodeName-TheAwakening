@@ -1,6 +1,6 @@
 # Resumen y visión
 
-**Versión:** 0.3 · **Fecha:** 2026-11-18 · **Estado:** base implementada en Unity y objetivos confirmados; detalles de dirección pendientes.
+**Versión:** 0.4 · **Fecha:** 2026-11-22 · **Estado:** base implementada en Unity y objetivos confirmados; detalles de dirección pendientes.
 
 ## Concepto en una frase
 
@@ -15,7 +15,7 @@ su despertar antes de que termine la alineación astral o la humanidad descubra 
   real, pausa y economía de crecimiento.
 - **Cámara y escala:** vista global de ocho regiones; gestión abstracta de población,
   sin unidades individuales controlables.
-- **Base jugable:** Unity 6.3 LTS desde el juego 0.5.0 (2026-11-18), reglas `alignment-3`.
+- **Base jugable:** Unity 6.3 LTS desde el juego 0.5.0 (2026-11-18); el juego 0.8.0 (2026-11-22) usa las reglas `alignment-6`, con árbol de talentos dentro de la partida.
   Las versiones 0.2.0–0.4.0 se hicieron en Godot 4.7 y se conservan como referencia; el
   prototipo React/TypeScript es un antecedente histórico.
 - **Plataformas:** la salida principal será **Steam**, con un ejecutable de escritorio

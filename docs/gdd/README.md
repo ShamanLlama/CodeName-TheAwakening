@@ -1,6 +1,6 @@
 # The Awakening of Cthulhu — GDD
 
-**Versión documental:** 0.3 · **Fecha:** 2026-11-18 · **Estado:** documentación de la implementación en curso; contrastada con el juego 0.5.1 (Unity, `alignment-3`).
+**Versión documental:** 0.4 · **Fecha:** 2026-11-22 · **Estado:** documentación de la implementación en curso; contrastada con el juego 0.8.0 (Unity, `alignment-6`).
 
 Este es el GDD de trabajo del juego de Lucid Labworks Studio. Adapta las plantillas de
 Game Time Continuum y aprovecha la documentación de reglas existente. La implementación
@@ -42,9 +42,9 @@ Para modificar una regla, consulta después su referencia detallada.
 ## Referencia detallada de la implementación
 
 Los capítulos previos se conservan como referencia de `alignment-1`; el nuevo índice
-los integra sin duplicar sus reglas. Los cambios de `alignment-2` (2026-11-02) y de
-`alignment-3` (2026-11-12, juego 0.4.0) están en
-[Experiencia y loops](02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-3--2026-11-12)
+los integra sin duplicar sus reglas. Los cambios de `alignment-2` (2026-11-02) a
+`alignment-6` (2026-11-22, juego 0.8.0: árbol de talentos con remates) están en
+[Experiencia y loops](02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-6--2026-11-22)
 y en las fotografías de valores de [07 — Balance](07-balance.md); los capítulos afectados
 llevan una nota al inicio. Están en inglés y describen la base implementada,
 no el alcance comprometido de una futura versión. Las funciones que citan

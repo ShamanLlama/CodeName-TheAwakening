@@ -57,7 +57,7 @@ Automatic monthly recruitment per region (`recruitmentPerMonth`, `src/game/deriv
 is a base rate plus a proportion of existing followers, multiplied by:
 
 - **Public worship** — a flat multiplier, the main reason to accept exposure.
-- **Doctrine** — Congregation multiplies it.
+- **Talents** — Swelling flock (Congregation root) multiplies it; Open worship multiplies public cells.
 - **Backlash** — a penalty for a window after revealing, so going public is not free.
 - **Madness** — a small bonus from recent manifestations.
 - **Difficulty**.

@@ -64,7 +64,7 @@ response, it is not left to the dice.
 ## Warning and severity
 
 A threat is scheduled with a **due month**, giving you a window to respond. The window is
-extended by the Hidden Hand doctrine and by a secretly converted politician.
+extended by Quiet friends (the Hidden hand root talent) and by a secretly converted politician.
 
 **Severity** (1–3) is set at scheduling time from `exposure + awareness`. It scales the
 losses *and* the price of obstructing the threat. This is the mechanism that turns

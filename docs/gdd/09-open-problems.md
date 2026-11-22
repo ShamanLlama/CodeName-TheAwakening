@@ -1,5 +1,21 @@
 # 09 — Open problems
 
+> **`alignment-6` (2026-11-22, juego 0.8.0) — estado de cada problema:**
+>
+> | Problema | Estado |
+> | --- | --- |
+> | 1 | Sin cambios. |
+> | 2 | El árbol se mide por rama. Bot en Normal: 22, 31 y 27 de 48. Hidden hand sigue siendo la rama más fuerte, y en Hard solo una estrategia gana (Congregation pública: 0/48). |
+> | 3 | Resuelto en la práctica. En la partida humana de 0.6.0 sobraron unos 700 de Influence. En la de 0.7.0 todo se gastó en contrarrestar, Bury y talentos, sin pasar de 300. |
+> | 5 | Medido con el bot: Easy 135/144, Normal 80/144, Hard 17/144. |
+> | 6 | Hay dos partidas humanas, ambas del mismo jugador interno. Después de 0.6.0 la awareness se entiende. El final no se entendía: dispersar un sitio durante el rito lo detiene sin aviso claro, y 0.8.0 lo muestra («RITE HALTED»). |
+>
+> **Abiertos nuevos:**
+> - Normal se sintió fácil con 0.7.0. 0.8.0 lo endurece sin castigar un solo error.
+> - Los remates tienen que cambiar la partida; falta confirmarlo con jugadores.
+> - Martyrs, Mute witnesses y Contingency solo están cubiertos por pruebas unitarias: ninguna política del bot los recorre.
+> - Falta gente externa jugando, que es requisito de «completo» (D05 y decisiones del 2026-11-21).
+>
 > **`alignment-5` (2026-11-21, juego 0.7.0):** el problema 2 cambia de forma. Las doctrinas son ahora las raíces de un árbol de talentos y el bot tiene una política por rama que juega a su fuerza: en Normal, 29/48 (Congregation, culto público), 38/48 (Hidden hand) y 28/48 (Harbinger), sin que ninguna supere a otra por más de 15. Easy (143/144) y Hard (17/144) ya se miden (problema 5). Falta comprobarlo con jugadores. Véase [Experiencia y loops](02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-5--2026-11-21).
 >
 > **`alignment-3` (2026-11-12):** El problema 1 ya no describe lo observado: en las partidas humanas de 0.3.x se usaron `exploit` y `convert` entre 2 y 5 veces por partida. Una amenaza tiene ahora tres respuestas (obstruir, dispersar, silenciar), `reveal` suma awareness una sola vez por región y cada acción muestra la awareness que suma. Los problemas 2 (doctrinas) y 5 (dificultades) siguen sin medirse.
