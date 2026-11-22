@@ -1,5 +1,16 @@
 # 06 — Ritual sites and the endgame
 
+> **`alignment-6` (2026-11-22, juego 0.8.0):**
+> - **Duración del rito:** se fija al iniciarlo en `GameState.RiteMonthsRequired`. Son 12 meses, u 8 con **The Great Procession** si hay 5 o más regiones públicas. Durante la procesión, ninguna célula vuelve a la clandestinidad.
+> - **Dreams of R'lyeh:** cada sacrificio que deja en pie tres sitios con apoyo adelanta el rito un mes.
+> - **The world forgets:** detiene el rito mientras las células siguen dispersas.
+> - **`Forecast.Rite`:** dice si el rito avanza este mes y nombra cada sitio que lo frena. Las causas son `destroyed`, `dormant`, `scattered`, `unsupported` y `unprepared`, este último cuando una amenaza oculta le quitó meses. Para poder nombrar un sitio destruido se guardan en `GameState.RiteSites` los sitios con que empezó el rito.
+> - **Riesgos durante el rito:** la vista previa de dispersar un sitio que el rito necesita dice «The final rite halts while this site hides: N months.». La de un sacrificio que deja un sitio sin apoyo dice «The final rite halts until this site again holds N followers.».
+> - **Caza de sitios:** desde el mes 200 sube a +0,6 por tirada.
+> - **Offerings to the deep:** sale del juego.
+>
+> Véase [Experiencia y loops](02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-6--2026-11-22).
+
 > **`alignment-5` (2026-11-21, juego 0.7.0):** una amenaza oculta ignorada quita 6 meses de preparación (4 en Easy) y el sitio guarda esa pérdida en `Site.Recoverable`; la siguiente pérdida la reemplaza. **Restaurar el sitio** (`restore`) devuelve la mitad redondeando hacia arriba (todo con Contingency) a 30 de Influence por mes, con +10 de exposición (ninguna con Contingency), una vez por pérdida. La caza de sitios desde el mes 200 sube a +0,3 por tirada (antes +0,15). Offerings to the deep permite terminar con un sacrificio la amenaza de una región, a +1 de awareness. Véase [Experiencia y loops](02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-5--2026-11-21).
 >
 > **`alignment-4` (2026-11-21):** `Forecast.Margin` deriva el margen del rito: el inicio más temprano con los sitios financiados (cada uno con sus meses de preparación pendientes y los meses que su célula siga dispersa, sin contar aceleraciones), el último inicio posible (mes 212) y la diferencia. Si el rito ya no puede completarse antes del mes 224 y no empezó, el jugador puede cerrar la partida como derrota (`GameEngine.Concede`, código `conceded`). Para eso se cuentan los eclipses y figuras secretas presentes y los sitios nuevos que todavía podrían terminarse, pero no presagios que aún no aparecieron. Antes, una partida así seguía hasta el mes 224. Véase [Experiencia y loops](02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-4--2026-11-21).
