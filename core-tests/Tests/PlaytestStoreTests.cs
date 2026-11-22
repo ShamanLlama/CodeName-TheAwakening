@@ -26,7 +26,7 @@ namespace Awakening.Core.Tests
             state.Ruleset = "alignment-6";
             Assert.True(c.Restore()); c.Resume(state);
             Assert.NotEqual(stored["active"], c.Data["active"]);
-            Assert.Equal("awakening-4", O(c.Active(), "context")["adapter"]);
+            Assert.Equal("awakening-5", O(c.Active(), "context")["adapter"]);
             Assert.Equal("partial", O(c.Active(), "context")["coverage"]);
             Assert.Equal(body, Item(c.Data, "jobs", 0)["body"]);
             Assert.Equal(0, N(O(c.Active(), "clock"), "elapsed_ms"));
@@ -48,9 +48,29 @@ namespace Awakening.Core.Tests
             Assert.False(restored.Corrupt);
             restored.Accept(); restored.Resume(r.State);
             Assert.Equal(original, Item(restored.Data, "jobs", 0)["body"]);
-            Assert.Equal("awakening-4", O(restored.Active(), "context")["adapter"]);
+            Assert.Equal("awakening-5", O(restored.Active(), "context")["adapter"]);
             Assert.Equal("capture_started", O(Item(restored.Data, "staging", 0), "event")["type"]);
             Assert.True(PlaytestCapture.ValidStore(restored.Snapshot(r.State)));
+        }
+
+        [Fact]
+        public void V4OfferingQueueRemainsImmutableWhenV5StartsAPartialCapture()
+        {
+            var rig = new Rig(); rig.State.Ruleset = "alignment-5"; rig.Start();
+            O(rig.Capture.Active(), "context")["adapter"] = "awakening-4";
+            rig.State.Status = "playing";
+            rig.Capture.EmitEvent("threat_resolved", M("region", "africa", "kind", "occult", "severity", 2, "due_month", 20, "legal_responses", new List<object> { "scatter" }, "response", "offering", "losses", M("followers", 0, "preparation_months", 0, "income_per_month", 0, "cells", 0, "sites", 0)), rig.State);
+            var job = rig.Capture.SealBatch();
+            string body = (string)job["body"];
+            var restored = new PlaytestCapture(() => rig.Unix);
+            restored.Configure(Configuration(), Saved(rig.Capture, rig.State));
+            Assert.False(restored.Corrupt);
+            rig.State.Ruleset = "alignment-6";
+            Assert.True(restored.Restore()); restored.Resume(rig.State);
+            Assert.Equal(body, Item(restored.Data, "jobs", 0)["body"]);
+            Assert.Equal("awakening-5", O(restored.Active(), "context")["adapter"]);
+            Assert.Equal("capture_started", O(Item(restored.Data, "staging", 0), "event")["type"]);
+            Assert.True(PlaytestCapture.ValidStore(restored.Snapshot(rig.State)));
         }
 
         [Fact]
