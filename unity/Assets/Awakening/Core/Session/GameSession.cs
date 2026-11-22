@@ -225,8 +225,7 @@ namespace Awakening.Core.Session
         }
 
         /// <summary>
-        /// Invoke a capstone that acts once (alignment-6: The world forgets). Saves and reports the log line like TakeTalent;
-        /// no playtest event yet (awakening-5 adds capstone_invoked).
+        /// Invoke a capstone that acts once (alignment-6: The world forgets), including its playtest observation.
         /// </summary>
         public void InvokeCapstone(string talentId)
         {
@@ -238,7 +237,14 @@ namespace Awakening.Core.Session
                 Events?.Invoke(new List<GameEvent> { new GameEvent { Id = -1, Month = State.ElapsedMonths, Message = result.Message, Refused = true } });
                 return;
             }
+            GameState before = State;
             State = result.State;
+            Lab.EmitEvent("capstone_invoked", new Dictionary<string, object>
+            {
+                ["talent"] = talentId, ["awareness_before"] = before.Awareness, ["awareness_after"] = State.Awareness,
+                ["threats_cancelled"] = GameData.RegionIds.Count(id => before.Regions[id].Threat != null && State.Regions[id].Threat == null),
+            }, Capture(State));
+            LabTransition(before, "forgotten");
             LabSync();
             Commit();
             LogEntry last = State.Log[State.Log.Count - 1];
@@ -323,7 +329,10 @@ namespace Awakening.Core.Session
                 GameState before = State;
                 State = result.State;
                 if (kind != "starting_region_selected") payload["spent"] = Spent(before, State);
-                Lab.EmitEvent(kind, payload, Capture(State));
+                if (kind == "awakening_started") payload["required"] = State.RiteMonthsRequired;
+                if (kind == "action_performed" && Equals(payload["action"], "sacrifice") && before.Status == "awakening")
+                    payload["rite_advanced"] = State.FinalProgress > before.FinalProgress;
+                Lab.EmitEvent(kind, payload, Capture(State), ObservationPhase(before));
                 LabTransition(before, kind == "action_performed" ? (string)payload["action"] : null);
                 LabSync();
                 Commit();
@@ -518,11 +527,10 @@ namespace Awakening.Core.Session
                 if (SameThreat(previous.Threat, current.Threat)) continue;
                 if (previous.Threat != null)
                 {
-                    string answer = response == "counter" || response == "scatter" || response == "silence" ? response : "ignored";
+                    string answer = response == "counter" || response == "scatter" || response == "silence" || response == "forgotten" ? response : "ignored";
                     var legal = new List<object>();
                     foreach (string action in new[] { "counter", "scatter", "silence" })
                         if (GameEngine.PreviewAction(before, action, id).Ok) legal.Add(action);
-                    if (response == "sacrifice" && GameEngine.HasTalent(before, "offerings")) answer = "offering";
                     var consequences = Threats.Consequences(before, previous);
                     bool ignored = answer == "ignored";
                     var data = ThreatData(id, previous.Threat);
@@ -560,6 +568,22 @@ namespace Awakening.Core.Session
             if (before.Status == "playing" && State.Status == "alignment")
                 Lab.EmitEvent("phase_changed", new Dictionary<string, object> { ["from_phase"] = "playing" }, Capture(State));
             LabThreats(before, response);
+            if (before.Status == "awakening" && State.ElapsedMonths != before.ElapsedMonths)
+            {
+                bool advancing = State.FinalProgress > before.FinalProgress;
+                // Inspect the resulting sites at this tick's boundary, rather than forecasting
+                // their recovery next month. This includes threats and upkeep paid during the tick.
+                var observed = State.Clone();
+                observed.Status = "awakening";
+                observed.ElapsedMonths--;
+                var blockers = advancing ? new List<RiteBlocker>() : Forecast.Rite(observed).Blockers;
+                Lab.RiteMonth(new Dictionary<string, object>
+                {
+                    ["progress"] = State.FinalProgress, ["required"] = State.RiteMonthsRequired,
+                    ["advancing"] = advancing,
+                    ["blockers"] = blockers.Select(b => (object)new Dictionary<string, object> { ["region"] = b.Region, ["reason"] = b.Reason }).ToList(),
+                }, Capture(State));
+            }
             if (State.ElapsedMonths != before.ElapsedMonths && State.ElapsedMonths % 12 == 0)
                 Lab.EmitEvent("month_snapshot", new Dictionary<string, object>
                 {
@@ -571,6 +595,7 @@ namespace Awakening.Core.Session
                     ["talents"] = State.Talents.Count,
                     ["unused_slots"] = GameEngine.TalentSlotsUnused(State),
                     ["bury_uses"] = State.BuryUses,
+                    ["yields"] = State.Talents.ToDictionary(id => id, id => (object)GameEngine.TalentYieldOf(State, id)),
                 }, Capture(State), ObservationPhase(before));
             LabSpeedChanged(before);
             if (GameEngine.IsOver(State))

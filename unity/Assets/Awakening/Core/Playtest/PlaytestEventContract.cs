@@ -6,7 +6,7 @@ using static Awakening.Core.Playtest.PlaytestJson;
 
 namespace Awakening.Core.Playtest
 {
-    // Event-level awakening-4 schema and semantics. Batch/stream ordering is checked by GTC.
+    // Event-level awakening-5 schema and semantics. Batch/stream ordering is checked by GTC.
     internal static class PlaytestEventContract
     {
         static readonly string[] Regions = { "north_america", "latin_america", "europe", "africa", "middle_east", "south_asia", "east_asia", "oceania" };
@@ -19,6 +19,9 @@ namespace Awakening.Core.Playtest
         static bool Spent(object value) => value is Dictionary<string, object> map && Keys(map, "influence", "dread", "followers") && map.Values.All(v => Number(v, 1e9));
         static bool Legal(object value) => value is List<object> list && list.Count <= 3 && list.Distinct().Count() == list.Count && list.All(v => In(v, Responses));
         static bool Threat(Dictionary<string, object> data) => In(Get(data, "region"), Regions) && In(Get(data, "kind"), "raid", "investigation", "occult") && PositiveInteger(Get(data, "severity"), 3) && Integer(Get(data, "due_month"), 240) && Legal(Get(data, "legal_responses"));
+
+        static bool Required(object value) => Integer(value, 12) && (Convert.ToDouble(value) == 8 || Convert.ToDouble(value) == 12);
+        static bool Blocker(object value) => value is Dictionary<string, object> map && Keys(map, "region", "reason") && In(Get(map, "region"), Regions) && In(Get(map, "reason"), "scattered", "unsupported", "dormant", "destroyed", "unprepared");
 
         internal static bool Valid(Dictionary<string, object> entry)
         {
@@ -39,11 +42,12 @@ namespace Awakening.Core.Playtest
                 case "starting_region_selected":
                     return Keys(data, "region") && In(Get(data, "region"), Regions) && phase == "playing" && month == 0;
                 case "action_performed":
-                    return playing && Keys(data, "action", "region", "spent") && In(Get(data, "action"), Actions) && In(Get(data, "region"), Regions) && Spent(Get(data, "spent"));
+                    bool sacrifice = phase == "awakening" && Equals(Get(data, "action"), "sacrifice");
+                    return playing && (sacrifice ? Keys(data, "action", "region", "spent", "rite_advanced") && Get(data, "rite_advanced") is bool : Keys(data, "action", "region", "spent")) && In(Get(data, "action"), Actions) && In(Get(data, "region"), Regions) && Spent(Get(data, "spent"));
                 case "talent_taken":
                     return playing && Keys(data, "talent", "branch", "tier", "slot", "spent") && Get(data, "talent") is string talent && TalentId.IsMatch(talent) && In(Get(data, "branch"), "congregation", "hidden_hand", "harbinger") && PositiveInteger(Get(data, "tier"), 3) && PositiveInteger(Get(data, "slot"), 6) && Spent(Get(data, "spent"));
                 case "awakening_started":
-                    return phase == "awakening" && Keys(data, "spent") && Spent(Get(data, "spent"));
+                    return phase == "awakening" && Keys(data, "spent", "required") && Required(Get(data, "required")) && Spent(Get(data, "spent"));
                 case "phase_changed":
                     return phase == "alignment" && Keys(data, "from_phase") && Equals(Get(data, "from_phase"), "playing");
                 case "checkpoint_reached":
@@ -59,11 +63,15 @@ namespace Awakening.Core.Playtest
                 case "threat_spawned":
                     return playing && Keys(data, "region", "kind", "severity", "due_month", "legal_responses", "cornered") && Threat(data) && Num(data, "due_month") > month && Get(data, "cornered") is bool cornered && cornered == !Arr(data, "legal_responses").Any(v => In(v, "counter", "silence"));
                 case "threat_resolved":
-                    if (!playing || !Keys(data, "region", "kind", "severity", "due_month", "legal_responses", "response", "losses") || !Threat(data) || !In(Get(data, "response"), "counter", "scatter", "silence", "offering", "ignored") || !(Get(data, "losses") is Dictionary<string, object> losses)) return false;
+                    if (!playing || !Keys(data, "region", "kind", "severity", "due_month", "legal_responses", "response", "losses") || !Threat(data) || !In(Get(data, "response"), "counter", "scatter", "silence", "forgotten", "ignored") || !(Get(data, "losses") is Dictionary<string, object> losses)) return false;
                     if (!Keys(losses, "followers", "preparation_months", "income_per_month", "cells", "sites") || !Number(Get(losses, "followers"), 1e9) || !Number(Get(losses, "income_per_month"), 1e9) || !Integer(Get(losses, "preparation_months"), 48) || !Integer(Get(losses, "cells"), 1) || !Integer(Get(losses, "sites"), 1)) return false;
-                    return Equals(data["response"], "ignored") ? Num(data, "due_month") <= month : (Equals(data["response"], "offering") || Arr(data, "legal_responses").Contains(data["response"])) && losses.Values.All(v => Convert.ToDouble(v) == 0);
+                    return Equals(data["response"], "ignored") ? Num(data, "due_month") <= month : (Equals(data["response"], "forgotten") || Arr(data, "legal_responses").Contains(data["response"])) && losses.Values.All(v => Convert.ToDouble(v) == 0);
                 case "month_snapshot":
-                    return playing && month > 0 && month % 12 == 0 && Keys(data, "awareness", "influence", "dread", "followers", "cells", "funded_sites", "ready_sites", "talents", "unused_slots", "bury_uses") && Number(Get(data, "awareness"), 100) && new[] { "influence", "dread", "followers" }.All(k => Number(Get(data, k), 1e9)) && new[] { "cells", "funded_sites", "ready_sites" }.All(k => Integer(Get(data, k), 8)) && Num(data, "ready_sites") <= Num(data, "funded_sites") && Num(data, "funded_sites") <= Num(data, "cells") && Integer(Get(data, "talents"), 6) && Integer(Get(data, "unused_slots"), 6) && Num(data, "talents") + Num(data, "unused_slots") <= 6 && Integer(Get(data, "bury_uses"), 20000);
+                    return playing && month > 0 && month % 12 == 0 && Keys(data, "awareness", "influence", "dread", "followers", "cells", "funded_sites", "ready_sites", "talents", "unused_slots", "bury_uses", "yields") && Number(Get(data, "awareness"), 100) && new[] { "influence", "dread", "followers" }.All(k => Number(Get(data, k), 1e9)) && new[] { "cells", "funded_sites", "ready_sites" }.All(k => Integer(Get(data, k), 8)) && Num(data, "ready_sites") <= Num(data, "funded_sites") && Num(data, "funded_sites") <= Num(data, "cells") && Integer(Get(data, "talents"), 6) && Integer(Get(data, "unused_slots"), 6) && Num(data, "talents") + Num(data, "unused_slots") <= 6 && Integer(Get(data, "bury_uses"), 20000) && Get(data, "yields") is Dictionary<string, object> yields && yields.Count == Num(data, "talents") && yields.All(pair => TalentId.IsMatch(pair.Key) && Number(pair.Value, 1e9));
+                case "capstone_invoked":
+                    return playing && Keys(data, "talent", "awareness_before", "awareness_after", "threats_cancelled") && Get(data, "talent") is string capstone && TalentId.IsMatch(capstone) && Number(Get(data, "awareness_before"), 100) && Number(Get(data, "awareness_after"), 100) && Integer(Get(data, "threats_cancelled"), 8);
+                case "rite_month":
+                    return phase == "awakening" && month > 0 && Keys(data, "progress", "required", "advancing", "blockers") && Required(Get(data, "required")) && Integer(Get(data, "progress"), 12) && Num(data, "progress") <= Num(data, "required") && Get(data, "advancing") is bool && Get(data, "blockers") is List<object> blockers && blockers.Count <= 8 && blockers.All(Blocker) && blockers.Cast<Dictionary<string, object>>().Select(b => b["region"]).Distinct().Count() == blockers.Count;
                 case "speed_changed":
                     return Keys(data, "previous", "new") && Integer(Get(data, "previous"), 2) && Integer(Get(data, "new"), 2) && Num(data, "previous") != Num(data, "new");
                 default: return false;

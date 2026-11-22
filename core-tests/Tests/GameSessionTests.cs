@@ -197,7 +197,7 @@ namespace Awakening.Core.Tests
             Assert.All(jobs, job =>
             {
                 var body = Body(job);
-                Assert.Equal("awakening-4", body["adapter"]);
+                Assert.Equal("awakening-5", body["adapter"]);
                 Assert.All(A(body, "events"), e => Assert.True(PlaytestCapture.ValidEvent(e)));
             });
             string output = Environment.GetEnvironmentVariable("AWAKENING_PLAYTEST_BATCH_OUTPUT");

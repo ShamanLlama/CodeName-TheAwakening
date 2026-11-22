@@ -6,7 +6,7 @@ playtest_gtc="${1:-/mnt/1tb-p/Proyects/GTC-page/gtc-web}"
 playtest_output="${2:-$(mktemp -d /tmp/awakening-playtest-batches.XXXXXX)}"
 mkdir -p -- "$playtest_output"
 playtest_output="$(cd -- "$playtest_output" && pwd)"
-AWAKENING_PLAYTEST_BATCH_OUTPUT="$playtest_output" "${DOTNET:-$HOME/.dotnet/dotnet}" test "$playtest_root/core-tests/Tests" --filter 'FullyQualifiedName~PlaytestContractTests|FullyQualifiedName~PlaytestAlignment5Tests|FullyQualifiedName~GameSessionTests.GameCommandsEmitActualCostsAndPreserveGoldenOutcomes'
+AWAKENING_PLAYTEST_BATCH_OUTPUT="$playtest_output" "${DOTNET:-$HOME/.dotnet/dotnet}" test "$playtest_root/core-tests/Tests" --filter 'FullyQualifiedName~PlaytestContractTests|FullyQualifiedName~PlaytestAlignment5Tests|FullyQualifiedName~PlaytestAlignment6Tests|FullyQualifiedName~GameSessionTests.GameCommandsEmitActualCostsAndPreserveGoldenOutcomes'
 cd -- "$playtest_gtc"
 for playtest_batch in "$playtest_output"/batch-*.json; do
     PYTHONDONTWRITEBYTECODE=1 uv run --script contracts/playtests/validate.py --json "$playtest_batch"

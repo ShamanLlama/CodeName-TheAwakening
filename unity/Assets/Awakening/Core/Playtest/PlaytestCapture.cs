@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -20,8 +21,8 @@ namespace Awakening.Core.Playtest
         public const int MaxSessions = 64;
         public const int MaxBodyBytes = 65536;
         public const int BatchEvents = 32;
-        public const string Adapter = "awakening-4";
-        public static readonly string[] StoredAdapters = { "awakening-1", "awakening-2", "awakening-3", "awakening-4" };
+        public const string Adapter = "awakening-5";
+        public static readonly string[] StoredAdapters = { "awakening-1", "awakening-2", "awakening-3", "awakening-4", "awakening-5" };
         public static readonly string[] ClockKeys = { "elapsed_ms", "simulation_ms", "planning_ms", "background_ms", "excluded_ms" };
         static readonly Regex IdPattern = new Regex("^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$", RegexOptions.CultureInvariant);
         readonly Func<double> _unixSeconds;
@@ -232,6 +233,16 @@ namespace Awakening.Core.Playtest
                 Urgent = true;
             }
         }
+        // Persist the bounded observation set independently of acknowledged batches and reloads.
+        public void RiteMonth(Dictionary<string, object> payload, CaptureState state)
+        {
+            if (!Capturing()) return;
+            var seen = Obj(Active(), "seen");
+            string key = "rite_month:" + state.ElapsedMonths;
+            if (seen.ContainsKey(key) || seen.Keys.Count(k => k.StartsWith("rite_month:", StringComparison.Ordinal)) >= 24) return;
+            seen[key] = true;
+            EmitEvent("rite_month", payload, state, "awakening");
+        }
         public void Checkpoint(string name, object region, CaptureState state)
         {
             if (!Capturing() || Obj(Active(), "seen").ContainsKey(name)) return;
@@ -439,7 +450,7 @@ namespace Awakening.Core.Playtest
         {
             if (!(value is Dictionary<string, object> entry) || !ValidId(Get(entry, "event_id")) || !Integer(Get(entry, "sequence"), MaxSequence) || Num(entry, "sequence") < 1 || !Integer(Get(entry, "game_month"), 224)) return false;
             if (!In(Get(entry, "phase"), "placing", "playing", "alignment", "awakening", "ended") || !(Get(entry, "data") is Dictionary<string, object>) || !(Get(entry, "clock") is Dictionary<string, object> clock)) return false;
-            if (!In(Get(entry, "type"), "run_started", "capture_started", "session_started", "starting_region_selected", "action_performed", "doctrine_selected", "talent_taken", "awakening_started", "phase_changed", "checkpoint_reached", "time_checkpoint", "capture_gap", "run_finished", "run_abandoned", "threat_spawned", "threat_resolved", "month_snapshot", "speed_changed")) return false;
+            if (!In(Get(entry, "type"), "run_started", "capture_started", "session_started", "starting_region_selected", "action_performed", "doctrine_selected", "talent_taken", "awakening_started", "phase_changed", "checkpoint_reached", "time_checkpoint", "capture_gap", "run_finished", "run_abandoned", "threat_spawned", "threat_resolved", "month_snapshot", "speed_changed", "capstone_invoked", "rite_month")) return false;
             return ValidClock(clock) && (adapter != Adapter || PlaytestEventContract.Valid(entry));
         }
         static bool ValidClock(Dictionary<string, object> clock)
