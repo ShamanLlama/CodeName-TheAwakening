@@ -16,8 +16,8 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
 
 | Versión | Fecha | Commit | Ruleset | Adaptador | Ronda GTC | Estado |
 | --- | --- | --- | --- | --- | --- | --- |
-| 0.7.0 | 2026-11-22 | `9a3055e` | `alignment-5` | `awakening-4` | «0.7.0 playtest por invitación · árbol de talentos y awareness gestionable», abierta del 2026-11-22 al 2026-12-06 (UTC) | En itch.io (Restricted con contraseña) |
-| 0.6.0 | 2026-11-21 | `675e2a7`; exportada desde `68b0249` | `alignment-4` | `awakening-3` | «0.6.0 playtest por invitación · ocultar con plazo y margen del rito», abierta del 2026-11-21 al 2026-12-05 (UTC) | Reemplazada por 0.7.0 |
+| 0.7.0 | 2026-11-22 | `9a3055e`; exportada desde `f253981` | `alignment-5` | `awakening-4` | «0.7.0 playtest por invitación · árbol de talentos y awareness gestionable», abierta del 2026-11-22 al 2026-12-06 (UTC) | En itch.io (Restricted con contraseña) |
+| 0.6.0 | 2026-11-21 | `675e2a7`; exportada desde `68b0249` | `alignment-4` | `awakening-3` | «0.6.0 playtest por invitación · ocultar con plazo y margen del rito», cerrada el 2026-11-22 (UTC) con 1 partida | Reemplazada por 0.7.0 |
 | 0.5.2 | 2026-11-18 | `880e836` | `alignment-3` | `awakening-2` | «0.5.2 playtest por invitación · interfaz legible», cerrada el 2026-11-21 (UTC) sin partidas | Reemplazada por 0.6.0 |
 | 0.5.1 | 2026-11-18 | `e1d5441` | `alignment-3` | `awakening-2` | «0.5.1 playtest por invitación · interfaz legible», cerrada el 2026-11-19 (UTC) con 1 partida | Reemplazada por 0.5.2 |
 | 0.5.0 | 2026-11-18 | `a25f916` | `alignment-3` | `awakening-2` | «0.5.0 playtest por invitación · versión Unity», cerrada el 2026-11-19 (UTC) con 1 partida | Reemplazada por 0.5.1 |
@@ -97,6 +97,15 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
   - Causas de derrota.
   - Pregunta: «¿qué descartaste?».
 - **Límites:** sin prueba con personas ni en teléfono físico todavía; las capturas son del ejecutable de desarrollo Linux.
+- **GTC (2026-11-22 UTC):**
+  - Primero se desplegó GTC `1fe2ee5`, con el contrato `awakening-4`, el resumen del Lab y la migración `0011`.
+  - Después se creó la build «The Awakening 0.7.0 · alignment-5 · Unity» (`f253981`, adaptador `awakening-4`) con su resumen en «cambios de esta build».
+  - La ronda se abrió en pausa. Con la pausa activa, un lote real `awakening-4` exportado del juego respondió `503 collection_paused`, así que el contrato pasó la validación. La build se probó en el host y la ronda se habilitó; cierra el 2026-12-06.
+  - La ronda 0.6.0 se cerró con 1 partida, la que motivó esta versión.
+- **Publicación:**
+  - Upload `20727549` en itch.io, único archivo jugable: `the-awakening-0.7.0-pilot.zip`, 8,9 MB, exportado desde un checkout limpio de `f253981`.
+  - Los archivos alojados son idénticos al export. La build arranca sin errores de consola, no envía nada antes de que el jugador responda y el guardado queda listo.
+  - La página pasa a «Novedad de 0.7.0 / New in 0.7.0», con el árbol, bury y restore, y los talentos entre los datos que se envían.
 
 ### 0.6.0 — ocultar con plazo, margen del rito y primera partida guiada
 
