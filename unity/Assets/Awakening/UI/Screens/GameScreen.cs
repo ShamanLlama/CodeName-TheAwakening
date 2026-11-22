@@ -27,9 +27,9 @@ namespace Awakening.UI
         public readonly Dialogs Dialogs;
         public string Selected = "";
 
-        Label _date, _countdown, _influence, _influenceRate, _dread, _followers, _doctrineNote, _tickerHead, _ticker;
+        Label _date, _countdown, _influence, _influenceRate, _dread, _followers, _talentsNote, _tickerHead, _ticker;
         readonly List<IconButton> _speed = new List<IconButton>();
-        Button _doctrine, _rite, _resetView, _concede, _bannerToggle;
+        Button _talents, _rite, _resetView, _concede, _bannerToggle;
         Label _awarenessCaption, _sitesCaption, _bannerHead, _bannerText, _bannerCause, _marginLine;
         AwarenessGauge _awareness;
         SiteSeals _sites;
@@ -141,8 +141,9 @@ namespace Awakening.UI
                 case KeyCode.C:
                     OpenDialog("chronicle");
                     return true;
+                case KeyCode.T:
                 case KeyCode.D:
-                    if (_game.State.Status != "placing") OpenDialog("doctrine");
+                    if (_game.State.Status != "placing") OpenDialog("talents");
                     return true;
                 case KeyCode.H:
                     OpenDialog("guide");
@@ -276,18 +277,20 @@ namespace Awakening.UI
                 $"Earned each month by your followers, minus {Js.Num(Balance.SiteUpkeep)} per funded site.\nSpent on every cult action. Keep a reserve for the alignment.");
             _dread = Readout(row, "Dread", Palette.Omen, "Power for the rites. Gained only by sacrifice and omens.\nSites cost 60, 100 and 160. The final rite costs 100.").value;
             _followers = Readout(row, "Followers", Palette.Cult, "Living members of the cult, in every region.").value;
-            Stack doctrine = Kit.VBox(3);
-            doctrine.name = "doctrine";
-            doctrine.Add(Kit.Caption("Doctrine"));
-            _doctrine = Kit.Button("", () => OpenDialog("doctrine"));
-            _doctrine.style.minWidth = Kit.Compact ? 124 : 150;
-            _doctrine.style.fontSize = 18;
-            Fonts.Apply(_doctrine, Fonts.BodyBold);
-            _doctrine.tooltip = "One permanent bonus per run.  (D)";
-            doctrine.Add(_doctrine);
-            _doctrineNote = Kit.Label("", 12, Palette.Warn, Fonts.TypeBold);
-            doctrine.Add(_doctrineNote);
-            row.Add(doctrine);
+            Stack talents = Kit.VBox(3);
+            talents.name = "talents";
+            talents.Add(Kit.Caption("Talents"));
+            _talents = Kit.Button("", () => OpenDialog("talents"));
+            _talents.name = "talents-button";
+            _talents.style.minWidth = Kit.Compact ? 124 : 150;
+            _talents.style.fontSize = Kit.Compact ? 16 : 18;
+            Fonts.Apply(_talents, Fonts.BodyBold);
+            _talents.tooltip = "Open the cult's talent tree.  (T)";
+            talents.Add(_talents);
+            _talentsNote = Kit.Label("", 12, Palette.Warn, Fonts.TypeBold);
+            _talentsNote.name = "talents-note";
+            talents.Add(_talentsNote);
+            row.Add(talents);
             row.Add(Divider());
 
             Stack ticker = Kit.VBox(3);
@@ -672,7 +675,7 @@ namespace Awakening.UI
             _influenceRate.style.color = net < 0 ? Palette.Danger : Palette.Muted;
             _dread.text = Format.Count(s.Dread);
             _followers.text = Format.Count(Derived.TotalFollowers(s));
-            RefreshDoctrine(s, placing, over);
+            RefreshTalents(s, placing, over);
 
             LogEntry last = s.Log.Count > 0 ? s.Log[s.Log.Count - 1] : null;
             SetTicker(last);
@@ -855,27 +858,67 @@ namespace Awakening.UI
             }
         }
 
-        /// <summary>The doctrine button always opens the choices, but says plainly when they cannot be bought.</summary>
-        void RefreshDoctrine(GameState s, bool placing, bool over)
+        /// <summary>The talents button always opens the tree, and flags unbroken seals in the ledger.</summary>
+        void RefreshTalents(GameState s, bool placing, bool over)
         {
-            _doctrine.SetEnabled(!placing && !over);
-            _doctrineNote.text = "";
-            // alignment-5 minimal port: the doctrine button shows the talents taken until the tree screen lands (wave 2).
-            if (s.Talents.Count > 0 && GameEngine.TalentSlotsUnused(s) == 0)
+            _talents.SetEnabled(!placing);
+            _talentsNote.text = "";
+            int total = GameData.Difficulties[s.Difficulty].TalentSlots;
+            int taken = s.Talents.Count;
+            int unused = GameEngine.TalentSlotsUnused(s);
+            int nextMonth = GameEngine.NextTalentSlotMonth(s);
+            int cost = GameEngine.TalentCost(s);
+
+            if (placing)
             {
-                _doctrine.EnableInClassList("aw-unavailable", false);
-                _doctrine.text = GameData.Talents[s.Talents[s.Talents.Count - 1]].Name;
-                _doctrine.style.color = Palette.Cult;
+                _talents.EnableInClassList("aw-unavailable", false);
+                _talents.EnableInClassList("aw-on", false);
+                _talents.text = $"0 / {total} seals";
+                _talents.style.color = StyleKeyword.Null;
+                _talents.tooltip = $"Talents unlock as seals open ({total} in this difficulty).  (T)";
                 return;
             }
-            int cost = GameEngine.TalentCost(s);
-            _doctrine.text = "Choose · " + cost;
-            int shortBy = cost - (int)Math.Floor(s.Influence);
-            bool affordable = shortBy <= 0;
-            _doctrine.EnableInClassList("aw-unavailable", !affordable);
-            _doctrine.style.color = StyleKeyword.Null;
-            _doctrine.tooltip = affordable ? "Choose a permanent doctrine  (D)" : "Inspect doctrines · " + shortBy + " more Influence to choose  (D)";
-            if (!affordable && !placing && !over) _doctrineNote.text = shortBy + " MORE INFLUENCE";
+
+            if (unused > 0 && !over)
+            {
+                int shortBy = cost - (int)Math.Floor(s.Influence);
+                bool affordable = shortBy <= 0;
+                _talents.text = $"Choose · {cost}";
+                _talents.EnableInClassList("aw-on", affordable);
+                _talents.EnableInClassList("aw-unavailable", !affordable);
+                _talents.style.color = StyleKeyword.Null;
+                _talentsNote.text = unused == 1 ? "1 SEAL UNBROKEN" : $"{unused} SEALS UNBROKEN";
+                _talentsNote.style.color = affordable ? Palette.Cult : Palette.Warn;
+                _talents.tooltip = affordable
+                    ? $"{unused} unbroken {(unused == 1 ? "seal" : "seals")} · next talent costs {cost} Influence  (T)"
+                    : $"{unused} unbroken {(unused == 1 ? "seal" : "seals")} · need {shortBy} more Influence to take a talent  (T)";
+                return;
+            }
+
+            _talents.EnableInClassList("aw-on", false);
+            _talents.EnableInClassList("aw-unavailable", false);
+            _talents.text = $"{taken} / {total} seals";
+            _talents.style.color = taken > 0 ? Palette.Cult : StyleKeyword.Null;
+            if (!over)
+            {
+                if (nextMonth >= 0)
+                {
+                    int wait = nextMonth - s.ElapsedMonths;
+                    _talentsNote.text = $"SEAL IN {wait} MO";
+                    _talentsNote.style.color = Palette.Muted;
+                    _talents.tooltip = $"Inspect talent tree · next seal opens {Format.Date(nextMonth)} (in {Format.Months(wait)})  (T)";
+                }
+                else
+                {
+                    _talentsNote.text = "ALL SEALS SPENT";
+                    _talentsNote.style.color = Palette.Muted;
+                    _talents.tooltip = $"Inspect talent tree · all {total} seals spent  (T)";
+                }
+            }
+            else
+            {
+                _talents.tooltip = $"Inspect the {taken} talents taken in this run  (T)";
+            }
         }
 
         /// <summary>During the alignment the rite button stays visible; it reads as ready only when it is.</summary>
@@ -971,17 +1014,20 @@ namespace Awakening.UI
             ["investigation"] = "Investigation", ["raid"] = "Police Raid", ["occult"] = "Occult Hunters",
         };
 
-        /// <summary>A press clipping: the headline names the threat, the stamps answer it.</summary>
+        /// <summary>A press clipping: the headline names the threat, the options and stamps answer it.</summary>
         VisualElement ThreatCard(GameState s, string id, bool brief)
         {
             RegionState r = s.Regions[id];
             Threat threat = r.Threat;
             int months = threat.DueMonth - s.ElapsedMonths;
             bool urgent = months <= 3;
-            Stack card = Kit.Panel(Palette.PaperLight, urgent ? Palette.Danger : Palette.PaperEdge, new Vector4(12, 9, 12, 10), 0.1f, 6);
+            bool cornered = Threats.Cornered(s, id);
+            var options = Threats.Options(s, id);
+            Stack card = Kit.Panel(Palette.PaperLight, urgent || cornered ? Palette.Danger : Palette.PaperEdge, new Vector4(12, 9, 12, 10), 0.1f, 6);
             card.name = "threat-card-" + id;
-            if (urgent) card.style.borderTopWidth = card.style.borderBottomWidth = card.style.borderLeftWidth = card.style.borderRightWidth = 2;
-            card.tooltip = GameData.ThreatNames[threat.Kind] + ".\nIf ignored: " + Threats.Describe(s, r);
+            if (urgent || cornered) card.style.borderTopWidth = card.style.borderBottomWidth = card.style.borderLeftWidth = card.style.borderRightWidth = 2;
+            if (cornered) card.style.borderLeftWidth = 5;
+            card.tooltip = GameData.ThreatNames[threat.Kind] + (cornered ? " (Cornered: neither obstruction nor silencing is available.)" : "") + ".\nIf ignored: " + Threats.Describe(s, r);
             card.RegisterCallback<PointerDownEvent>(e =>
             {
                 if (e.button == 0 && !(e.target is Button)) Select(id);
@@ -1008,30 +1054,68 @@ namespace Awakening.UI
             row.Add(right);
             if (brief)
             {
-                card.Add(Kit.Caption(Kit.Touch ? "Tap for responses" : "Inspect responses", Palette.Danger));
+                string briefText = cornered
+                    ? (Kit.Touch ? "CORNERED · tap for responses" : "CORNERED · inspect responses")
+                    : (Kit.Touch ? "Tap for responses" : "Inspect responses");
+                Label briefLabel = Kit.Caption(briefText, Palette.Danger);
+                if (cornered) briefLabel.name = "threat-cornered-" + id;
+                card.Add(briefLabel);
                 return card;
             }
-            // Three answers, each paid in a different currency. The region's file says what else each costs.
-            var stamps = new Flow(6, 6);
-            foreach (string action in Notes.Responses)
+            if (cornered)
             {
-                ActionPreview preview = GameEngine.PreviewAction(s, action, id);
-                string chosen = action;
-                Button stamp = Kit.Stamp(Notes.ResponseStamp(preview, action), () => _game.Act(chosen, id), Accent.Danger);
-                stamp.style.fontSize = 13;
-                stamp.SetEnabled(preview.Ok);
-                stamp.tooltip = preview.Ok ? GameData.Actions[action].Name + ". " + Notes.ResponseNote(r, preview, action) + "." : preview.Reason;
-                if (Kit.Touch) stamp.style.minHeight = 40;
-                if (!preview.Ok)
-                {
-                    Stack disabled = Kit.VBox(2);
-                    disabled.Add(stamp);
-                    disabled.Add(Kit.Label(Notes.Blocker(s, action, id, preview).shortText, 11, Palette.Warn, Fonts.TypeBold));
-                    stamps.Add(disabled);
-                }
-                else stamps.Add(stamp);
+                Label badge = Kit.Body(Notes.ThreatCorneredLabel(s, id, Kit.Compact), 11, Palette.Danger, Fonts.TypeBold);
+                badge.name = "threat-cornered-" + id;
+                badge.style.backgroundColor = Palette.Alpha(Palette.Danger, 0.10f);
+                badge.style.borderTopWidth = badge.style.borderBottomWidth = badge.style.borderLeftWidth = badge.style.borderRightWidth = 1;
+                badge.style.borderTopColor = badge.style.borderBottomColor = badge.style.borderLeftColor = badge.style.borderRightColor = Palette.Alpha(Palette.Danger, 0.65f);
+                badge.style.paddingLeft = badge.style.paddingRight = 6;
+                badge.style.paddingTop = badge.style.paddingBottom = 2;
+                badge.tooltip = "Neither obstruction nor silencing is available now.";
+                card.Add(badge);
             }
-            card.Add(stamps);
+            // Three answers from Threats.Options: price and why the others are unavailable from the moment it appears.
+            Stack opts = Kit.VBox(Kit.Compact ? 4 : 3);
+            foreach (ThreatOption opt in options)
+            {
+                ActionPreview preview = GameEngine.PreviewAction(s, opt.Response, id);
+                string chosen = opt.Response;
+                Button stamp = Kit.Stamp(Notes.ResponseStamp(s, preview, chosen), () => _game.Act(chosen, id), Accent.Danger);
+                stamp.style.fontSize = 12;
+                stamp.style.paddingLeft = stamp.style.paddingRight = 7;
+                stamp.style.height = Kit.Touch ? 34 : 24;
+                stamp.style.flexShrink = 0;
+                stamp.SetEnabled(opt.Ok);
+                stamp.tooltip = opt.Ok
+                    ? GameData.Actions[chosen].Name + " (" + opt.Cost + "). " + Notes.ResponseNote(r, preview, chosen) + "."
+                    : opt.Reason + " (" + opt.Cost + ")";
+                string detail = opt.Ok
+                    ? (chosen == "silence" ? "+" + Js.Num(preview.Awareness) + " awareness" : chosen == "scatter" ? GameEngine.ScatterMonths(s) + " mo hidden" : "rests 12 mo")
+                    : Notes.ThreatOptionReason(opt);
+                Color detailColor = !opt.Ok ? Palette.Warn : chosen == "silence" ? Palette.Danger : Palette.Muted;
+                string detailWeight = !opt.Ok ? Fonts.TypeBold : Fonts.Italic;
+                Label info = Kit.Body(detail, Kit.Compact ? 11 : 12, detailColor, detailWeight);
+                if (Kit.Compact)
+                {
+                    Stack item = Kit.VBox(1);
+                    stamp.style.alignSelf = Align.FlexStart;
+                    item.Add(stamp);
+                    item.Add(info);
+                    opts.Add(item);
+                }
+                else
+                {
+                    Stack item = Kit.HBox(6);
+                    item.style.alignItems = Align.Center;
+                    info.style.flexGrow = 1;
+                    info.style.flexShrink = 1;
+                    info.style.minWidth = 0;
+                    item.Add(stamp);
+                    item.Add(info);
+                    opts.Add(item);
+                }
+            }
+            card.Add(opts);
             return card;
         }
 

@@ -99,11 +99,24 @@ namespace Awakening.UI
         internal static IEnumerator Crowd(GameController game, GameScreen screen)
         {
             if (GameEngine.IsOver(game.State)) yield break;
+            bool corneredSet = false;
+            bool restoreSet = false;
             foreach (string id in GameData.RegionIds)
             {
                 var region = game.State.Regions[id];
                 if (region.Population.Followers > 0 && region.Threat == null)
                     Director.ScheduleThreat(game.State, id, id.Length % 3 == 2);
+                if (!corneredSet && region.Threat != null)
+                {
+                    region.Cooldowns["counter"] = game.State.ElapsedMonths + 8;
+                    region.Cooldowns["silence"] = game.State.ElapsedMonths + 8;
+                    corneredSet = true;
+                }
+                if (!restoreSet && region.Site.Invested && region.Site.Progress <= 20)
+                {
+                    region.Site.Recoverable = 6;
+                    restoreSet = true;
+                }
             }
             game.Settings.Hints = new List<string>();
             screen.Map.ZoomAt(screen.Map.contentRect.size * .5f, 1.6f);
@@ -203,7 +216,7 @@ namespace Awakening.UI
                 if (crowded && !Kit.Compact && screen.LayoutThreatHeights.Length == 3
                     && game.State.Regions.Values.Count(region => region.Threat != null) >= 2)
                     yield return ThreatRecovery(screen);
-                var kinds = new List<string> { "menu", "doctrine", "chronicle", "guide" };
+                var kinds = new List<string> { "menu", "talents", "chronicle", "guide" };
                 if (game.State.Status == "alignment") kinds.Add("alignment");
                 if (GameEngine.CanConcede(game.State)) kinds.Add("concede");
                 if (GameEngine.IsOver(game.State)) kinds.Add("end");
@@ -213,6 +226,15 @@ namespace Awakening.UI
                     yield return Frames(6);
                     Within(screen.Dialogs.LayoutBox, $"dialog {kind}");
                     if (Visible(screen.LayoutBanner)) Fail($"timetable visible over open modal {kind}");
+                    if (kind == "talents" && Kit.Compact)
+                    {
+                        foreach (string branchId in GameData.BranchIds)
+                        {
+                            screen.Dialogs.LayoutSelectTalentBranch(branchId);
+                            yield return Frames(2);
+                            Within(screen.Dialogs.LayoutBox, $"dialog talents/{branchId}");
+                        }
+                    }
                     screen.Dialogs.Close();
                 }
             }
