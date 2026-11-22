@@ -26,6 +26,17 @@ namespace Awakening.Core.Rules
         public static double SiteRequirement(RegionState r) => Math.Max(Balance.SiteFollowers, Js.RoundHalfUp(Capacity(r) * Balance.SiteSupportShare));
         public static bool Supported(RegionState r) => !r.Scattered && r.Population.Followers >= SiteRequirement(r);
         public static double CultShare(GameState state) => TotalFollowers(state) / GameData.WorldPopulation;
+        /// <summary>
+        /// With Open worship, the share of humanity the world stops counting toward the cult: public followers pass as one
+        /// more creed (alignment-6; it takes over A faith among faiths, which halved this for the whole cult).
+        /// </summary>
+        public static double OpenWorshipShare(GameState state)
+        {
+            if (!GameEngine.HasTalent(state, "open_worship")) return 0.0;
+            double sum = 0.0;
+            foreach (string id in GameData.RegionIds) if (state.Regions[id].Public) sum += state.Regions[id].Population.Followers;
+            return sum / GameData.WorldPopulation;
+        }
         public static double AwarenessDrag(GameState state) => Math.Max(0.0, 1.0 - state.Awareness / Balance.AwarenessDrag);
         public static int ReadySites(GameState state)
         {
@@ -50,13 +61,14 @@ namespace Awakening.Core.Rules
             foreach (string id in GameData.RegionIds) sum += RegionIncome(state.Regions[id]);
             return sum * AwarenessDrag(state);
         }
-        public static double RecruitmentPerMonth(GameState state, RegionState r)
+        /// <param name="without">A talent to leave out, to measure what it adds (GameState.TalentYield).</param>
+        public static double RecruitmentPerMonth(GameState state, RegionState r, string without = null)
         {
             if (r.Population.Followers <= 0 || r.Scattered) return 0.0;
-            bool openWorship = GameEngine.HasTalent(state, "open_worship");
+            bool openWorship = without != "open_worship" && GameEngine.HasTalent(state, "open_worship");
             return Math.Min(Recruitable(r), (Balance.RecruitmentBase + r.Population.Followers * Balance.RecruitmentRate)
                 * (r.Public ? openWorship ? Balance.OpenWorshipRecruitment : Balance.PublicRecruitment : 1.0)
-                * (GameEngine.HasTalent(state, "swelling_flock") ? 1.0 + Balance.SwellingFlockRecruitment : 1.0)
+                * (without != "swelling_flock" && GameEngine.HasTalent(state, "swelling_flock") ? 1.0 + Balance.SwellingFlockRecruitment : 1.0)
                 * (state.ElapsedMonths < r.BacklashUntil ? 0.55 : 1.0)
                 * (1.0 + r.Madness / 500.0) * GameData.Difficulties[state.Difficulty].Recruitment * (r.Public && openWorship ? 1.0 : AwarenessDrag(state)));
         }

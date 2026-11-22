@@ -22,6 +22,14 @@ namespace Awakening.Core.Rules
         public List<string> Talents = new List<string>();
         /// <summary>Times Bury the record was used this run; each use raises its price.</summary>
         public int BuryUses;
+        /// <summary>What each taken talent has given this run (alignment-6), in the unit GameEngine.TalentYieldText names.</summary>
+        public Dictionary<string, double> TalentYield = new Dictionary<string, double>();
+        /// <summary>Invokable capstones already spent this run.</summary>
+        public List<string> CapstonesUsed = new List<string>();
+        /// <summary>Months the final rite needs: Balance.FinalMonths, or fewer with The Great Procession. Fixed when the rite begins.</summary>
+        public int RiteMonthsRequired = Balance.FinalMonths;
+        /// <summary>Regions whose prepared sites carried the final rite when it began (empty before), so a destroyed one can still be named.</summary>
+        public List<string> RiteSites = new List<string>();
         public int FinalProgress;
         public RegionMap Regions = new RegionMap();
         public List<LogEntry> Log = new List<LogEntry>();
@@ -39,6 +47,9 @@ namespace Awakening.Core.Rules
             copy.Regions = Regions?.Clone();
             copy.Log = Log.Select(entry => entry.Clone()).ToList();
             copy.Talents = new List<string>(Talents);
+            copy.TalentYield = new Dictionary<string, double>(TalentYield);
+            copy.CapstonesUsed = new List<string>(CapstonesUsed);
+            copy.RiteSites = new List<string>(RiteSites);
             copy.Telemetry = Telemetry?.Clone();
             return copy;
         }
@@ -238,6 +249,26 @@ namespace Awakening.Core.Rules
         public string Cost;
     }
     public sealed class RitualForecast { public bool Urgent; public string Message; }
+    /// <summary>A site that keeps the final rite from advancing (Forecast.Rite).</summary>
+    public sealed class RiteBlocker
+    {
+        public string Region;
+        /// <summary>"destroyed", "dormant", "scattered", "unsupported" or "unprepared" (an occult society took months from it).</summary>
+        public string Reason;
+    }
+    /// <summary>The final rite as it stands: how far it is, whether the next month advances it and what stops it.</summary>
+    public sealed class RiteStatus
+    {
+        public bool Started;
+        /// <summary>Months of the rite completed (GameState.FinalProgress).</summary>
+        public int Progress;
+        /// <summary>Months the rite needs: fixed once it begins; before that, what it would need if begun now.</summary>
+        public int Required;
+        /// <summary>The rite is under way and the next month advances it, if nothing else happens.</summary>
+        public bool Advancing;
+        /// <summary>While the rite is under way and halted: each site that does not count, in region order.</summary>
+        public List<RiteBlocker> Blockers = new List<RiteBlocker>();
+    }
     /// <summary>Whether the final rite still fits before the deadline, derived from the current sites.</summary>
     public sealed class RiteMargin
     {

@@ -4,7 +4,7 @@ namespace Awakening.Core.Rules
 {
     public static class Balance
     {
-        public const string Ruleset = "alignment-5";
+        public const string Ruleset = "alignment-6";
         public const int PreparationMonths = 200;
         public const int AlignmentMonths = 24;
         public const int FinalMonths = 12;
@@ -52,7 +52,11 @@ namespace Awakening.Core.Rules
         /// <summary>Months the world-awareness part of concealment rests after it is used, across every region.</summary>
         public const int ConcealWorldMonths = 6;
         public const double SiteUpkeep = 1.0;
-        public const double FinaleSitePressure = 0.3;
+        /// <summary>Extra threat pressure on regions with a site once the stars align (alignment-6: 0.3 → 0.6, the finale every capstone answers).</summary>
+        public const double FinaleSitePressure = 0.6;
+        /// <summary>alignment-6: from this month every threat roll weighs a little more, so the middle of the run is not quiet.</summary>
+        public const int MidgamePressureMonth = 100;
+        public const double MidgamePressure = 0.05;
         public const int FinaleWarningMonths = 24;
         public const double AwarenessPerCapita = 1.5;
         public const int FigureSiteProgress = 8;
@@ -67,12 +71,22 @@ namespace Awakening.Core.Rules
         public const int RedAltarsManifestDread = 15;
         public const double OpenWorshipRecruitment = 2.5;
         public const double MartyrDreadPerFollower = 1.0 / 3.0;
-        public const double FaithAmongFaithsShare = 0.5;
         public const int SleeperScatterMonths = 5;
-        public const int BoughtPressAwareness = 8;
         public const double MuteWitnessesSeverityAwareness = 2.0;
         public const double ScapegoatSeverityAwareness = 1.0;
-        public const double OfferingAwareness = 1.0;
+        // alignment-6: capstones that open another way to win.
+        /// <summary>The Great Procession: public regions needed when the final rite begins.</summary>
+        public const int ProcessionPublicRegions = 5;
+        /// <summary>The Great Procession: months the final rite needs instead of FinalMonths.</summary>
+        public const int ProcessionRiteMonths = 8;
+        /// <summary>The Great Procession: world awareness each public region adds every month of the rite.</summary>
+        public const double ProcessionAwareness = 0.3;
+        /// <summary>The world forgets: world awareness removed when invoked.</summary>
+        public const int WorldForgetsAwareness = 25;
+        /// <summary>The world forgets: months every cell stays scattered.</summary>
+        public const int WorldForgetsScatterMonths = 6;
+        /// <summary>Dreams of R'lyeh: world awareness each rite-advancing sacrifice adds.</summary>
+        public const double DreamsAwareness = 2.0;
         // Bury the record: Influence for world awareness, dearer with each use (the step depends on difficulty).
         public const int BuryAwareness = 5;
         public const int BuryBaseCost = 50;

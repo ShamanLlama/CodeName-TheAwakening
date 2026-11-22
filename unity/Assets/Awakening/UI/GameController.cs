@@ -649,7 +649,7 @@ namespace Awakening.UI
         internal static GameState DoomedState(int month = 200)
         {
             var s = Awakening.Core.Dev.Playthrough.Play("early", "drowned", month);
-            if (s.Status == "awakening") { s.Status = "alignment"; s.FinalProgress = 0; }
+            if (s.Status == "awakening") { s.Status = "alignment"; s.FinalProgress = 0; s.RiteSites.Clear(); s.RiteMonthsRequired = Balance.FinalMonths; }
             if (!GameEngine.CanConcede(s))
             {
                 var funded = GameData.RegionIds.Select(id => s.Regions[id]).Where(r => r.Site.Invested).ToList();

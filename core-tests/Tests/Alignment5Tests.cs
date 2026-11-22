@@ -11,6 +11,7 @@ namespace Awakening.Core.Tests
 {
     // alignment-5: the in-run talent tree replaces the doctrine; Bury the record and Restore the site; the answers to a
     // threat as it appears; Mysticism shapes manifestations; each difficulty changes rules, not only multipliers.
+    // Kept under alignment-6 with its capstones and values (Alignment6Tests covers what changed).
     public class Alignment5Tests
     {
         static GameState At(int month, string difficulty = "normal", double influence = 1000.0)
@@ -66,7 +67,7 @@ namespace Awakening.Core.Tests
             Assert.Contains("+35%", GameData.Talents["swelling_flock"].Description);
             Assert.Contains("after 5 months, not 8", GameData.Talents["sleeper_cells"].Description);
             Assert.Contains("2 world awareness per severity, not 3", GameData.Talents["mute_witnesses"].Description);
-            Assert.Contains("removes 8 world awareness, not 5", GameData.Talents["bought_press"].Description);
+            Assert.Contains("needs 8 months, not 12", GameData.Talents["great_procession"].Description);
             Assert.Contains("1 Dread for every 3", GameData.Talents["martyrs"].Description);
         }
 
@@ -92,8 +93,8 @@ namespace Awakening.Core.Tests
             Assert.Equal(4, GameEngine.TalentSlotsOpen(s)); Assert.Equal(3, GameEngine.TalentSlotsUnused(s)); Assert.Equal(176, GameEngine.NextTalentSlotMonth(s));
             s.ElapsedMonths = 199;
             Assert.Equal(-1, GameEngine.NextTalentSlotMonth(s));
-            foreach (string id in new[] { "open_worship", "faith_among_faiths", "quiet_friends", "contingency" }) s = Take(s, id);
-            Assert.Equal("Every seal of this run is spent.", GameEngine.TalentReason(s, "bought_press"));
+            foreach (string id in new[] { "open_worship", "great_procession", "quiet_friends", "contingency" }) s = Take(s, id);
+            Assert.Equal("Every seal of this run is spent.", GameEngine.TalentReason(s, "world_forgets"));
 
             Assert.Equal(1, GameEngine.TalentSlotsOpen(At(24, "easy"))); Assert.Equal(2, GameEngine.TalentSlotsOpen(At(44, "easy")));
             Assert.Equal(1, GameEngine.TalentSlotsOpen(At(71, "hard"))); Assert.Equal(4, GameEngine.TalentSlotsOpen(At(168, "hard")));
@@ -105,7 +106,7 @@ namespace Awakening.Core.Tests
             var s = At(200);
             s.Status = "alignment";
             var costs = new List<int>();
-            foreach (string id in new[] { "quiet_friends", "sleeper_cells", "bought_press", "red_altars", "scapegoats" })
+            foreach (string id in new[] { "quiet_friends", "sleeper_cells", "world_forgets", "red_altars", "scapegoats" })
             {
                 costs.Add(GameEngine.TalentCost(s));
                 double before = s.Influence;
@@ -116,7 +117,7 @@ namespace Awakening.Core.Tests
                 s = next;
             }
             Assert.Equal(new[] { 40, 70, 100, 130, 160 }, costs);
-            Assert.Equal(new[] { "quiet_friends", "sleeper_cells", "bought_press", "red_altars", "scapegoats" }, s.Talents);
+            Assert.Equal(new[] { "quiet_friends", "sleeper_cells", "world_forgets", "red_altars", "scapegoats" }, s.Talents);
             var poor = At(24, influence: 39.0);
             Assert.Equal("Need 40 Influence.", GameEngine.TalentReason(poor, "red_altars"));
             Assert.Same(poor, GameEngine.TakeTalent(poor, "red_altars").State);
@@ -127,17 +128,17 @@ namespace Awakening.Core.Tests
         {
             var s = At(200); s.Status = "alignment";
             Assert.Equal("Requires Swelling flock.", GameEngine.TalentReason(s, "open_worship"));
-            Assert.Equal("Requires Swelling flock and Open worship or Martyrs.", GameEngine.TalentReason(s, "faith_among_faiths"));
+            Assert.Equal("Requires Swelling flock and Open worship or Martyrs.", GameEngine.TalentReason(s, "great_procession"));
             s = Take(s, "swelling_flock");
-            Assert.Equal("Requires Open worship or Martyrs.", GameEngine.TalentReason(s, "faith_among_faiths"));
+            Assert.Equal("Requires Open worship or Martyrs.", GameEngine.TalentReason(s, "great_procession"));
             s = Take(s, "martyrs");
             Assert.Equal("Closed for this run: the cult chose Martyrs.", GameEngine.TalentReason(s, "open_worship"));
-            Assert.Equal("", GameEngine.TalentReason(s, "faith_among_faiths"));
+            Assert.Equal("", GameEngine.TalentReason(s, "great_procession"));
             Assert.Equal("Already taken.", GameEngine.TalentReason(s, "martyrs"));
             Assert.Equal("Unknown talent.", GameEngine.TalentReason(s, "recruitment"));
             Assert.Equal("Unknown talent.", GameEngine.TalentReason(s, null));
-            var taken = GameEngine.TakeTalent(s, "faith_among_faiths").State;
-            Assert.Contains("A faith among faiths (Congregation)", taken.Log.Last().Message);
+            var taken = GameEngine.TakeTalent(s, "great_procession").State;
+            Assert.Contains("The Great Procession (Congregation)", taken.Log.Last().Message);
             Assert.Contains("Open worship is closed for this run.", Take(Take(At(64), "swelling_flock"), "martyrs").Log.Last().Message);
             // No respecialization: there is no command that removes a talent, and completed runs refuse new ones.
             var over = taken.Clone(); over.Status = "won";
@@ -185,17 +186,6 @@ namespace Awakening.Core.Tests
             Assert.Contains("The martyrs feed the dark", hit.Log.Last().Message);
             var plain = At(40); plain.Dread = 50.0;
             Assert.Equal(50.0, Land(plain, "africa", "raid", 2).Dread);
-        }
-
-        [Fact]
-        public void AFaithAmongFaithsHalvesWhatTheCultsSizeAddsToAwareness()
-        {
-            var plain = At(40); plain.Regions["africa"].Exposure = 0.0;
-            var faith = With(plain.Clone(), "swelling_flock", "martyrs", "faith_among_faiths");
-            double share = Derived.CultShare(plain) * Balance.AwarenessPerCapita;
-            double a = GameEngine.AdvanceSimulation(Clear(plain), 1).Awareness, b = GameEngine.AdvanceSimulation(Clear(faith), 1).Awareness;
-            Assert.True(a > b);
-            Assert.InRange(a - b, share * 0.4, share * 0.6);
         }
 
         [Fact]
@@ -254,23 +244,6 @@ namespace Awakening.Core.Tests
             Assert.Equal(0.0, Land(clean, "africa", "investigation", 3).Awareness);
         }
 
-        [Fact]
-        public void OfferingsEndAThreatWithASacrifice()
-        {
-            var s = With(At(40), "red_altars", "scapegoats", "offerings");
-            s.Regions["africa"].Threat = new Threat { Kind = "raid", Severity = 2, DueMonth = 45 };
-            var preview = GameEngine.PreviewAction(s, "sacrifice", "africa");
-            Assert.Equal(Balance.OfferingAwareness, preview.Awareness);
-            Assert.Contains("the threat here ends", preview.Effect);
-            var fed = GameEngine.PerformAction(s, "sacrifice", "africa").State;
-            Assert.Null(fed.Regions["africa"].Threat);
-            Assert.Equal(Balance.OfferingAwareness, fed.Awareness);
-            Assert.Equal(235.0, fed.Dread);
-            var calm = With(At(40), "red_altars", "scapegoats", "offerings");
-            Assert.Equal(0, GameEngine.PreviewAction(calm, "sacrifice", "africa").Awareness);
-            Assert.Equal(0, GameEngine.PerformAction(calm, "sacrifice", "africa").State.Awareness);
-        }
-
         // ---- Bury the record ----
 
         [Fact]
@@ -282,14 +255,14 @@ namespace Awakening.Core.Tests
             Assert.True(preview.Ok, preview.Reason);
             Assert.Equal(50, preview.Influence); Assert.Equal(0, preview.Awareness);
             Assert.Equal("−5 world awareness. Concealment's own world effect is not spent.", preview.Effect);
-            Assert.Equal("+8 Exposure. The next burial costs 75 Influence.", preview.Risk);
+            Assert.Equal("+8 Exposure. The next burial costs 85 Influence.", preview.Risk);
             var once = GameEngine.PerformAction(s, "bury", "africa").State;
             Assert.Equal(35.0, once.Awareness); Assert.Equal(950.0, once.Influence); Assert.Equal(18.0, once.Regions["africa"].Exposure);
             Assert.Equal(1, once.BuryUses); Assert.Equal(0, once.WorldConcealReadyAt);
             Assert.StartsWith("Available in 6 months", GameEngine.PreviewAction(once, "bury", "africa").Reason);
-            Assert.Equal(75, GameEngine.PreviewAction(once, "bury", "europe").Influence);
+            Assert.Equal(85, GameEngine.PreviewAction(once, "bury", "europe").Influence);
             var twice = GameEngine.PerformAction(once, "bury", "europe").State;
-            Assert.Equal(100, GameEngine.BuryCost(twice));
+            Assert.Equal(120, GameEngine.BuryCost(twice));
             Assert.Equal(0, GameEngine.ConcealWorldCooldown(twice));
 
             Assert.Equal("Nothing to bury: the world has not noticed you.", GameEngine.PreviewAction(At(40), "bury", "africa").Reason);
@@ -299,18 +272,14 @@ namespace Awakening.Core.Tests
         }
 
         [Fact]
-        public void BuryStepsByDifficultyAndBoughtPress()
+        public void BuryStepsByDifficulty()
         {
-            foreach (var (difficulty, step) in new[] { ("easy", 15), ("normal", 25), ("hard", 40) })
+            foreach (var (difficulty, step) in new[] { ("easy", 15), ("normal", 35), ("hard", 40) })
             {
                 var s = At(40, difficulty); s.BuryUses = 2;
                 Assert.Equal(50 + 2 * step, GameEngine.BuryCost(s));
-                With(s, "quiet_friends", "sleeper_cells", "bought_press");
-                Assert.Equal(50 + 2 * (int)Js.RoundHalfUp(step / 2.0), GameEngine.BuryCost(s));
             }
-            var press = With(At(40), "quiet_friends", "contingency", "bought_press"); press.Awareness = 40.0;
-            Assert.Equal(32.0, GameEngine.PerformAction(press, "bury", "africa").State.Awareness);
-            var low = With(At(40), "quiet_friends", "contingency", "bought_press"); low.Awareness = 3.0;
+            var low = At(40); low.Awareness = 3.0;
             Assert.Equal(0.0, GameEngine.PerformAction(low, "bury", "africa").State.Awareness);
         }
 
@@ -354,13 +323,13 @@ namespace Awakening.Core.Tests
         }
 
         [Fact]
-        public void EasyOccultSocietiesTakeFourMonths()
+        public void EasyOccultSocietiesTakeFiveMonths()
         {
-            Assert.Equal(4, GameData.Difficulties["easy"].OccultPreparationLoss);
+            Assert.Equal(5, GameData.Difficulties["easy"].OccultPreparationLoss);
             var hit = Land(Site(At(60, "easy"), "africa", 20), "africa", "occult", 1);
-            Assert.Equal(16, hit.Regions["africa"].Site.Progress); Assert.Equal(4, hit.Regions["africa"].Site.Recoverable);
+            Assert.Equal(15, hit.Regions["africa"].Site.Progress); Assert.Equal(5, hit.Regions["africa"].Site.Recoverable);
             var s = Site(At(60, "easy"), "africa", 20); s.Regions["africa"].Threat = new Threat { Kind = "occult", Severity = 1, DueMonth = 70 };
-            Assert.Contains("ritual −4 preparation months", Threats.Describe(s, s.Regions["africa"]));
+            Assert.Contains("ritual −5 preparation months", Threats.Describe(s, s.Regions["africa"]));
         }
 
         // ---- Threat options ----
@@ -435,11 +404,11 @@ namespace Awakening.Core.Tests
         [Fact]
         public void EachDifficultyStatesTheRulesItChanges()
         {
-            Assert.Equal("5 talent seals. An ignored occult society costs a site 6 months. Each burial costs 25 Influence more. Concealment's world effect rests 6 months.", GameData.Difficulties["normal"].Rule);
-            Assert.StartsWith("6 talent seals. An ignored occult society costs a site 4 months. Each burial costs 15", GameData.Difficulties["easy"].Rule);
+            Assert.Equal("5 talent seals. An ignored occult society costs a site 6 months. Each burial costs 35 Influence more. Concealment's world effect rests 6 months.", GameData.Difficulties["normal"].Rule);
+            Assert.StartsWith("6 talent seals. An ignored occult society costs a site 5 months. Each burial costs 15", GameData.Difficulties["easy"].Rule);
             Assert.EndsWith("Each burial costs 40 Influence more. Concealment's world effect rests 9 months.", GameData.Difficulties["hard"].Rule);
             Assert.Equal(new[] { 1.2, 1.0, 0.85 }, GameData.DifficultyIds.Select(d => GameData.Difficulties[d].Recruitment));
-            Assert.Equal(new[] { 0.75, 1.0, 1.25 }, GameData.DifficultyIds.Select(d => GameData.Difficulties[d].Pressure));
+            Assert.Equal(new[] { 1.0, 1.0, 1.25 }, GameData.DifficultyIds.Select(d => GameData.Difficulties[d].Pressure));
         }
 
         // ---- Saves ----
@@ -483,13 +452,13 @@ namespace Awakening.Core.Tests
                 case "duplicate": json["talents"] = new List<object> { "red_altars", "red_altars" }; break;
                 case "siblings": json["talents"] = new List<object> { "red_altars", "mute_witnesses", "scapegoats" }; break;
                 case "orphan": json["talents"] = new List<object> { "mute_witnesses" }; break;
-                case "capstone": json["talents"] = new List<object> { "red_altars", "offerings" }; break;
-                case "too-many": json["talents"] = new List<object> { "red_altars", "mute_witnesses", "offerings", "quiet_friends", "sleeper_cells", "bought_press" }; break;
+                case "capstone": json["talents"] = new List<object> { "red_altars", "dreams_of_rlyeh" }; break;
+                case "too-many": json["talents"] = new List<object> { "red_altars", "mute_witnesses", "dreams_of_rlyeh", "quiet_friends", "sleeper_cells", "world_forgets" }; break;
                 case "recoverable": ((Dictionary<string, object>)((Dictionary<string, object>)((Dictionary<string, object>)json["regions"])["europe"])["site"])["recoverable"] = 3; break;
                 case "bury": json["buryUses"] = -1; break;
             }
             Assert.False(SaveData.IsGameState(json));
-            json["talents"] = new List<object> { "red_altars", "mute_witnesses", "offerings", "quiet_friends", "sleeper_cells" };
+            json["talents"] = new List<object> { "red_altars", "mute_witnesses", "dreams_of_rlyeh", "quiet_friends", "sleeper_cells" };
             if (forgery != "recoverable" && forgery != "bury") Assert.True(SaveData.IsGameState(json));
         }
 
@@ -508,7 +477,7 @@ namespace Awakening.Core.Tests
             var decoded = SaveData.DecodeSave(raw);
             Assert.NotNull(decoded); Assert.Null(decoded.State);
             Assert.Equal(55.0, decoded.Settings.Volume); Assert.Equal(new[] { "first-site" }, decoded.Settings.Hints); Assert.True(decoded.TutorialComplete);
-            Assert.Equal("Your unfinished run used older rules (alignment-4) and cannot continue under alignment-5. Settings and playtest records are kept; start a new run.",
+            Assert.Equal("Your unfinished run used older rules (alignment-4) and cannot continue under alignment-6. Settings and playtest records are kept; start a new run.",
                 SaveData.TakeRetiredNotice(decoded));
         }
 

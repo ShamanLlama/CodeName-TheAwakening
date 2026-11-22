@@ -6,8 +6,9 @@ using Awakening.Core.Rules;
 namespace Awakening.Core.Dev
 {
     /// <summary>
-    /// Scripted policy from godot/dev/playthrough.gd, one strategy per talent branch (alignment-5): early is the
-    /// public congregation, late the hidden hand that goes public at month 160, terror the harbinger that never does.
+    /// Scripted policy from godot/dev/playthrough.gd, one strategy per talent branch and capstone (alignment-6): early is
+    /// the public congregation that walks The Great Procession, late the hidden hand that goes public at month 160 and
+    /// keeps The world forgets for an emergency, terror the harbinger that never goes public and feeds Dreams of R'lyeh.
     /// All gains use normal commands.
     /// </summary>
     public static class Playthrough
@@ -16,12 +17,22 @@ namespace Awakening.Core.Dev
         /// <summary>Talents each strategy takes, in order, whenever a seal is open and Influence allows.</summary>
         public static readonly IReadOnlyDictionary<string, string[]> TalentPlans = new Dictionary<string, string[]>
         {
-            ["early"] = new[] { "swelling_flock", "open_worship", "faith_among_faiths", "quiet_friends", "contingency" },
-            ["late"] = new[] { "quiet_friends", "contingency", "bought_press", "swelling_flock", "martyrs" },
-            ["terror"] = new[] { "red_altars", "scapegoats", "offerings", "quiet_friends", "contingency" },
+            ["early"] = new[] { "swelling_flock", "open_worship", "great_procession", "quiet_friends", "contingency" },
+            ["late"] = new[] { "quiet_friends", "sleeper_cells", "world_forgets", "swelling_flock", "martyrs" },
+            ["terror"] = new[] { "red_altars", "scapegoats", "dreams_of_rlyeh", "quiet_friends", "contingency" },
         };
         public static readonly string[] Targets = { "latin_america", "middle_east", "oceania" };
         public const string Farm = "africa";
+        /// <summary>The fifth public region The Great Procession needs, besides the farm and the three site regions.</summary>
+        public const string Marcher = "south_asia";
+        /// <summary>The procession's other cells go public from this month, late enough to spare them most raids.</summary>
+        public const int ProcessionReveal = 184;
+        /// <summary>The procession waits for its fifth public region at most until this month before beginning the rite anyway.</summary>
+        public const int ProcessionWait = 201;
+        /// <summary>The world forgets is invoked when world awareness reaches this.</summary>
+        public const int ForgetAt = 85;
+        /// <summary>Dreams of R'lyeh: no sacrifice for the dream once world awareness would pass this.</summary>
+        public const int DreamCeiling = 94;
         /// <summary>World awareness at which the policy buries the record with spare Influence.</summary>
         public const int BuryAt = 60;
         /// <summary>The policy only silences while world awareness stays at or below this.</summary>
@@ -71,17 +82,26 @@ namespace Awakening.Core.Dev
             var c = Threats.Consequences(state, r);
             var silence = GameEngine.PreviewAction(state, "silence", id);
             int owed = state.Status == "awakening" ? 0 : DreadOwed(state);
-            bool matters = c.DestroysCell || r.Site.Invested && (c.InterruptsSite || c.PreparationLost > 0);
-            // Offerings to the deep: feed the hunters instead of silencing, if the flock can spare it.
-            if (matters && GameEngine.HasTalent(state, "offerings") && r.Population.Followers - Balance.SacrificeFollowers >= (r.Site.Invested ? Derived.SiteRequirement(r) + 20 : 60)
-                && GameEngine.PreviewAction(state, "sacrifice", id).Ok)
-                return GameEngine.PerformAction(state, "sacrifice", id).State;
+            bool matters = Matters(state, r);
             if (silence.Ok && state.Dread - silence.Dread >= owed && matters && state.Awareness + silence.Awareness <= SilenceCeiling)
                 return GameEngine.PerformAction(state, "silence", id).State;
             double hidingCost = GameEngine.ScatterMonths(state) * Derived.RecruitmentPerMonth(state, r);
             if (!r.Site.Invested && !r.Public && c.Followers > hidingCost && GameEngine.PreviewAction(state, "scatter", id).Ok)
                 return GameEngine.PerformAction(state, "scatter", id).State;
             return state;
+        }
+        static bool Matters(GameState state, RegionState r)
+        {
+            var c = Threats.Consequences(state, r);
+            return c.DestroysCell || r.Site.Invested && (c.InterruptsSite || c.PreparationLost > 0);
+        }
+        /// <summary>The world forgets: in an emergency of awareness, or when two threats that matter will land unanswered.</summary>
+        public static bool ShouldForget(GameState state)
+        {
+            if (GameEngine.InvokeReason(state, "world_forgets").Length != 0) return false;
+            if (state.Awareness >= ForgetAt) return true;
+            int unanswered = GameData.RegionIds.Count(id => state.Regions[id].Threat != null && state.Regions[id].Threat.DueMonth - state.ElapsedMonths <= 2 && Matters(state, state.Regions[id]));
+            return unanswered >= 2;
         }
         /// <param name="onMonth">Optional observer, called with the state after each month's orders and before the month passes.</param>
         public static GameState Play(string strategy, string seed, int stopMonth = Balance.Deadline, Action<GameState> onMonth = null, string difficulty = "normal")
@@ -151,8 +171,25 @@ namespace Awakening.Core.Dev
                     else if (needConceal == "awareness") spare("conceal", id);
                     if (s.Dread < owed && r.Population.Followers - Balance.SacrificeFollowers >= need + 120) act("sacrifice", id);
                 }
-                if (s.Awareness >= BuryAt) spareBury();
-                if (s.Status == "alignment" && Derived.ReadySites(s) >= 3) s = GameEngine.StartAwakening(s).State;
+                if (GameEngine.HasTalent(s, "great_procession"))
+                {
+                    // The procession needs five public regions: the farm and one more cell walk with the three sites.
+                    if (s.Regions[Marcher].Population.Followers <= 0) act("expand", Marcher);
+                    if (s.ElapsedMonths >= ProcessionReveal)
+                        foreach (string id in new[] { Farm, Marcher }.Concat(Targets)) if (!s.Regions[id].Public) act("reveal", id);
+                }
+                if (s.Status == "awakening" && GameEngine.HasTalent(s, "dreams_of_rlyeh"))
+                    foreach (string id in new[] { Farm }.Concat(Targets))
+                    {
+                        var r = s.Regions[id];
+                        double keep = r.Site.Invested ? Derived.SiteRequirement(r) + 20 : 60;
+                        if (GameEngine.DreamAdvances(s, id) && s.Awareness + Balance.DreamsAwareness <= DreamCeiling && r.Population.Followers - Balance.SacrificeFollowers >= keep)
+                            act("sacrifice", id);
+                    }
+                if (ShouldForget(s)) s = GameEngine.InvokeCapstone(s, "world_forgets").State;
+                if (s.Awareness >= BuryAt || GameEngine.InProcession(s) && s.Awareness >= BuryAt - 15) spareBury();
+                bool walk = !GameEngine.HasTalent(s, "great_procession") || GameEngine.ProcessionRegions(s) >= Balance.ProcessionPublicRegions || s.ElapsedMonths >= ProcessionWait;
+                if (s.Status == "alignment" && Derived.ReadySites(s) >= 3 && walk) s = GameEngine.StartAwakening(s).State;
                 onMonth?.Invoke(s);
                 s = GameEngine.AdvanceSimulation(s, 1);
             }

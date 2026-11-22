@@ -98,7 +98,7 @@ namespace Awakening.Core.Tests
             Assert.Equal(1.3, decoded.Settings.UiScale);
             Assert.True(decoded.Settings.ReducedMotion);
             Assert.Equal(new[] { "first-site" }, decoded.Settings.Hints);
-            Assert.Equal("Your unfinished run used older rules (alignment-3) and cannot continue under alignment-5. Settings and playtest records are kept; start a new run.",
+            Assert.Equal("Your unfinished run used older rules (alignment-3) and cannot continue under alignment-6. Settings and playtest records are kept; start a new run.",
                 SaveData.TakeRetiredNotice(decoded));
         }
         [Fact]

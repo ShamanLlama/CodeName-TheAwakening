@@ -9,12 +9,12 @@ live in [`GameData.cs`](../../unity/Assets/Awakening/Core/Rules/GameData.cs). No
 folder overrides them. The snapshots below are dated and will drift; when they disagree
 with the code, the code is right and this file is stale.
 
-**Checked 2026-11-21 against game 0.7.0 (Unity, `alignment-5`):** the latest snapshotted value of
+**Checked 2026-11-22 against game 0.8.0 (Unity, `alignment-6`):** the latest snapshotted value of
 every constant matches `Balance.cs` and `GameData.cs` (older values, such as `concealAwareness`
 1 in the 2026-09-14 snapshot, are superseded by a later snapshot), and
-`dotnet run --project core-tests/Tools -- measure --seeds=48` gives the 95/144 bot wins
-of the `alignment-5` snapshot (early 29, late 38, terror 28). Add `--difficulty=easy` or
-`--difficulty=hard` for the other modes (143/144 and 17/144).
+`dotnet run --project core-tests/Tools -- measure --seeds=48` gives the 80/144 bot wins
+of the `alignment-6` snapshot (early 22, late 31, terror 27). Add `--difficulty=easy` or
+`--difficulty=hard` for the other modes (135/144 and 17/144).
 
 Balance changed three times in a single working session during the tuning pass that
 produced the current build. Duplicating numbers across a dozen prose documents is how the
@@ -31,7 +31,34 @@ alone silently changes difficulty:
 | `raidLossShare` / `threatLossShare` | `raidLossFloor` / `threatLossFloor` | A high flat floor makes small regions disproportionately fragile |
 | `awarenessPerCapita` | `concealAwareness`, `ConcealWorldMonths`, `BuryAwareness` and the burial step | Together they set the maximum sustainable cult size |
 | `TalentBaseCost` / `TalentCostStep` | The seal months of each difficulty | Together they decide when a policy can afford its second node; that timing, not the total price, decided whether public worship works |
-| `FinaleSitePressure` | `FinaleWarningMonths`, `RestoreMonthCost` | The site hunt is what restoring and the Hidden hand answer |
+| `FinaleSitePressure` | `FinaleWarningMonths`, `RestoreMonthCost`, the capstones | The site hunt is what restoring and the three capstones answer (a shorter rite, an advanced rite, cancelled threats) |
+| `MidgamePressure` | Each difficulty's `Pressure` | It is added before the multiplier; more pressure favours the hidden strategies |
+
+## Snapshot — 2026-11-22 (`alignment-6`, Unity 0.8.0)
+
+Fuente de verdad: `Balance.cs` y `GameData.cs`. Solo se listan los valores nuevos o cambiados desde `alignment-5`.
+
+| Constante | Valor | Controla |
+| --- | --- | --- |
+| `Ruleset` | `alignment-6` | Los saves de `alignment-5` se retiran con aviso; los ajustes se conservan |
+| `ProcessionPublicRegions` / `ProcessionRiteMonths` | 5 / 8 | The Great Procession: regiones públicas al iniciar el rito y meses que pide (`FinalMonths` sigue en 12) |
+| `ProcessionAwareness` | 0,3 | Awareness por región pública y por mes durante la procesión |
+| `WorldForgetsAwareness` / `WorldForgetsScatterMonths` | 25 / 6 | The world forgets: awareness que quita y meses que dispersa a todas las células (el plan pedía 4) |
+| `DreamsAwareness` | 2 | Awareness de cada sacrificio que adelanta el rito con Dreams of R'lyeh |
+| `MidgamePressureMonth` / `MidgamePressure` | 100 / 0,05 | Presión que suma cada tirada de amenaza desde ese mes |
+| `FinaleSitePressure` | 0,6 | Antes 0,3. Presión extra sobre sitios desde el mes 200 |
+| Salen | `FaithAmongFaithsShare`, `BoughtPressAwareness`, `OfferingAwareness` | Remates retirados. Open worship deja de contar a los seguidores públicos, sin constante propia |
+| `DifficultyDefinition` Normal | `BuryStep` 35 | Antes 25 |
+| `DifficultyDefinition` Easy | `Pressure` 1,0; `OccultPreparationLoss` 5 | Antes 0,75 y 4 |
+
+Los campos nuevos del estado son `TalentYield` (id → lo que rindió), `CapstonesUsed`,
+`RiteMonthsRequired` (12 u 8, fijado al iniciar el rito) y `RiteSites` (los sitios con que
+empezó el rito).
+
+Medición con bot (48 seeds por estrategia, una política por rama y remate): Normal 95/144 → 80/144
+(early 29 → 22, late 38 → 31, terror 28 → 27), Easy 143 → 135 y Hard 17 → 17. Con 144 seeds,
+Normal da 70, 102 y 74 de 144. Detalle, uso de cada remate y descartes en
+[Experiencia y loops](02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-6--2026-11-22).
 
 ## Snapshot — 2026-11-21 (`alignment-5`, Unity 0.7.0)
 
@@ -220,11 +247,12 @@ Derived support requirements, by region weight:
 
 `GameData.Difficulties`. Three multipliers and, since `alignment-5`, four rules that change
 decisions. `DifficultyDefinition.Rule` states the rules in one line for the start screen.
+Values as of `alignment-6` (Easy's pressure and occult loss, and Normal's burial step, changed).
 
 | | Recruitment | Threat pressure | Warning months | Talent seals (months) | Occult loss | Burial step | Conceal world rest |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Easy | ×1.2 | ×0.75 | +2 | 6 (24, 44, 64, 104, 144, 176) | 4 months | +15 | 6 months |
-| Normal | ×1.0 | ×1.0 | +0 | 5 (24, 64, 104, 144, 176) | 6 months | +25 | 6 months |
+| Easy | ×1.2 | ×1.0 | +2 | 6 (24, 44, 64, 104, 144, 176) | 5 months | +15 | 6 months |
+| Normal | ×1.0 | ×1.0 | +0 | 5 (24, 64, 104, 144, 176) | 6 months | +35 | 6 months |
 | Hard | ×0.85 | ×1.25 | −1 | 4 (24, 72, 120, 168) | 6 months | +40 | 9 months |
 
 ## Talents (replace the doctrines since `alignment-5`)
@@ -233,7 +261,8 @@ decisions. `DifficultyDefinition.Rule` states the rules in one line for the star
 middles and a capstone that needs the root and either middle. A seal opens at each month of
 the difficulty's `TalentSlotMonths`; each talent costs 30 Influence more than the last, from
 40. Permanent; no respecialization. The table of the twelve nodes is in
-[Experiencia y loops](02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-5--2026-11-21).
+[Experiencia y loops](02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-6--2026-11-22);
+the capstones changed in `alignment-6` (The Great Procession, The world forgets, Dreams of R'lyeh).
 The roots keep the old doctrines:
 
 | Root (old doctrine) | Effect |

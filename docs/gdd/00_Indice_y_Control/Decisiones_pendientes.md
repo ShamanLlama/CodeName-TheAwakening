@@ -1,6 +1,6 @@
 # Decisiones pendientes
 
-**Versión:** 0.7 · **Fecha:** 2026-11-21 · **Estado:** D01–D05 y D08–D17 confirmadas; D05 y D15 implementadas en `alignment-5` (juego 0.7.0); D07 con respuesta parcial; D06 pendiente.
+**Versión:** 0.8 · **Fecha:** 2026-11-22 · **Estado:** D01–D05 y D08–D17 confirmadas; D05 y D15 implementadas en `alignment-5` (juego 0.7.0); remates de D05 y D18–D20 tomadas en `alignment-6` (juego 0.8.0) y pendientes de revisión de dirección; D07 con respuesta parcial; D06 pendiente.
 
 Este registro distingue las decisiones confirmadas de las preguntas abiertas.
 La primera etapa del GDD documenta la implementación; los objetivos futuros
@@ -51,6 +51,29 @@ indica.
 8. **D17 — Definición de «completo».** Árbol probado, gente externa jugando, balance
    sentido, varios caminos para ganar y varias formas de perder.
 
+## Decisiones de diseño de `alignment-6` — 2026-11-22
+
+Las tomó el agente de reglas de 0.8.0 dentro del plan de la build. Responden a la primera
+partida humana con 0.7.0: «el último nodo del árbol debería ser más game changer». Dirección
+puede revisarlas.
+
+1. **D05 (ampliación) — Cada remate abre otra forma de ganar.** The Great Procession (rito de 8
+   meses con 5 regiones públicas), The world forgets (una vez: −25 de awareness y sin amenazas, a
+   cambio de 6 meses de red dispersa) y Dreams of R'lyeh (cada sacrificio adelanta el rito). El
+   bot gana con cada uno. Detalle en
+   [Experiencia y loops](../02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-6--2026-11-22).
+2. **D18 — Los remates de 0.7.0 salen del juego.** Los seis nodos medios ya los ocupan nodos
+   obligatorios, así que ninguno de los remates viejos puede bajar de nivel. El efecto de A faith
+   among faiths pasa a Open worship, solo para las células públicas, porque sin él el culto
+   público dejaba de ser viable. Bought press y Offerings to the deep salen.
+3. **D19 — Cada talento dice lo que rindió.** Es una línea por talento tomado, en la unidad del
+   talento. Responde a «Martyrs no dio nada» sin cambiar Martyrs: primero se mide si el jugador
+   lo nota.
+4. **D20 — Normal más exigente sin castigar un error.** Enterrar sube 35 por uso, cada tirada
+   de amenaza pesa +0,05 desde el mes 100 y la caza de sitios sube a +0,6. Easy pasa a la
+   presión de Normal y una amenaza oculta le quita 5 meses. Ninguna regla nueva convierte un
+   error en derrota: las tres suman amenazas que se pueden responder.
+
 ## Preguntas abiertas para las siguientes conversaciones
 
 - **Identidad del jugador y tono.** ¿Quién dirige el culto? ¿El nombre actual es
@@ -73,7 +96,7 @@ indica.
 | D02 | Duración objetivo | Confirmada; falta medir | 15–30 minutos por partida — 2026-10-28. El rango incluye la pausa y la planificación — 2026-11-21 | Mapa y ritmo, balance y playtesting |
 | D03 | Experiencia buscada | Confirmada | Mezcla de estrategia, narrativa y horror — 2026-10-28 | Pilares, narrativa, arte y audio |
 | D04 | Identidad y tono | Confirmada | Se admiten sucesos escritos además de la crónica sistémica — 2026-11-12. Voz lovecraftiana; los sucesos son ficticios, con sabor de época, no históricos — 2026-11-21. Quién dirige el culto sigue abierto | Visión y narrativa |
-| D05 | Progresión entre partidas | Confirmada e implementada | Dirección quiere un árbol de talentos que dé opciones y estrategias distintas, con puntos que el jugador gasta — 2026-11-12. El árbol vive dentro de cada partida, sin poder que persista entre partidas — 2026-11-21. Implementado en `alignment-5` (juego 0.7.0): 12 nodos en tres ramas, sellos por tiempo según la dificultad, reemplaza la doctrina — 2026-11-21 | Game Design, balance y alcance |
+| D05 | Progresión entre partidas | Confirmada e implementada | Dirección quiere un árbol de talentos que dé opciones y estrategias distintas, con puntos que el jugador gasta — 2026-11-12. El árbol vive dentro de cada partida, sin poder que persista entre partidas — 2026-11-21. Implementado en `alignment-5` (juego 0.7.0): 12 nodos en tres ramas, sellos por tiempo según la dificultad, reemplaza la doctrina — 2026-11-21. Remates nuevos en `alignment-6` (juego 0.8.0), véase D18 — 2026-11-22 | Game Design, balance y alcance |
 | D06 | Presentación final | Pendiente | — | Arte, audio y producción |
 | D07 | Público, idiomas y dispositivos | Parcial | Dispositivos resueltos en D12: escritorio para Steam y web para la beta — 2026-11-17. Público e idiomas siguen pendientes | Público, UX y plataforma |
 | D08 | Entrega y recursos | Confirmada | Juego gratuito, corto y completo; no una demo ni un producto de pago — 2026-11-12. Plataformas en D12; fechas por definir | Producción y negocio |
@@ -86,6 +109,9 @@ indica.
 | D15 | Mysticism | Confirmada e implementada | Tendrá efecto; se diseña con el árbol en 0.7.0 — 2026-11-21. En `alignment-5` (juego 0.7.0) cambia la awareness y las conversiones de manifestar: `8 × (1 − (m − 50)/100)` de awareness y `(m − 50)` % más o menos de conversiones — 2026-11-21 | Población, regiones, balance y Game Design |
 | D16 | Dificultad Easy | Confirmada | Easy no tiene que ganarse en la primera partida, pero no debe abrumar — 2026-11-21 | Balance y playtesting |
 | D17 | Definición de «completo» | Confirmada | Árbol probado, gente externa jugando, balance sentido, varios caminos para ganar y varias formas de perder — 2026-11-21 | Producción, alcance y playtesting |
+| D18 | Remates de 0.7.0 | Tomada en `alignment-6`; falta revisión de dirección | Salen A faith among faiths, Bought press y Offerings to the deep; el efecto de A faith among faiths pasa a Open worship para las células públicas — 2026-11-22 | Game Design y balance |
+| D19 | Rendimiento por talento | Tomada en `alignment-6`; falta revisión de dirección | Cada talento tomado dice en una línea lo que rindió en la partida — 2026-11-22 | Game Design, UI/UX y playtesting |
+| D20 | Exigencia de Normal y Easy | Tomada en `alignment-6`; falta revisión de dirección | Normal: enterrar +35, presión +0,05 desde el mes 100, caza +0,6. Easy: presión ×1,0 y amenaza oculta de 5 meses. Bot: Normal 80/144, Easy 135, Hard 17 — 2026-11-22 | Balance y playtesting |
 
 No convertir preguntas pendientes en funcionalidades comprometidas. Los problemas
 observados del prototipo siguen en [Open problems](../09-open-problems.md).

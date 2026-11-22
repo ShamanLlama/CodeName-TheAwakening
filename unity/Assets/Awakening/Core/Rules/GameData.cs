@@ -36,7 +36,7 @@ namespace Awakening.Core.Rules
         public string Description { get; internal set; }
     }
 
-    /// <summary>A node of the in-run talent tree (alignment-5). It replaces the doctrine.</summary>
+    /// <summary>A node of the in-run talent tree (alignment-5; capstones redrawn in alignment-6). It replaces the doctrine.</summary>
     public sealed class TalentDefinition
     {
         public string Id { get; internal set; }
@@ -79,9 +79,11 @@ namespace Awakening.Core.Rules
         public static readonly string[] BranchIds = {"congregation", "hidden_hand", "harbinger"};
         /// <summary>Ordered by branch, then tier; the two middles of a branch are listed in display order.</summary>
         public static readonly string[] TalentIds = {
-            "swelling_flock", "open_worship", "martyrs", "faith_among_faiths",
-            "quiet_friends", "sleeper_cells", "contingency", "bought_press",
-            "red_altars", "mute_witnesses", "scapegoats", "offerings"};
+            "swelling_flock", "open_worship", "martyrs", "great_procession",
+            "quiet_friends", "sleeper_cells", "contingency", "world_forgets",
+            "red_altars", "mute_witnesses", "scapegoats", "dreams_of_rlyeh"};
+        /// <summary>Capstones invoked once per run from the tree rather than working on their own (alignment-6).</summary>
+        public static readonly string[] InvokableTalentIds = { "world_forgets" };
         public static readonly string[] ThreatKinds = {"investigation", "raid", "occult"};
         public static readonly string[] OpportunityKinds = {"nightmare", "eclipse", "celebrity", "politician"};
         public static readonly IReadOnlyDictionary<string, RegionDefinition> Regions =
@@ -108,8 +110,9 @@ namespace Awakening.Core.Rules
         public static readonly IReadOnlyDictionary<string, DifficultyDefinition> Difficulties =
             new ReadOnlyDictionary<string, DifficultyDefinition>(new Dictionary<string, DifficultyDefinition>
             {
-                ["easy"] = Difficulty("Easy", 1.2, 0.75, 2, new[] { 24, 44, 64, 104, 144, 176 }, 4, 15, Balance.ConcealWorldMonths),
-                ["normal"] = Difficulty("Normal", 1.0, 1.0, 0, new[] { 24, 64, 104, 144, 176 }, Balance.OccultPreparationLoss, 25, Balance.ConcealWorldMonths),
+                // alignment-6: Easy threatens as often as Normal (0.75 before) and an occult society takes 5 months (4 before).
+                ["easy"] = Difficulty("Easy", 1.2, 1.0, 2, new[] { 24, 44, 64, 104, 144, 176 }, 5, 15, Balance.ConcealWorldMonths),
+                ["normal"] = Difficulty("Normal", 1.0, 1.0, 0, new[] { 24, 64, 104, 144, 176 }, Balance.OccultPreparationLoss, 35, Balance.ConcealWorldMonths), // alignment-6: burial step 25 → 35
                 ["hard"] = Difficulty("Hard", 0.85, 1.25, -1, new[] { 24, 72, 120, 168 }, Balance.OccultPreparationLoss, 40, 9),
             });
 
@@ -151,13 +154,14 @@ namespace Awakening.Core.Rules
                 ["swelling_flock"] = Talent("swelling_flock", "congregation", 1, "Swelling flock",
                     "The whisper passes from hearth to hearth. Automatic recruitment +" + Pct(Balance.SwellingFlockRecruitment) + "."),
                 ["open_worship"] = Talent("open_worship", "congregation", 2, "Open worship",
-                    F("Let them sing in the streets. Public cells recruit ×{0} instead of ×{1}, world awareness no longer slows them, and they add nothing to world awareness month by month.",
+                    F("Let them sing in the streets: one more creed among many. Public cells recruit ×{0} instead of ×{1}, world awareness no longer slows them, and the world stops counting their followers: they add nothing to world awareness month by month.",
                         Js.Num(Balance.OpenWorshipRecruitment), Js.Num(Balance.PublicRecruitment)), "martyrs", "swelling_flock"),
                 ["martyrs"] = Talent("martyrs", "congregation", 2, "Martyrs",
                     F("Every believer the hunters take goes gladly into the dark. Followers lost to a threat yield 1 Dread for every {0}.", Js.Num(Math.Round(1.0 / Balance.MartyrDreadPerFollower))),
                     "open_worship", "swelling_flock"),
-                ["faith_among_faiths"] = Talent("faith_among_faiths", "congregation", 3, "A faith among faiths",
-                    "So many kneel that one more creed passes unremarked. The size of the cult adds " + Pct(Balance.FaithAmongFaithsShare) + " of its usual world awareness each month.",
+                ["great_procession"] = Talent("great_procession", "congregation", 3, "The Great Procession",
+                    F("Let the whole world watch them walk. If {0} or more regions worship in public when the final rite begins, it needs {1} months, not {2}. While it lasts, each public region adds +{3} world awareness a month, and no procession turns back underground.",
+                        Balance.ProcessionPublicRegions, Balance.ProcessionRiteMonths, Balance.FinalMonths, Js.Num(Balance.ProcessionAwareness)),
                     null, "swelling_flock", "open_worship", "martyrs"),
                 ["quiet_friends"] = Talent("quiet_friends", "hidden_hand", 1, "Quiet friends",
                     F("Clerks and constables owe you favours. Threats arrive {0} months later; obstructing them costs a third less.", Balance.QuietFriendsWarning)),
@@ -167,8 +171,9 @@ namespace Awakening.Core.Rules
                 ["contingency"] = Talent("contingency", "hidden_hand", 2, "Contingency",
                     "Copies of every rite are kept elsewhere. Restoring a site recovers every lost month, not half, and leaves no new trace.",
                     "sleeper_cells", "quiet_friends"),
-                ["bought_press"] = Talent("bought_press", "hidden_hand", 3, "Bought press",
-                    F("Editors print what they are paid to print. Burying the record removes {0} world awareness, not {1}, and its price rises half as fast.", Balance.BoughtPressAwareness, Balance.BuryAwareness),
+                ["world_forgets"] = Talent("world_forgets", "hidden_hand", 3, "The world forgets",
+                    F("Invoke once per run. Files burn, witnesses doubt their own eyes: −{0} world awareness and every threat dissolves. Every cell goes to ground for {1} months: no recruits, no income, no site progress, and a final rite under way halts.",
+                        Balance.WorldForgetsAwareness, Balance.WorldForgetsScatterMonths),
                     null, "quiet_friends", "sleeper_cells", "contingency"),
                 ["red_altars"] = Talent("red_altars", "harbinger", 1, "Red altars",
                     F("Fear is a harvest. Sacrifices yield {0} Dread; manifestations cost {1} Dread; silencing witnesses costs a third less.", Balance.RedAltarsSacrificeDread, Balance.RedAltarsManifestDread)),
@@ -178,8 +183,9 @@ namespace Awakening.Core.Rules
                 ["scapegoats"] = Talent("scapegoats", "harbinger", 2, "Scapegoats",
                     F("Let the hunters find someone else to blame. A threat that lands lowers world awareness by {0} per severity.", Js.Num(Balance.ScapegoatSeverityAwareness)),
                     "mute_witnesses", "red_altars"),
-                ["offerings"] = Talent("offerings", "harbinger", 3, "Offerings to the deep",
-                    F("Give the hunters what they came for. A sacrifice in a threatened region ends its threat, at +{0} world awareness.", Js.Num(Balance.OfferingAwareness)),
+                ["dreams_of_rlyeh"] = Talent("dreams_of_rlyeh", "harbinger", 3, "Dreams of R'lyeh",
+                    F("The dead priest drinks every death. During the final rite, each sacrifice that leaves three supported sites carries the rite one month forward, at +{0} world awareness.",
+                        Js.Num(Balance.DreamsAwareness)),
                     null, "red_altars", "mute_witnesses", "scapegoats"),
             });
 
