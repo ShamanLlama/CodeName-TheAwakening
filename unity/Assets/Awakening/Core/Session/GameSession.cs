@@ -501,6 +501,7 @@ namespace Awakening.Core.Session
                     var legal = new List<object>();
                     foreach (string action in new[] { "counter", "scatter", "silence" })
                         if (GameEngine.PreviewAction(before, action, id).Ok) legal.Add(action);
+                    if (response == "sacrifice" && GameEngine.HasTalent(before, "offerings")) answer = "offering";
                     var consequences = Threats.Consequences(before, previous);
                     bool ignored = answer == "ignored";
                     var data = ThreatData(id, previous.Threat);
@@ -519,7 +520,12 @@ namespace Awakening.Core.Session
                     Lab.EmitEvent("threat_resolved", data, Capture(State), ObservationPhase(before));
                 }
                 if (current.Threat != null)
-                    Lab.EmitEvent("threat_spawned", ThreatData(id, current.Threat), Capture(State), ObservationPhase(before));
+                {
+                    var data = ThreatData(id, current.Threat);
+                    data["legal_responses"] = Threats.Options(State, id).Where(option => option.Ok).Select(option => (object)option.Response).ToList();
+                    data["cornered"] = Threats.Cornered(State, id);
+                    Lab.EmitEvent("threat_spawned", data, Capture(State), ObservationPhase(before));
+                }
             }
         }
 
@@ -541,6 +547,9 @@ namespace Awakening.Core.Session
                     ["cells"] = State.Regions.Values.Count(r => r.Population.Followers > 0),
                     ["funded_sites"] = State.Regions.Values.Count(r => r.Site.Invested),
                     ["ready_sites"] = Derived.ReadySites(State),
+                    ["talents"] = State.Talents.Count,
+                    ["unused_slots"] = GameEngine.TalentSlotsUnused(State),
+                    ["bury_uses"] = State.BuryUses,
                 }, Capture(State), ObservationPhase(before));
             LabSpeedChanged(before);
             if (GameEngine.IsOver(State))

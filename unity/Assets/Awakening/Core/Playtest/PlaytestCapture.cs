@@ -20,8 +20,8 @@ namespace Awakening.Core.Playtest
         public const int MaxSessions = 64;
         public const int MaxBodyBytes = 65536;
         public const int BatchEvents = 32;
-        public const string Adapter = "awakening-3";
-        public static readonly string[] StoredAdapters = { "awakening-1", "awakening-2", "awakening-3" };
+        public const string Adapter = "awakening-4";
+        public static readonly string[] StoredAdapters = { "awakening-1", "awakening-2", "awakening-3", "awakening-4" };
         public static readonly string[] ClockKeys = { "elapsed_ms", "simulation_ms", "planning_ms", "background_ms", "excluded_ms" };
         static readonly Regex IdPattern = new Regex("^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$", RegexOptions.CultureInvariant);
         readonly Func<double> _unixSeconds;
@@ -414,13 +414,13 @@ namespace Awakening.Core.Playtest
                 foreach (string key in new[] { "collection_id", "build_id", "round_id", "tester_id", "run_id" }) if (!ValidId(Get(context, key))) return false;
                 if (!Equals(Get(context, "run_id"), pair.Key) || !Equals(Get(context, "schema_version"), "1.0") || !In(Get(context, "adapter"), StoredAdapters) || !Equals(Get(context, "participation_version"), "playtests-v1") || !In(Get(context, "coverage"), "from_start", "partial")) return false;
                 var last = Obj(run, "last_event");
-                if (last.Count != 0 && !ValidEvent(last)) return false;
+                if (last.Count != 0 && !ValidEvent(last, Str(context, "adapter"))) return false;
                 if (Flag(run, "closed") && (!ValidId(run["last_session_id"]) || !In(Get(last, "type"), "run_finished", "run_abandoned"))) return false;
                 if (!ValidClock(clock)) return false;
             }
             foreach (object item in Arr(store, "staging"))
             {
-                if (!(item is Dictionary<string, object> entry) || !(Get(entry, "run_id") is string id) || !runs.ContainsKey(id) || !ValidId(Get(entry, "session_id")) || !ValidEvent(Get(entry, "event")) || !Number(Get(entry, "created_at"))) return false;
+                if (!(item is Dictionary<string, object> entry) || !(Get(entry, "run_id") is string id) || !runs.ContainsKey(id) || !ValidId(Get(entry, "session_id")) || !ValidEvent(Get(entry, "event"), Str(Obj((Dictionary<string, object>)runs[id], "context"), "adapter")) || !Number(Get(entry, "created_at"))) return false;
             }
             foreach (object item in Arr(store, "jobs"))
             {
@@ -428,17 +428,19 @@ namespace Awakening.Core.Playtest
                 if (!(Get(job, "body") is string text) || Characters(text) > MaxBodyBytes || !Number(Get(job, "queued_at")) || !Integer(Get(job, "attempts")) || !Number(Get(job, "next_retry")) || !(Get(job, "blocked") is bool)) return false;
                 if (!JsonReader.TryParse(text, out object parsed) || !(parsed is Dictionary<string, object> body) || !(Get(body, "events") is List<object> events) || events.Count == 0 || events.Count > 64 || !Equals(Get(body, "batch_id"), job["id"])) return false;
                 if (!ValidId(Get(body, "session_id")) || !Equals(Get(body, "run_id"), job["run_id"])) return false;
-                foreach (object entry in events) if (!ValidEvent(entry)) return false;
+                if (!Equals(Get(body, "adapter"), Get(Obj((Dictionary<string, object>)runs[id], "context"), "adapter"))) return false;
+                foreach (object entry in events) if (!ValidEvent(entry, (string)body["adapter"])) return false;
             }
             return true;
         }
         static bool In(object value, params string[] options) => value is string text && Array.IndexOf(options, text) >= 0;
-        public static bool ValidEvent(object value)
+        public static bool ValidEvent(object value) => ValidEvent(value, Adapter);
+        static bool ValidEvent(object value, string adapter)
         {
             if (!(value is Dictionary<string, object> entry) || !ValidId(Get(entry, "event_id")) || !Integer(Get(entry, "sequence"), MaxSequence) || Num(entry, "sequence") < 1 || !Integer(Get(entry, "game_month"), 224)) return false;
             if (!In(Get(entry, "phase"), "placing", "playing", "alignment", "awakening", "ended") || !(Get(entry, "data") is Dictionary<string, object>) || !(Get(entry, "clock") is Dictionary<string, object> clock)) return false;
             if (!In(Get(entry, "type"), "run_started", "capture_started", "session_started", "starting_region_selected", "action_performed", "doctrine_selected", "talent_taken", "awakening_started", "phase_changed", "checkpoint_reached", "time_checkpoint", "capture_gap", "run_finished", "run_abandoned", "threat_spawned", "threat_resolved", "month_snapshot", "speed_changed")) return false;
-            return ValidClock(clock);
+            return ValidClock(clock) && (adapter != Adapter || PlaytestEventContract.Valid(entry));
         }
         static bool ValidClock(Dictionary<string, object> clock)
         {

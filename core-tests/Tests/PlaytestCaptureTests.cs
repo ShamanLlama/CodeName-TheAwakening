@@ -16,12 +16,15 @@ namespace Awakening.Core.Tests
         public void NewEventKindsSurviveSaveAndKeepTheQueueBounded()
         {
             var r = new Rig(); r.Start();
-            foreach (string kind in new[] { "threat_spawned", "threat_resolved", "month_snapshot", "speed_changed" })
-                r.Capture.EmitEvent(kind, M(), r.State);
+            r.State.Status = "playing"; r.State.ElapsedMonths = 12;
+            r.Capture.EmitEvent("threat_spawned", M("region", "africa", "kind", "occult", "severity", 2, "due_month", 20, "legal_responses", new List<object> { "scatter" }, "cornered", true), r.State);
+            r.Capture.EmitEvent("threat_resolved", M("region", "africa", "kind", "occult", "severity", 2, "due_month", 20, "legal_responses", new List<object> { "scatter" }, "response", "offering", "losses", M("followers", 0, "preparation_months", 0, "income_per_month", 0, "cells", 0, "sites", 0)), r.State);
+            r.Capture.EmitEvent("month_snapshot", M("awareness", 10, "influence", 0, "dread", 0, "followers", 100, "cells", 1, "funded_sites", 0, "ready_sites", 0, "talents", 0, "unused_slots", 0, "bury_uses", 0), r.State);
+            r.Capture.EmitEvent("speed_changed", M("previous", 0, "new", 1), r.State);
             var saved = Saved(r.Capture, r.State);
             var restored = new PlaytestCapture(); restored.Configure(Configuration(), saved);
             Assert.False(restored.Corrupt);
-            Assert.Equal("awakening-3", O(restored.Active(), "context")["adapter"]);
+            Assert.Equal("awakening-4", O(restored.Active(), "context")["adapter"]);
             for (int n = 0; n < PlaytestCapture.MaxEvents; n++) r.Capture.EmitEvent("speed_changed", M("previous", 0, "new", 1), r.State);
             Assert.False(r.Capture.Capturing());
             Assert.True(r.Capture.PendingEvents() <= PlaytestCapture.MaxEvents);
@@ -291,8 +294,12 @@ namespace Awakening.Core.Tests
             for (int i = 0; i < 4; i++) r.Capture.EmitEvent("time_checkpoint", M("synthetic", new string('x', 22000)), r.State);
             var job = r.Capture.SealBatch();
             Assert.Equal(2, A(Body(job), "events").Count); Assert.InRange(System.Text.Encoding.UTF8.GetByteCount((string)job["body"]), 1, 65536);
-            var saved = Saved(r.Capture, r.State); var reopened = new PlaytestCapture(); reopened.Configure(Configuration(), saved); reopened.Accept(); reopened.Resume(r.State);
-            Assert.Equal(2, A(Body(reopened.SealBatch()), "events").Count);
+            Assert.Equal(2, A(Body(r.Capture.SealBatch()), "events").Count);
+            // Oversized synthetic payloads exercise only the byte cap; they are not valid v4 records.
+            var valid = new Rig(); valid.Start(); valid.Capture.SealBatch();
+            valid.Capture.EmitEvent("time_checkpoint", M("reason", "periodic"), valid.State);
+            var saved = Saved(valid.Capture, valid.State); var reopened = new PlaytestCapture(); reopened.Configure(Configuration(), saved); reopened.Accept(); reopened.Resume(valid.State);
+            Assert.Single(A(Body(reopened.SealBatch()), "events"));
             Assert.Equal("resume", O(Item(Body(reopened.SealBatch()), "events", 0), "data")["mode"]);
         }
         static void EqualJson(object expected, object actual) => Assert.Equivalent(JsonReader.Parse(JsonWriter.Write(expected)), JsonReader.Parse(JsonWriter.Write(actual)), strict: true);

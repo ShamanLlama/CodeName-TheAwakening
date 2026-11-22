@@ -19,7 +19,7 @@ namespace Awakening.Core.Tests
         internal static double N(Dictionary<string, object> map, string key) => Convert.ToDouble(map[key]);
         internal static Dictionary<string, object> Body(Dictionary<string, object> job) => (Dictionary<string, object>)JsonReader.Parse((string)job["body"]);
         internal static Dictionary<string, object> Configuration() => M("enabled", true, "endpoint", "https://playtest.example.invalid/api/playtests/v1/batches/", "collection_id", "10000000-0000-4000-8000-000000000001", "build_id", "10000000-0000-4000-8000-000000000002", "round_id", "10000000-0000-4000-8000-000000000003");
-        internal static CaptureState State() => new CaptureState { Seed = "synthetic-playtest", Difficulty = "normal", Ruleset = "alignment-3", Status = "placing", NextLogId = 1 };
+        internal static CaptureState State() => new CaptureState { Seed = "synthetic-playtest", Difficulty = "normal", Ruleset = "alignment-5", Status = "placing", NextLogId = 1 };
         internal static Dictionary<string, object> Saved(PlaytestCapture capture, CaptureState state) => (Dictionary<string, object>)JsonReader.Parse(JsonWriter.Write(capture.Snapshot(state)));
         internal static Dictionary<string, object> Receipt(Dictionary<string, object> job, int accepted = -1) => M("batch_id", job["id"], "receipt_id", PlaytestCapture.Identifier(), "accepted_events", accepted < 0 ? A(Body(job), "events").Count : accepted, "accepted_comment", false, "run_expires_at", "2027-04-30T12:00:00Z");
         internal sealed class Rig
