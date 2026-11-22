@@ -212,10 +212,16 @@ namespace Awakening.Core.Session
             Apply(GameEngine.PerformAction(State, actionId, regionId), "action_performed", new Dictionary<string, object> { ["action"] = actionId, ["region"] = regionId });
         }
 
-        public void ChooseDoctrine(string choice)
+        /// <summary>Take a talent of the in-run tree (alignment-5); replaces the doctrine.</summary>
+        public void TakeTalent(string id)
         {
             LabTouch();
-            Apply(GameEngine.ChooseSpecialization(State, choice), "doctrine_selected", new Dictionary<string, object> { ["doctrine"] = choice });
+            var talent = id != null && GameData.Talents.TryGetValue(id, out TalentDefinition found) ? found : null;
+            int slot = State == null ? 0 : State.Talents.Count + 1;
+            Apply(GameEngine.TakeTalent(State, id), "talent_taken", new Dictionary<string, object>
+            {
+                ["talent"] = id, ["branch"] = talent?.Branch, ["tier"] = talent?.Tier ?? 0, ["slot"] = slot,
+            });
         }
 
         public void Awaken()
@@ -495,7 +501,7 @@ namespace Awakening.Core.Session
                     var legal = new List<object>();
                     foreach (string action in new[] { "counter", "scatter", "silence" })
                         if (GameEngine.PreviewAction(before, action, id).Ok) legal.Add(action);
-                    var consequences = Threats.Consequences(previous);
+                    var consequences = Threats.Consequences(before, previous);
                     bool ignored = answer == "ignored";
                     var data = ThreatData(id, previous.Threat);
                     data["response"] = answer;

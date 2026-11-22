@@ -470,7 +470,7 @@ namespace Awakening.UI
 
         public void Act(string actionId, string regionId) => Command(() => Session.Act(actionId, regionId));
 
-        public void ChooseDoctrine(string choice) => Command(() => Session.ChooseDoctrine(choice));
+        public void TakeTalent(string id) => Command(() => Session.TakeTalent(id));
 
         public void Awaken() => Command(() => Session.Awaken());
 
@@ -593,7 +593,7 @@ namespace Awakening.UI
             var report = new Dictionary<string, object>
             {
                 ["ruleset"] = state.Ruleset, ["seed"] = state.Seed, ["difficulty"] = state.Difficulty, ["month"] = state.ElapsedMonths,
-                ["status"] = state.Status, ["specialization"] = state.Specialization, ["resultReason"] = state.ResultReason,
+                ["status"] = state.Status, ["talents"] = string.Join(",", state.Talents), ["resultReason"] = state.ResultReason,
                 ["followers"] = Derived.TotalFollowers(state), ["readySites"] = Derived.ReadySites(state), ["finalProgress"] = state.FinalProgress,
                 ["resources"] = new Dictionary<string, object> { ["influence"] = state.Influence, ["dread"] = state.Dread }, ["awareness"] = state.Awareness,
             };

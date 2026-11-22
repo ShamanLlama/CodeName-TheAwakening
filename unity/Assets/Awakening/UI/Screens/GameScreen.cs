@@ -860,15 +860,17 @@ namespace Awakening.UI
         {
             _doctrine.SetEnabled(!placing && !over);
             _doctrineNote.text = "";
-            if (s.Specialization != null)
+            // alignment-5 minimal port: the doctrine button shows the talents taken until the tree screen lands (wave 2).
+            if (s.Talents.Count > 0 && GameEngine.TalentSlotsUnused(s) == 0)
             {
                 _doctrine.EnableInClassList("aw-unavailable", false);
-                _doctrine.text = GameData.Specializations[s.Specialization].Name;
+                _doctrine.text = GameData.Talents[s.Talents[s.Talents.Count - 1]].Name;
                 _doctrine.style.color = Palette.Cult;
                 return;
             }
-            _doctrine.text = "Choose · " + GameData.SpecializationCost;
-            int shortBy = GameData.SpecializationCost - (int)Math.Floor(s.Influence);
+            int cost = GameEngine.TalentCost(s);
+            _doctrine.text = "Choose · " + cost;
+            int shortBy = cost - (int)Math.Floor(s.Influence);
             bool affordable = shortBy <= 0;
             _doctrine.EnableInClassList("aw-unavailable", !affordable);
             _doctrine.style.color = StyleKeyword.Null;
@@ -979,7 +981,7 @@ namespace Awakening.UI
             Stack card = Kit.Panel(Palette.PaperLight, urgent ? Palette.Danger : Palette.PaperEdge, new Vector4(12, 9, 12, 10), 0.1f, 6);
             card.name = "threat-card-" + id;
             if (urgent) card.style.borderTopWidth = card.style.borderBottomWidth = card.style.borderLeftWidth = card.style.borderRightWidth = 2;
-            card.tooltip = GameData.ThreatNames[threat.Kind] + ".\nIf ignored: " + Threats.Describe(r);
+            card.tooltip = GameData.ThreatNames[threat.Kind] + ".\nIf ignored: " + Threats.Describe(s, r);
             card.RegisterCallback<PointerDownEvent>(e =>
             {
                 if (e.button == 0 && !(e.target is Button)) Select(id);
@@ -996,7 +998,7 @@ namespace Awakening.UI
             else
             {
                 text.Add(Kit.Caption(GameData.Regions[id].Name + " · if ignored", Palette.Muted));
-                foreach (string effect in Notes.ThreatEffects(r)) text.Add(Kit.Label(effect, 15, Palette.Text, Fonts.Italic));
+                foreach (string effect in Notes.ThreatEffects(s, r)) text.Add(Kit.Label(effect, 15, Palette.Text, Fonts.Italic));
             }
             row.Add(text);
             Stack right = Kit.VBox(0);

@@ -26,7 +26,7 @@ namespace Awakening.Core.Rules
                 Version = 2, Ruleset = Balance.Ruleset, Status = "placing", Difficulty = difficulty, Seed = seed,
                 RngState = Rng.SeedToState(seed), ElapsedMonths = 0, Speed = 1,
                 Influence = Balance.StartingInfluence, Dread = Balance.StartingDread, Awareness = 0.0,
-                Specialization = null, FinalProgress = 0, Regions = regions, NextLogId = 1, ResultReason = null
+                Talents = new System.Collections.Generic.List<string>(), BuryUses = 0, FinalProgress = 0, Regions = regions, NextLogId = 1, ResultReason = null
             };
         }
         public static CommandResult PlaceStartingFoothold(GameState state, string id)
@@ -42,25 +42,108 @@ namespace Awakening.Core.Rules
         public static int CounterCost(GameState state, RegionState r)
         {
             int cost = Balance.CounterSeverityCost * (r.Threat != null ? r.Threat.Severity : 1);
-            return state.Specialization == "infiltration" ? (int)Js.RoundHalfUp(cost * 2 / 3.0) : cost;
+            return HasTalent(state, "quiet_friends") ? (int)Js.RoundHalfUp(cost * 2 / 3.0) : cost;
         }
         public static int SilenceCost(GameState state, RegionState r)
         {
-            int each = state.Specialization == "terror" ? Balance.SilenceSeverityDreadTerror : Balance.SilenceSeverityDread;
+            int each = HasTalent(state, "red_altars") ? Balance.SilenceSeverityDreadTerror : Balance.SilenceSeverityDread;
             return each * (r.Threat != null ? r.Threat.Severity : 1);
         }
-        public static double AwarenessCost(string id, RegionState r)
+        public static int SacrificeDread(GameState state) => HasTalent(state, "red_altars") ? Balance.RedAltarsSacrificeDread : Balance.SacrificeDread;
+        /// <summary>World awareness an action adds when performed (bury and conceal lower it in their effect instead).</summary>
+        public static double AwarenessCost(GameState state, string id, string regionId)
         {
+            var r = state.Regions[regionId];
             switch (id)
             {
-                case "reveal": return r.Revealed ? 0.0 : Balance.RevealAwareness;
-                case "manifest": return Balance.ManifestAwareness;
+                case "reveal": return r.Revealed || HasTalent(state, "open_worship") ? 0.0 : Balance.RevealAwareness;
+                case "manifest": return Derived.ManifestAwareness(regionId);
                 case "prepare": return Balance.SiteAwareness;
                 case "reveal_figure": return Balance.FigureAwareness;
-                case "silence": return Balance.SilenceSeverityAwareness * (r.Threat != null ? r.Threat.Severity : 1);
+                case "silence": return (HasTalent(state, "mute_witnesses") ? Balance.MuteWitnessesSeverityAwareness : Balance.SilenceSeverityAwareness) * (r.Threat != null ? r.Threat.Severity : 1);
+                case "sacrifice": return Offers(state, r) ? Balance.OfferingAwareness : 0.0;
                 default: return 0.0;
             }
         }
+        /// <summary>With Offerings to the deep, a sacrifice in a threatened region also ends its threat.</summary>
+        static bool Offers(GameState state, RegionState r) => r.Threat != null && HasTalent(state, "offerings");
+        /// <summary>Months a scattered flock stays hidden (Sleeper cells shortens it).</summary>
+        public static int ScatterMonths(GameState state) => HasTalent(state, "sleeper_cells") ? Balance.SleeperScatterMonths : Balance.ScatterMonths;
+        /// <summary>Months concealment's world effect rests after use, by difficulty.</summary>
+        public static int ConcealWorldMonths(GameState state) => GameData.Difficulties[state.Difficulty].ConcealWorldMonths;
+        /// <summary>Preparation months an ignored occult threat takes, by difficulty.</summary>
+        public static int OccultPreparationLoss(GameState state) => GameData.Difficulties[state.Difficulty].OccultPreparationLoss;
+
+        // ---- Talent tree (alignment-5) ----
+        public static bool HasTalent(GameState s, string id) => s.Talents != null && s.Talents.Contains(id);
+        static int[] SealMonths(GameState s) => GameData.Difficulties[s.Difficulty].TalentSlotMonths;
+        /// <summary>Seals opened so far, used or not.</summary>
+        public static int TalentSlotsOpen(GameState s) => SealMonths(s).Count(month => month <= s.ElapsedMonths);
+        /// <summary>Seals opened and not yet spent.</summary>
+        public static int TalentSlotsUnused(GameState s) => Math.Max(0, TalentSlotsOpen(s) - s.Talents.Count);
+        /// <summary>Month the next seal opens; -1 when every seal of the run is open.</summary>
+        public static int NextTalentSlotMonth(GameState s)
+        {
+            foreach (int month in SealMonths(s)) if (month > s.ElapsedMonths) return month;
+            return -1;
+        }
+        /// <summary>Influence the next talent costs; it rises with every talent taken.</summary>
+        public static int TalentCost(GameState s) => Balance.TalentBaseCost + Balance.TalentCostStep * s.Talents.Count;
+        static string TalentName(string id) => GameData.Talents[id].Name;
+        /// <summary>"" when the talent can be taken now; otherwise why not.</summary>
+        public static string TalentReason(GameState s, string id)
+        {
+            if (id == null || !GameData.Talents.ContainsKey(id)) return "Unknown talent.";
+            if (!IsActive(s)) return "Start a run before taking talents; completed runs cannot change.";
+            var t = GameData.Talents[id];
+            if (HasTalent(s, id)) return "Already taken.";
+            if (t.Excludes != null && HasTalent(s, t.Excludes)) return "Closed for this run: the cult chose " + TalentName(t.Excludes) + ".";
+            if (t.Requires.Length > 0 && !HasTalent(s, t.Requires[0]))
+                return t.Requires.Length == 1 ? "Requires " + TalentName(t.Requires[0]) + "."
+                    : "Requires " + TalentName(t.Requires[0]) + " and " + string.Join(" or ", t.Requires.Skip(1).Select(TalentName)) + ".";
+            if (t.Requires.Length > 1 && !t.Requires.Skip(1).Any(r => HasTalent(s, r)))
+                return "Requires " + string.Join(" or ", t.Requires.Skip(1).Select(TalentName)) + ".";
+            if (TalentSlotsUnused(s) == 0)
+            {
+                int next = NextTalentSlotMonth(s);
+                return next < 0 ? "Every seal of this run is spent." : F("The next seal opens in {0} months.", next - s.ElapsedMonths);
+            }
+            int cost = TalentCost(s);
+            if (s.Influence < cost) return F("Need {0} Influence.", cost);
+            return "";
+        }
+        public static CommandResult TakeTalent(GameState s, string id)
+        {
+            string reason = TalentReason(s, id);
+            if (reason.Length != 0) return Fail(s, reason);
+            var t = GameData.Talents[id];
+            int cost = TalentCost(s);
+            var next = s.Clone();
+            next.Influence -= cost;
+            next.Telemetry.InfluenceSpent += cost;
+            next.Talents.Add(id);
+            Derived.AddLog(next, "The cult takes up " + t.Name + " (" + GameData.Branches[t.Branch].Name + "). "
+                + (t.Excludes != null ? TalentName(t.Excludes) + " is closed for this run." : "No talent is undone."));
+            return Success(next);
+        }
+
+        // ---- Bury the record and Restore the site (alignment-5) ----
+        public static int BuryStep(GameState s)
+        {
+            int step = GameData.Difficulties[s.Difficulty].BuryStep;
+            return HasTalent(s, "bought_press") ? (int)Js.RoundHalfUp(step / 2.0) : step;
+        }
+        public static int BuryCost(GameState s) => Balance.BuryBaseCost + BuryStep(s) * s.BuryUses;
+        public static int BuryAwareness(GameState s) => HasTalent(s, "bought_press") ? Balance.BoughtPressAwareness : Balance.BuryAwareness;
+        /// <summary>Preparation months Restore the site would return in this region now.</summary>
+        public static int RestoreMonths(GameState s, string regionId)
+        {
+            var site = s.Regions[regionId].Site;
+            if (!site.Invested || site.Recoverable <= 0) return 0;
+            int months = HasTalent(s, "contingency") ? site.Recoverable : (site.Recoverable + 1) / 2;
+            return Math.Max(0, Math.Min(months, Balance.SiteMonths - site.Progress));
+        }
+        public static int RestoreCost(GameState s, string regionId) => Balance.RestoreMonthCost * RestoreMonths(s, regionId);
         /// <summary>Months until concealment lowers world awareness again; 0 when it is available.</summary>
         public static int ConcealWorldCooldown(GameState state) => Math.Max(0, state.WorldConcealReadyAt - state.ElapsedMonths);
         /// <summary>Whether a conceal now would also lower world awareness.</summary>
@@ -83,9 +166,10 @@ namespace Awakening.Core.Rules
             var a = GameData.Actions[id];
             var r = state.Regions[regionId];
             var p = r.Population;
-            int costInfluence = id == "counter" ? CounterCost(state, r) : id == "conceal" ? ConcealCost(state) : a.Influence;
-            int costDread = id == "manifest" && state.Specialization == "terror" ? 15 : id == "prepare" ? SiteDreadCost(state) : id == "silence" ? SilenceCost(state, r) : a.Dread;
-            double costAwareness = AwarenessCost(id, r);
+            int costInfluence = id == "counter" ? CounterCost(state, r) : id == "conceal" ? ConcealCost(state)
+                : id == "bury" ? BuryCost(state) : id == "restore" ? RestoreCost(state, regionId) : a.Influence;
+            int costDread = id == "manifest" && HasTalent(state, "red_altars") ? Balance.RedAltarsManifestDread : id == "prepare" ? SiteDreadCost(state) : id == "silence" ? SilenceCost(state, r) : a.Dread;
+            double costAwareness = AwarenessCost(state, id, regionId);
             int costFollowers = a.Followers;
             string reason = IsActive(state) ? "" : "Start a run before acting; completed runs cannot change.";
             int cooldown = Cooldown(r, id) - state.ElapsedMonths;
@@ -94,6 +178,9 @@ namespace Awakening.Core.Rules
             if (reason.Length == 0 && state.Dread < costDread) reason = F("Need {0} Dread.", costDread);
             if (reason.Length == 0 && p.Followers < costFollowers) reason = F("Need {0} local followers.", costFollowers);
             if (reason.Length == 0 && id != "expand" && p.Followers <= 0) reason = "Establish a cult here first.";
+            if (reason.Length == 0 && id == "bury" && state.Awareness <= 0) reason = "Nothing to bury: the world has not noticed you.";
+            if (reason.Length == 0 && id == "restore" && (!r.Site.Invested || r.Site.Recoverable <= 0)) reason = "No lost preparation to restore here.";
+            if (reason.Length == 0 && id == "restore" && RestoreMonths(state, regionId) <= 0) reason = "This site is already prepared.";
             if (reason.Length == 0 && r.Scattered && new[] { "recruit", "reveal", "prepare", "reveal_figure" }.Contains(id))
                 reason = F("The flock is scattered for {0} more months.", r.ScatteredUntil - state.ElapsedMonths);
             if (reason.Length == 0 && (id == "recruit" || id == "expand") && Derived.Recruitable(r) < 1) reason = "No recruits available. Use a manifestation to change disbelief.";
@@ -122,17 +209,18 @@ namespace Awakening.Core.Rules
             switch (id)
             {
                 case "sacrifice":
-                    int gain = state.Specialization == "terror" ? 35 : Balance.SacrificeDread;
+                    int gain = SacrificeDread(state);
                     effect = "+" + Js.Fixed(Math.Min(gain, Balance.DreadCap - state.Dread), 0) + " Dread. " + Js.Fixed(Math.Max(0.0, p.Followers - costFollowers), 0)
-                        + " followers remain; income falls by " + Js.Fixed(costFollowers * Balance.InfluencePerFollower, 2) + "/month.";
-                    risk = "+12 Exposure. Fewer than " + Js.Num(Derived.SiteRequirement(r)) + " followers interrupts this site's ritual.";
+                        + " followers remain; income falls by " + Js.Fixed(costFollowers * Balance.InfluencePerFollower, 2) + "/month."
+                        + (Offers(state, r) ? " The hunters take the offering and the threat here ends." : "");
+                    risk = (Offers(state, r) ? "+" + Js.Num(costAwareness) + " world awareness, " : "") + "+12 Exposure. Fewer than " + Js.Num(Derived.SiteRequirement(r)) + " followers interrupts this site's ritual.";
                     break;
                 case "reveal":
                     risk = "+18 Exposure" + (r.Revealed ? "" : ", +" + Js.Num(costAwareness) + " world awareness") + "; recruitment backlash for 6 months, then full public growth.";
                     break;
                 case "scatter":
                     effect = "The threat finds nobody. −" + Js.Fixed(Math.Min(Balance.ScatterExposure, Math.Max(0.0, r.Exposure - (r.Site.Invested ? 40.0 : 0.0))), 0) + " Exposure.";
-                    risk = F("For {0} months this cell recruits nobody and earns nothing (−{1} Influence/month).", Balance.ScatterMonths, Js.Fixed(Derived.RegionIncome(r), 2))
+                    risk = F("For {0} months this cell recruits nobody and earns nothing (−{1} Influence/month).", ScatterMonths(state), Js.Fixed(Derived.RegionIncome(r), 2))
                         + (r.Site.Invested ? " Its ritual site stalls and cannot carry the final rite." : "") + (r.Public ? " Public worship ends." : "");
                     break;
                 case "silence":
@@ -145,12 +233,23 @@ namespace Awakening.Core.Rules
                     if (ConcealsWorld(state))
                     {
                         effect = local + ", −" + Js.Fixed(Math.Min(Balance.ConcealAwareness, state.Awareness), 0) + " world awareness. The price rises with awareness.";
-                        risk = F("The world effect then rests for {0} months in every region.", Balance.ConcealWorldMonths);
+                        risk = F("The world effect then rests for {0} months in every region.", ConcealWorldMonths(state));
                     }
                     else if (state.Awareness > 0) effect = local + F(" only. The world effect returns in {0} months.", ConcealWorldCooldown(state));
                     else effect = local + ".";
                     break;
-                case "manifest": risk = "+15 Exposure and +8 awareness. New believers can strengthen resistance."; break;
+                case "manifest":
+                    effect = F("Up to {0} deniers and {1} unaware people become believers.", Derived.ManifestDeniers(regionId), Derived.ManifestUnaware(regionId));
+                    risk = "+15 Exposure and +" + Js.Num(costAwareness) + " awareness. New believers can strengthen resistance.";
+                    break;
+                case "bury":
+                    effect = "−" + Js.Fixed(Math.Min(BuryAwareness(state), state.Awareness), 0) + " world awareness. Concealment's own world effect is not spent.";
+                    risk = "+" + Js.Num(Balance.BuryExposure) + F(" Exposure. The next burial costs {0} Influence.", costInfluence + BuryStep(state));
+                    break;
+                case "restore":
+                    effect = F("+{0} preparation months recovered.", RestoreMonths(state, regionId));
+                    risk = HasTalent(state, "contingency") ? "" : "+" + Js.Num(Balance.RestoreExposure) + " Exposure.";
+                    break;
                 case "prepare":
                     risk = "Upkeep " + Js.Num(Balance.SiteUpkeep) + " Influence/month while funded; unpaid months stall the site. Site remains exposed, even underground. An occult response is scheduled.";
                     if (preparationLeft < Balance.SiteMonths) risk += F(" Needs acceleration to finish in time: {0} preparation months, then a {1}-month final rite.", Balance.SiteMonths - acceleration, Balance.FinalMonths);
@@ -188,9 +287,11 @@ namespace Awakening.Core.Rules
                     r.Exposure = Derived.ClampPct(r.Exposure + 3);
                     break;
                 case "sacrifice":
+                    bool offering = Offers(next, r);
                     t.Sacrificed += Derived.LoseFollowers(r, preview.Followers);
-                    GrantDread(next, next.Specialization == "terror" ? 35 : Balance.SacrificeDread);
+                    GrantDread(next, SacrificeDread(next));
                     r.Exposure = Derived.ClampPct(r.Exposure + 12);
+                    if (offering) r.Threat = null;
                     break;
                 case "reveal":
                     r.Public = true; r.Revealed = true;
@@ -204,13 +305,13 @@ namespace Awakening.Core.Rules
                     if (ConcealsWorld(state))
                     {
                         next.Awareness = Derived.ClampPct(next.Awareness - Balance.ConcealAwareness);
-                        next.WorldConcealReadyAt = next.ElapsedMonths + Balance.ConcealWorldMonths;
+                        next.WorldConcealReadyAt = next.ElapsedMonths + ConcealWorldMonths(next);
                     }
                     break;
                 case "manifest":
                     var p = r.Population;
-                    double denied = Math.Min(p.Deniers, Balance.ManifestationDeniers);
-                    double unaware = Math.Min(p.Unaware, Balance.ManifestationUnaware);
+                    double denied = Math.Min(p.Deniers, Derived.ManifestDeniers(regionId));
+                    double unaware = Math.Min(p.Unaware, Derived.ManifestUnaware(regionId));
                     p.Deniers -= denied; p.Unaware -= unaware; p.Believers += denied + unaware;
                     r.Madness = Derived.ClampPct(r.Madness + 20);
                     r.Exposure = Derived.ClampPct(r.Exposure + 15);
@@ -223,7 +324,7 @@ namespace Awakening.Core.Rules
                 case "counter": r.Threat = null; t.ThreatsCountered++; break;
                 case "scatter":
                     r.Threat = null; r.Public = false; r.Scattered = true;
-                    r.ScatteredUntil = next.ElapsedMonths + Balance.ScatterMonths;
+                    r.ScatteredUntil = next.ElapsedMonths + ScatterMonths(next);
                     r.Exposure = Math.Max(EvidenceFloor(r), r.Exposure - Balance.ScatterExposure);
                     break;
                 case "silence": r.Threat = null; r.Exposure = Derived.ClampPct(r.Exposure + Balance.SilenceExposure); break;
@@ -236,6 +337,16 @@ namespace Awakening.Core.Rules
                     r.Figure = new Figure { Kind = r.Opportunity.Kind, Revealed = false };
                     r.Opportunity = null;
                     r.Exposure = Derived.ClampPct(r.Exposure + 5);
+                    break;
+                case "bury":
+                    next.Awareness = Derived.ClampPct(next.Awareness - BuryAwareness(state));
+                    next.BuryUses++;
+                    r.Exposure = Derived.ClampPct(r.Exposure + Balance.BuryExposure);
+                    break;
+                case "restore":
+                    r.Site.Progress = Math.Min(Balance.SiteMonths, r.Site.Progress + RestoreMonths(state, regionId));
+                    r.Site.Recoverable = 0;
+                    if (!HasTalent(state, "contingency")) r.Exposure = Derived.ClampPct(r.Exposure + Balance.RestoreExposure);
                     break;
                 case "reveal_figure":
                     r.Figure.Revealed = true;
@@ -273,22 +384,11 @@ namespace Awakening.Core.Rules
                 }
             }
         }
-        static void GrantDread(GameState s, double amount)
+        internal static void GrantDread(GameState s, double amount)
         {
             double gain = Math.Min(amount, Balance.DreadCap - s.Dread);
             s.Dread += gain;
             s.Telemetry.DreadEarned += gain;
-        }
-        public static CommandResult ChooseSpecialization(GameState state, string choice)
-        {
-            if (!IsActive(state) || state.Specialization != null || !GameData.SpecializationIds.Contains(choice)) return Fail(state, "Choose one doctrine per run.");
-            if (state.Influence < GameData.SpecializationCost) return Fail(state, "A doctrine requires 40 Influence.");
-            var next = state.Clone();
-            next.Influence -= GameData.SpecializationCost;
-            next.Telemetry.InfluenceSpent += GameData.SpecializationCost;
-            next.Specialization = choice;
-            Derived.AddLog(next, "The cult commits to " + choice + ". Other doctrines are closed for this run.");
-            return Success(next);
         }
         public static GameState SetGameSpeed(GameState state, int speed)
         {
@@ -349,7 +449,7 @@ namespace Awakening.Core.Rules
                     if (r.Population.Followers > 0)
                     {
                         r.Exposure = Derived.ClampPct(Math.Max(EvidenceFloor(r), r.Exposure + (r.Public ? 0.6 : -0.36)));
-                        if (r.Public || r.Site.Invested) next.Awareness = Derived.ClampPct(next.Awareness + 0.075);
+                        if (r.Public && !HasTalent(next, "open_worship") || r.Site.Invested) next.Awareness = Derived.ClampPct(next.Awareness + 0.075);
                     }
                     r.Madness = Math.Max(0.0, r.Madness - 0.3);
                     if (r.Site.Invested && !r.Site.Dormant && Derived.Supported(r) && r.Site.Progress < Balance.SiteMonths)
@@ -358,7 +458,8 @@ namespace Awakening.Core.Rules
                         if (r.Site.Progress == Balance.SiteMonths) Derived.AddLog(next, "The ritual site in " + GameData.Regions[id].Name + " is prepared.");
                     }
                 }
-                next.Awareness = Derived.ClampPct(next.Awareness + Derived.CultShare(next) * Balance.AwarenessPerCapita);
+                next.Awareness = Derived.ClampPct(next.Awareness + Derived.CultShare(next) * Balance.AwarenessPerCapita
+                    * (HasTalent(next, "faith_among_faiths") ? Balance.FaithAmongFaithsShare : 1.0));
                 if (next.Status == "awakening" && Derived.ReadySites(next) >= Balance.RequiredSites) next.FinalProgress++;
                 if (next.FinalProgress >= Balance.FinalMonths)
                 {

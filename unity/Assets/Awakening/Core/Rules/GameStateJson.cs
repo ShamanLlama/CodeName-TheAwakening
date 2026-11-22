@@ -29,7 +29,8 @@ namespace Awakening.Core.Rules
                 ["influence"] = value.Influence,
                 ["dread"] = value.Dread,
                 ["awareness"] = value.Awareness,
-                ["specialization"] = value.Specialization,
+                ["talents"] = value.Talents.Select(t => (object)t).ToList(),
+                ["buryUses"] = value.BuryUses,
                 ["finalProgress"] = value.FinalProgress,
                 ["regions"] = value.Regions.ToDictionary(e => e.Key, e => (object)ToJson(e.Value)),
                 ["log"] = value.Log.Select(e => (object)ToJson(e)).ToList(),
@@ -57,7 +58,8 @@ namespace Awakening.Core.Rules
                 Influence = (double)Convert.ToDouble(Get(value, "influence"), System.Globalization.CultureInfo.InvariantCulture),
                 Dread = (double)Convert.ToDouble(Get(value, "dread"), System.Globalization.CultureInfo.InvariantCulture),
                 Awareness = (double)Convert.ToDouble(Get(value, "awareness"), System.Globalization.CultureInfo.InvariantCulture),
-                Specialization = (string)Get(value, "specialization"),
+                Talents = ((List<object>)Get(value, "talents")).Cast<string>().ToList(),
+                BuryUses = (int)Convert.ToDouble(Get(value, "buryUses"), System.Globalization.CultureInfo.InvariantCulture),
                 FinalProgress = (int)Convert.ToDouble(Get(value, "finalProgress"), System.Globalization.CultureInfo.InvariantCulture),
                 Regions = ReadRegions(Get(value, "regions")),
                 Log = ((List<object>)Get(value, "log")).Select(e => ReadLogEntry((Dictionary<string, object>)e)).ToList(),
@@ -146,6 +148,7 @@ namespace Awakening.Core.Rules
                 ["invested"] = value.Invested,
                 ["progress"] = value.Progress,
                 ["dormant"] = value.Dormant,
+                ["recoverable"] = value.Recoverable,
             };
         }
 
@@ -157,6 +160,7 @@ namespace Awakening.Core.Rules
                 Invested = (bool)Get(value, "invested"),
                 Progress = (int)Convert.ToDouble(Get(value, "progress"), System.Globalization.CultureInfo.InvariantCulture),
                 Dormant = (bool)Get(value, "dormant"),
+                Recoverable = (int)Convert.ToDouble(Get(value, "recoverable"), System.Globalization.CultureInfo.InvariantCulture),
             };
         }
 

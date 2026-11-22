@@ -269,7 +269,7 @@ namespace Awakening.UI
                 ["unsupported"] = regions.Any(r => r.Site.Invested && IsStalled(r)),
                 ["awareness"] = s.Awareness >= 30,
                 ["sacrifice"] = s.ElapsedMonths >= 24 && !regions.Any(r => r.Site.Invested),
-                ["doctrine"] = s.Specialization == null && s.Influence >= GameData.SpecializationCost && s.ElapsedMonths >= 6,
+                ["doctrine"] = s.Talents.Count == 0 && GameEngine.TalentSlotsUnused(s) > 0 && s.Influence >= GameEngine.TalentCost(s),
             };
             foreach (string id in new[] { "first_cell", "threat", "unsupported", "awareness", "sacrifice", "omen", "doctrine" })
                 if (checks[id] && !seen(id)) return id;
@@ -341,9 +341,9 @@ namespace Awakening.UI
         }
 
         /// <summary>What a threat does if it lands, one plain phrase per line.</summary>
-        public static List<string> ThreatEffects(RegionState r)
+        public static List<string> ThreatEffects(GameState s, RegionState r)
         {
-            ThreatConsequences c = Threats.Consequences(r);
+            ThreatConsequences c = Threats.Consequences(s, r);
             var lines = new List<string> { $"Kills {(int)Math.Ceiling(c.Followers)} followers" };
             if (c.DestroysCell)
             {

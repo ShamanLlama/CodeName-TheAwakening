@@ -466,7 +466,7 @@ namespace Awakening.UI
                 head.Add(title);
                 head.Add(Kit.Label(Format.Months(threat.DueMonth - s.ElapsedMonths), 15, Palette.Danger, Fonts.TypeBold));
                 box.Add(head);
-                box.Add(Kit.Body("If ignored: " + Threats.Describe(r), 15, Palette.Text, Fonts.Italic));
+                box.Add(Kit.Body("If ignored: " + Threats.Describe(s, r), 15, Palette.Text, Fonts.Italic));
                 foreach (string id in Notes.Responses) box.Add(Response(s, r, id));
             }
             if (r.Opportunity != null)

@@ -18,12 +18,12 @@ namespace Awakening.Core.Rules
             var r = state.Regions[id];
             if (r.Threat != null || r.Population.Followers <= 0) return;
             int warning = Balance.ThreatWarningMonths + GameData.Difficulties[state.Difficulty].Warning
-                + (state.Specialization == "infiltration" ? 2 : 0)
+                + (GameEngine.HasTalent(state, "quiet_friends") ? Balance.QuietFriendsWarning : 0)
                 + (r.Figure != null && r.Figure.Kind == "politician" && !r.Figure.Revealed ? 2 : 0);
             string kind = ritual || r.Site.Invested ? "occult" : r.Public ? "raid" : "investigation";
             int severity = (int)Derived.ClampPct(1 + Math.Floor((r.Exposure + state.Awareness) / 60.0), 1, 3);
             r.Threat = new Threat { Kind = kind, DueMonth = state.ElapsedMonths + warning, Severity = severity };
-            Derived.AddLog(state, GameData.ThreatNames[kind] + " in " + GameData.Regions[id].Name + F(". Respond within {0} months. If ignored: ", warning) + Threats.Describe(r));
+            Derived.AddLog(state, GameData.ThreatNames[kind] + " in " + GameData.Regions[id].Name + F(". Respond within {0} months. If ignored: ", warning) + Threats.Describe(state, r));
         }
         public static void ResolveWorld(GameState state)
         {
@@ -39,16 +39,33 @@ namespace Awakening.Core.Rules
                 if (r.Threat != null && r.Threat.DueMonth <= state.ElapsedMonths)
                 {
                     var threat = r.Threat;
-                    var c = Threats.Consequences(r);
+                    var c = Threats.Consequences(state, r);
                     double loss = Derived.LoseFollowers(r, c.Followers);
                     state.Telemetry.RaidLosses += loss;
-                    if (threat.Kind == "occult" && r.Site.Invested) r.Site.Progress -= c.PreparationLost;
+                    if (threat.Kind == "occult" && r.Site.Invested)
+                    {
+                        r.Site.Progress -= c.PreparationLost;
+                        // Restore the site can buy back the latest loss; an older one is forgotten.
+                        if (c.PreparationLost > 0) r.Site.Recoverable = c.PreparationLost;
+                    }
                     r.Exposure = Derived.ClampPct(r.Exposure + 5);
                     r.Threat = null;
                     string detail = "";
                     if (c.DestroysCell) detail = " The cell and any ritual site are destroyed.";
                     else if (c.PreparationLost != 0) detail = F(" Ritual loses {0} preparation months.", c.PreparationLost);
                     if (!c.DestroysCell && c.InterruptsSite) detail += " Ritual support is interrupted.";
+                    if (GameEngine.HasTalent(state, "martyrs") && loss > 0)
+                    {
+                        double before = state.Dread;
+                        GameEngine.GrantDread(state, Js.RoundHalfUp(loss * Balance.MartyrDreadPerFollower));
+                        if (state.Dread > before) detail += " The martyrs feed the dark: +" + Js.Fixed(state.Dread - before, 0) + " Dread.";
+                    }
+                    if (GameEngine.HasTalent(state, "scapegoats") && state.Awareness > 0)
+                    {
+                        double before = state.Awareness;
+                        state.Awareness = Derived.ClampPct(state.Awareness - Balance.ScapegoatSeverityAwareness * threat.Severity);
+                        detail += " Scapegoats take the blame: −" + Js.Fixed(before - state.Awareness, 0) + " world awareness.";
+                    }
                     Derived.AddLog(state, regionName + " loses " + Js.Fixed(loss, 0) + " followers to " + threat.Kind + "; income −" + Js.Fixed(c.IncomeLost, 2) + "/month." + detail);
                 }
             }

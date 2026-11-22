@@ -34,7 +34,7 @@ namespace Awakening.Core.Save
     public static class SaveData
     {
         public const int SaveVersion = 2;
-        public static readonly string[] RetiredRulesets = { "alignment-1", "alignment-2", "alignment-3" };
+        public static readonly string[] RetiredRulesets = { "alignment-1", "alignment-2", "alignment-3", "alignment-4" };
         public static readonly string[] ResultCodes = { "awakened", "world_awareness", "deadline", "conceded" };
         public const string RetiredNotice = "Your unfinished run used older rules (%s) and cannot continue under %s. Settings and playtest records are kept; start a new run.";
         public static SaveEnvelope DefaultSave() => new SaveEnvelope();
@@ -86,10 +86,10 @@ namespace Awakening.Core.Save
                 || !OneOf(Get(v, "status"), GameData.Statuses) || !OneOf(Get(v, "difficulty"), GameData.DifficultyIds)
                 || !Integer(Get(v, "speed"), 2) || !Number(Get(v, "influence"), Balance.InfluenceCap)
                 || !Number(Get(v, "dread"), Balance.DreadCap) || !Number(Get(v, "awareness"), 100)
-                || Get(v, "specialization") != null && !OneOf(v["specialization"], GameData.SpecializationIds)
+                || !TalentsValid(Get(v, "talents"), Get(v, "difficulty") as string) || !Integer(Get(v, "buryUses"), 1000)
                 || !Integer(Get(v, "finalProgress"), Balance.FinalMonths) || !Integer(Get(v, "nextLogId"))
                 || Get(v, "resultReason") != null && !(v["resultReason"] is string) || Record(Get(v, "regions")) == null
-                || Get(v, "worldConcealReadyAt") != null && !Integer(v["worldConcealReadyAt"], Balance.Deadline + Balance.ConcealWorldMonths)
+                || Get(v, "worldConcealReadyAt") != null && !Integer(v["worldConcealReadyAt"], Balance.Deadline + GameData.Difficulties.Values.Max(d => d.ConcealWorldMonths))
                 || Get(v, "resultCode") != null && !OneOf(v["resultCode"], ResultCodes)) return false;
             string status = (string)v["status"];
             double month = N(v["elapsedMonths"]);
@@ -110,7 +110,8 @@ namespace Awakening.Core.Save
                     || (bool)r["scattered"] != (month < N(r["scatteredUntil"]))
                     || !Number(Get(r, "madness"), 100) || !Integer(Get(r, "backlashUntil")) || Record(Get(r, "cooldowns")) == null || site == null
                     || !(Get(site, "invested") is bool) || !Integer(Get(site, "progress"), Balance.SiteMonths)
-                    || !(Get(site, "dormant") is bool) || !(bool)site["invested"] && (N(site["progress"]) != 0 || (bool)site["dormant"])) return false;
+                    || !(Get(site, "dormant") is bool) || !(bool)site["invested"] && (N(site["progress"]) != 0 || (bool)site["dormant"])
+                    || !Integer(Get(site, "recoverable"), Balance.SiteMonths) || !(bool)site["invested"] && N(site["recoverable"]) != 0) return false;
                 var population = Record(r["population"]);
                 double sum = 0.0;
                 foreach (string key in new[] { "unaware", "deniers", "believers", "followers", "losses" })
@@ -150,6 +151,23 @@ namespace Awakening.Core.Save
                 if (!GameData.ActionIds.Contains(entry.Key) || !Integer(entry.Value)) return false;
             foreach (var entry in Record(telemetry["revelations"]))
                 if (!GameData.RegionIds.Contains(entry.Key) || !Integer(entry.Value, month)) return false;
+            return true;
+        }
+        /// <summary>Known, distinct talents that the tree allows in this order, within the difficulty's seals.</summary>
+        static bool TalentsValid(object value, string difficulty)
+        {
+            if (!(value is List<object> list) || difficulty == null || !GameData.Difficulties.ContainsKey(difficulty)
+                || list.Count > GameData.Difficulties[difficulty].TalentSlots) return false;
+            var taken = new List<string>();
+            foreach (object item in list)
+            {
+                if (!(item is string id) || !GameData.Talents.ContainsKey(id) || taken.Contains(id)) return false;
+                var t = GameData.Talents[id];
+                if (t.Excludes != null && taken.Contains(t.Excludes)) return false;
+                if (t.Requires.Length > 0 && !taken.Contains(t.Requires[0])) return false;
+                if (t.Requires.Length > 1 && !t.Requires.Skip(1).Any(taken.Contains)) return false;
+                taken.Add(id);
+            }
             return true;
         }
         public static SaveEnvelope DecodeSave(string raw)

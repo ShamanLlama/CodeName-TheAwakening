@@ -50,12 +50,14 @@ namespace Awakening.Core.Tests
             .Select(step => string.Join(";", ((List<object>)step["commands"]).Cast<Dictionary<string, object>>()
                 .Select(c => string.Join(",", new[] { "op", "region", "id", "choice" }.Where(c.ContainsKey).Select(k => (string)c[k])))) + "|" + Convert.ToString(step["months"], CultureInfo.InvariantCulture)).ToList();
 
-        // alignment-4 changes only concealment's world effect and adds two state keys. Until a trace conceals while that
-        // effect rests, the current engine must still match the Godot oracle exactly in every state, log line,
-        // derived value, command result and every preview other than concealment's own.
+        // alignment-5 keeps the base rules of alignment-3 except where it says so. Until a trace reaches one of the known
+        // divergences, the current engine must still match the Godot oracle exactly in every state, log line, derived
+        // value, command result and every preview other than those of the changed actions. The divergences:
+        // concealing while its world effect rests (alignment-4), manifesting (Mysticism), choosing a doctrine (now a
+        // talent), an occult threat against a site on Easy (4 months, not 6) and the site hunt from month 200 (0.3, not 0.15).
         [Theory]
         [MemberData(nameof(GodotTraces))]
-        public void GodotTracesStillMatchUntilConcealmentDiverges(string file)
+        public void GodotTracesStillMatchUntilAlignment5Diverges(string file)
         {
             var trace = GoldenTraces.LoadTrace(Path.Combine(GodotGoldenDirectory, file));
             var state = GameEngine.CreateGameState((string)trace["difficulty"], (string)trace["seed"]);
@@ -64,9 +66,12 @@ namespace Awakening.Core.Tests
             foreach (Dictionary<string, object> step in (List<object>)trace["steps"])
             {
                 var commands = ((List<object>)step["commands"]).Cast<Dictionary<string, object>>().ToList();
+                double months = Convert.ToDouble(step["months"], CultureInfo.InvariantCulture);
+                bool diverges = commands.Any(c => (string)c["op"] == "doctrine" || (string)c["op"] == "action" && (string)c["id"] == "manifest")
+                    || state.ElapsedMonths + months >= Balance.PreparationMonths && state.Regions.Values.Any(r => r.Site.Invested);
                 foreach (var command in commands)
                 {
-                    if ((string)command["op"] == "action" && (string)command["id"] == "conceal" && GameEngine.ConcealWorldCooldown(state) > 0 && state.Awareness > 0)
+                    if (diverges || (string)command["op"] == "action" && (string)command["id"] == "conceal" && GameEngine.ConcealWorldCooldown(state) > 0 && state.Awareness > 0)
                     {
                         Assert.True(matched > 0, file + " diverged before its first step");
                         return;
@@ -75,36 +80,46 @@ namespace Awakening.Core.Tests
                     {
                         "place" => GameEngine.PlaceStartingFoothold(state, (string)command["region"]),
                         "action" => GameEngine.PerformAction(state, (string)command["id"], (string)command["region"]),
-                        "doctrine" => GameEngine.ChooseSpecialization(state, (string)command["choice"]),
                         _ => GameEngine.StartAwakening(state),
                     };
                     Assert.True((bool)command["ok"] == result.Ok, file + " step " + matched + " " + command["op"]);
                     state = result.State;
                 }
-                state = GameEngine.AdvanceSimulation(state, Convert.ToDouble(step["months"], CultureInfo.InvariantCulture));
+                state = GameEngine.AdvanceSimulation(state, months);
+                if (state.Difficulty == "easy" && state.Regions.Values.Any(r => r.Site.Invested && (r.Threat?.Kind == "occult" || r.Site.Recoverable > 0)))
+                {
+                    Assert.True(matched > 0, file + " diverged before its first step");
+                    return;
+                }
                 RequireGodot((Dictionary<string, object>)step["after"], state, logFrom, file + " step " + matched);
                 logFrom = state.NextLogId;
                 matched++;
             }
             Assert.Equal(trace["final"], state.Status);
         }
+        static readonly string[] ChangedPreviews = { "conceal", "manifest", "bury", "restore" };
         static void RequireGodot(Dictionary<string, object> expected, GameState state, int logFrom, string where)
         {
             var actual = GoldenTraces.Snapshot(state, logFrom, expected.ContainsKey("previews"));
             var plain = (Dictionary<string, object>)actual["state"];
             plain.Remove("worldConcealReadyAt");
             plain.Remove("resultCode");
+            plain.Remove("talents");
+            plain.Remove("buryUses");
+            plain["specialization"] = null;
+            foreach (Dictionary<string, object> region in ((Dictionary<string, object>)plain["regions"]).Values)
+                ((Dictionary<string, object>)region["site"]).Remove("recoverable");
             plain["ruleset"] = "alignment-3";
             var godot = new Dictionary<string, object>(expected);
             if (expected.ContainsKey("previews"))
             {
-                godot["previews"] = WithoutConceal(expected["previews"]);
-                actual["previews"] = WithoutConceal(actual["previews"]);
+                godot["previews"] = WithoutChanged(expected["previews"]);
+                actual["previews"] = WithoutChanged(actual["previews"]);
             }
             GoldenTraces.RequireEqual(godot, actual, where);
         }
-        static Dictionary<string, object> WithoutConceal(object previews) => ((Dictionary<string, object>)previews).ToDictionary(
-            region => region.Key, region => (object)((Dictionary<string, object>)region.Value).Where(a => a.Key != "conceal").ToDictionary(a => a.Key, a => a.Value));
+        static Dictionary<string, object> WithoutChanged(object previews) => ((Dictionary<string, object>)previews).ToDictionary(
+            region => region.Key, region => (object)((Dictionary<string, object>)region.Value).Where(a => !ChangedPreviews.Contains(a.Key)).ToDictionary(a => a.Key, a => a.Value));
         public static IEnumerable<object[]> PolicyRuns()
         {
             var endings = GoldenTraces.LoadTrace(Path.Combine(GoldenDirectory, "policy-endings.json.gz"));

@@ -53,11 +53,28 @@ namespace Awakening.Core.Rules
         public static double RecruitmentPerMonth(GameState state, RegionState r)
         {
             if (r.Population.Followers <= 0 || r.Scattered) return 0.0;
+            bool openWorship = GameEngine.HasTalent(state, "open_worship");
             return Math.Min(Recruitable(r), (Balance.RecruitmentBase + r.Population.Followers * Balance.RecruitmentRate)
-                * (r.Public ? Balance.PublicRecruitment : 1.0)
-                * (state.Specialization == "recruitment" ? 1.35 : 1.0)
+                * (r.Public ? openWorship ? Balance.OpenWorshipRecruitment : Balance.PublicRecruitment : 1.0)
+                * (GameEngine.HasTalent(state, "swelling_flock") ? 1.0 + Balance.SwellingFlockRecruitment : 1.0)
                 * (state.ElapsedMonths < r.BacklashUntil ? 0.55 : 1.0)
-                * (1.0 + r.Madness / 500.0) * GameData.Difficulties[state.Difficulty].Recruitment * AwarenessDrag(state));
+                * (1.0 + r.Madness / 500.0) * GameData.Difficulties[state.Difficulty].Recruitment * (r.Public && openWorship ? 1.0 : AwarenessDrag(state)));
+        }
+        /// <summary>World awareness a manifestation draws here: less where the impossible is half expected.</summary>
+        // Integer percentages keep exact halves (57.5 rounds to 58, not 57.4999...).
+        static int MysticismPercent(string regionId) => GameData.Regions[regionId].Mysticism - Balance.MysticismPivot;
+        public static double ManifestAwareness(string regionId) => Js.RoundHalfUp(Balance.ManifestAwareness * (100 - MysticismPercent(regionId)) / 100.0);
+        public static int ManifestDeniers(string regionId) => (int)Js.RoundHalfUp(Balance.ManifestationDeniers * (100 + MysticismPercent(regionId)) / 100.0);
+        public static int ManifestUnaware(string regionId) => (int)Js.RoundHalfUp(Balance.ManifestationUnaware * (100 + MysticismPercent(regionId)) / 100.0);
+        /// <summary>One line for the region panel: what this region's Mysticism does to a manifestation.</summary>
+        public static string MysticismNote(string regionId)
+        {
+            int mysticism = GameData.Regions[regionId].Mysticism;
+            string label = mysticism > Balance.MysticismPivot ? "Mystical" : mysticism < Balance.MysticismPivot ? "Skeptical" : "Wavering";
+            double awareness = ManifestAwareness(regionId);
+            return string.Format(CultureInfo.InvariantCulture, "{0}: a manifestation here draws {1} world awareness{2} and turns up to {3} deniers and {4} unaware into believers.",
+                label, Js.Num(awareness), awareness != Balance.ManifestAwareness ? ", not " + Js.Num(Balance.ManifestAwareness) + "," : "",
+                ManifestDeniers(regionId), ManifestUnaware(regionId));
         }
         public static double SiteUpkeep(GameState state)
         {
