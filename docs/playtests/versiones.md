@@ -16,7 +16,8 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
 
 | Versión | Fecha | Commit | Ruleset | Adaptador | Ronda GTC | Estado |
 | --- | --- | --- | --- | --- | --- | --- |
-| 0.7.0 | 2026-11-22 | `9a3055e`; exportada desde `f253981` | `alignment-5` | `awakening-4` | «0.7.0 playtest por invitación · árbol de talentos y awareness gestionable», abierta del 2026-11-22 al 2026-12-06 (UTC) | En itch.io (Restricted con contraseña) |
+| 0.8.0 | 2026-11-22 | `a72528e` | `alignment-6` | `awakening-5` | «0.8.0 playtest por invitación · remates que cambian la partida», abierta del 2026-11-22 al 2026-12-06 (UTC) | En itch.io (Restricted con contraseña) |
+| 0.7.0 | 2026-11-22 | `9a3055e`; exportada desde `f253981` | `alignment-5` | `awakening-4` | «0.7.0 playtest por invitación · árbol de talentos y awareness gestionable», cerrada el 2026-11-22 (UTC) con 1 partida | Reemplazada por 0.8.0 |
 | 0.6.0 | 2026-11-21 | `675e2a7`; exportada desde `68b0249` | `alignment-4` | `awakening-3` | «0.6.0 playtest por invitación · ocultar con plazo y margen del rito», cerrada el 2026-11-22 (UTC) con 1 partida | Reemplazada por 0.7.0 |
 | 0.5.2 | 2026-11-18 | `880e836` | `alignment-3` | `awakening-2` | «0.5.2 playtest por invitación · interfaz legible», cerrada el 2026-11-21 (UTC) sin partidas | Reemplazada por 0.6.0 |
 | 0.5.1 | 2026-11-18 | `e1d5441` | `alignment-3` | `awakening-2` | «0.5.1 playtest por invitación · interfaz legible», cerrada el 2026-11-19 (UTC) con 1 partida | Reemplazada por 0.5.2 |
@@ -30,6 +31,77 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
 | 0.3.1 | 2026-11-02 | `2256c6c` | `alignment-2` | `awakening-1` | «0.3.1 playtest por invitación · decisiones económicas», cerrada el 2026-11-03 con 2 partidas | Reemplazada por 0.3.2 |
 | 0.3.0 | 2026-11-02 | `85f5905`; exportada desde `dbfb07f` | `alignment-2` | `awakening-1` | «0.3.0 playtest por invitación · decisiones económicas», cerrada el mismo día sin partidas | Reemplazada por 0.3.1 |
 | 0.2.0 | 2026-10-30 / 2026-10-31 | `ae38ec0`; adaptador E4–E6 en `6aa2419` | `alignment-1` | `awakening-1` | QA técnica E7 y «E7 piloto interno de gameplay» (abierta hasta 2026-11-09) | Reemplazada en itch.io por 0.3.0 el 2026-11-02 |
+
+### 0.8.0 — remates que cambian la partida, rito detenido visible y Normal más exigente
+
+- **Commit:** `a72528e`. Integra en `main` las ramas `t3/alignment-6-ruleset-bot`, `t3/awakening-5-game-telemetry` y `t3/talent-ui-capstones-rite`.
+  - La hicieron tres agentes: Claude Opus 5.5 (reglas y bot), GPT‑6.1 Sol (telemetría y Lab) y Gemini 4 Neon (interfaz).
+  - Neon se detuvo antes de verificar. Claude guardó su trabajo, lo integró, corrigió un desborde del libro mayor en teléfono y lo verificó.
+- **Motivo:** primera partida humana con 0.7.0 (2026-11-22, Normal). La ganó en el mes 220 con Congregation y gastó toda la Influence.
+  - El jugador dijo que fue fácil, pero que se sintió mucho mejor que 0.6.0.
+  - Eligió Martyrs para probarlo, y no le dio nada.
+  - No entendió que dispersar durante el rito lo detenía; eso le costó unos 8 meses.
+  - Pidió que el último nodo del árbol cambiara más la partida.
+- **Reglas (`alignment-6`):**
+  - **Remates nuevos:**
+    - **The Great Procession:** con 5 o más regiones públicas al iniciar el rito, este dura 8 meses en vez de 12. Mientras dura, suma +0,3 de awareness por región pública y por mes, y no se puede ocultar.
+    - **The world forgets:** se invoca una vez por partida y no cuesta Influence. Baja 25 de awareness y cancela todas las amenazas, pero todas las células quedan dispersas 6 meses y el rito se detiene.
+    - **Dreams of R'lyeh:** durante el rito, cada sacrificio que deja tres sitios con apoyo adelanta un mes y suma +2 de awareness.
+  - **Remates retirados:** salen A faith among faiths, Bought press y Offerings to the deep. El efecto de A faith among faiths pasa a Open worship, solo para los seguidores públicos.
+  - **Rendimiento por talento:** `TalentYield` acumula lo que dio cada talento en la partida.
+  - **Rito como dato:** `Forecast.Rite` informa el progreso, la duración requerida y los bloqueos (`scattered`, `unsupported`, `dormant`, `destroyed`, `unprepared`). El riesgo de dispersar o sacrificar durante el rito avisa que el rito se detiene.
+  - **Dificultad:**
+    - Normal: el paso de Bury sube de 25 a 35.
+    - Desde el mes 100, cada tirada de amenaza suma +0,05 de presión.
+    - Desde el mes 200, la caza de sitios sube a +0,6.
+    - Easy: presión ×1,0 (antes ×0,75) y pérdida por amenaza oculta de 5 meses (antes 4).
+  - Las partidas sin terminar de `alignment-5` se retiran con aviso; los ajustes se conservan.
+- **Playtest (`awakening-5`):**
+  - `capstone_invoked`.
+  - `rite_month`, uno por mes de rito, con progreso, duración requerida, avance y bloqueos.
+  - `yields` en `month_snapshot`.
+  - `required` en `awakening_started`.
+  - `rite_advanced` en los sacrificios durante el rito.
+  - `threat_resolved` con la respuesta `forgotten` para las amenazas que cancela The world forgets; se quita `offering`.
+  - Contrato en `GTC-page/gtc-web/contracts/playtests/awakening-5/` (migración `0012`).
+- **Interfaz:**
+  - **Remates destacados en el árbol**, con su condición, su costo y su efecto.
+  - **The world forgets:** se invoca desde el árbol, con confirmación que muestra el riesgo. En escritorio también tiene acceso rápido en el libro mayor; en teléfono, el libro mayor avisa «INVOKE READY».
+  - **Rendimiento:** cada talento tomado muestra lo que dio, por ejemplo «+184 followers so far».
+  - **Rito:** la banda muestra «RITE HALTED · N of 12 months» con la causa de cada sitio. El botón del rito anuncia la Procesión cuando se cumple.
+- **Medición:**
+  - `dotnet test core-tests/Tests`: 271/271, antes 225.
+  - `UiChecks`: `UI_CHECKS_PASSED`, con remates, rendimiento, The world forgets, rito detenido y Dreams of R'lyeh.
+  - `unity/layout-check.sh`: 60/60.
+  - GTC: 155 pruebas aprobadas y 9 omitidas por requerir PostgreSQL. Validador del contrato: 72 lotes válidos y 110 rechazos comprobados.
+  - **Bot, 48 semillas por política:**
+
+    | Dificultad | `alignment-5` → `alignment-6` | early (Congregation) | late (Hidden hand) | terror (Harbinger) |
+    | --- | --- | --- | --- | --- |
+    | Normal | 95 → 80/144 | 29 → 22 | 38 → 31 | 28 → 27 |
+    | Easy | 143 → 135/144 | 48 → 44 | 48 → 47 | 47 → 44 |
+    | Hard | 17 → 17/144 | 0 → 0 | 10 → 14 | 7 → 3 |
+
+    Con 144 semillas por política, Normal da 70, 102 y 74, unos 82 de 144.
+  - **Uso de los remates en Normal:**
+
+    | Remate | Partidas que lo usaron | Ganadas |
+    | --- | --- | --- |
+    | The Great Procession | 36 | 22 |
+    | The world forgets | 39 | 26 |
+    | Dreams of R'lyeh | 32 (157 meses adelantados) | 27 |
+- **Riesgos:**
+  - Hidden hand sigue siendo la rama más fuerte.
+  - Hard tiene una sola estrategia viable: el culto público gana 0/48.
+  - La Procesión casi no pierde por awareness; su costo real son las redadas.
+  - Martyrs, Mute witnesses y Contingency no tienen una política de bot que los recorra.
+- **Qué mirar en esta ronda:**
+  - Qué remate se toma y cuándo se usa.
+  - Meses de rito detenido y sus causas.
+  - Rendimiento de cada talento.
+  - Si Normal deja de sentirse fácil.
+  - Pregunta: «¿el remate cambió tu plan?».
+- **Límites:** sin jugadores externos ni teléfono físico todavía; las capturas son del ejecutable de desarrollo Linux.
 
 ### 0.7.0 — árbol de talentos, enterrar el registro y recuperar sitios
 
