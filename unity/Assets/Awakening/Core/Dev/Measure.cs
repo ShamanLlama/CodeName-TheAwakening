@@ -9,7 +9,7 @@ namespace Awakening.Core.Dev
 {
     public static class Measure
     {
-        public static readonly string[] Strategies = { "early", "late", "hub" };
+        public static readonly string[] Strategies = Playthrough.Strategies;
         public static readonly string[] Responses = { "counter", "scatter", "silence" };
         static double Median(List<double> values)
         {
@@ -21,11 +21,11 @@ namespace Awakening.Core.Dev
         static string Print(double value, int digits) => Math.Round(value, digits, MidpointRounding.ToEven).ToString("F" + digits.ToString(CultureInfo.InvariantCulture), CultureInfo.InvariantCulture);
         public const int BurstConceals = 4;
         static int Concealed(GameState state) => state.Telemetry.Actions.TryGetValue("conceal", out int count) ? count : 0;
-        public static void Run(int seeds = 24, TextWriter output = null)
+        public static void Run(int seeds = 24, TextWriter output = null, string difficulty = "normal")
         {
             if (seeds < 1) throw new ArgumentOutOfRangeException(nameof(seeds));
             output = output ?? Console.Out;
-            output.WriteLine(string.Format(CultureInfo.InvariantCulture, "ruleset {0} · normal · {1} seeds per strategy", Balance.Ruleset, seeds));
+            output.WriteLine(string.Format(CultureInfo.InvariantCulture, "ruleset {0} · {2} · {1} seeds per strategy", Balance.Ruleset, seeds, difficulty));
             int totalWins = 0;
             foreach (string strategy in Strategies)
             {
@@ -33,6 +33,7 @@ namespace Awakening.Core.Dev
                 var conceals = new List<double>(); var winMonths = new List<double>();
                 var influence = new List<double>(); var awareness = new List<double>(); var dread = new List<double>(); var landed = new List<double>();
                 var used = Responses.ToDictionary(r => r, r => new List<double>());
+                var talents = new List<double>(); var buried = new List<double>(); var restored = new List<double>();
                 for (int i = 0; i < seeds; i++)
                 {
                     int previous = 0;
@@ -42,12 +43,14 @@ namespace Awakening.Core.Dev
                         previous = total;
                         if (inMonth >= BurstConceals) burstMonths++;
                         worstMonth = Math.Max(worstMonth, inMonth);
-                    });
+                    }, difficulty);
                     conceals.Add(Concealed(final));
                     if (final.Status == "won") { wins++; winMonths.Add(final.ElapsedMonths); }
                     else if (final.Awareness >= 100) lostAwareness++;
                     else lostDeadline++;
                     influence.Add(final.Influence); awareness.Add(final.Awareness); dread.Add(final.Dread); landed.Add(final.Telemetry.RaidLosses);
+                    talents.Add(final.Talents.Count); buried.Add(final.BuryUses);
+                    restored.Add(final.Telemetry.Actions.TryGetValue("restore", out int restores) ? restores : 0);
                     foreach (string response in Responses) used[response].Add(final.Telemetry.Actions.TryGetValue(response, out int count) ? count : 0);
                 }
                 totalWins += wins;
@@ -58,6 +61,9 @@ namespace Awakening.Core.Dev
                 output.WriteLine(string.Format(CultureInfo.InvariantCulture,
                     "{0,-6} conceal {1} per run · months with {2}+ conceals {3} · most in one month {4} · victory month {5}",
                     "", Print(Median(conceals), 1), BurstConceals, burstMonths, worstMonth, winMonths.Count == 0 ? "-" : Print(Median(winMonths), 1)));
+                output.WriteLine(string.Format(CultureInfo.InvariantCulture,
+                    "{0,-6} talents {1} · bury {2} (runs with any {3}) · restore {4} (runs with any {5})",
+                    "", Print(Median(talents), 1), Print(Median(buried), 1), buried.Count(b => b > 0), Print(Median(restored), 1), restored.Count(r => r > 0)));
             }
             output.WriteLine(string.Format(CultureInfo.InvariantCulture, "total wins {0}/{1}", totalWins, seeds * Strategies.Length));
         }

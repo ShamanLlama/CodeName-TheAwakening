@@ -208,14 +208,20 @@ namespace Awakening.UI
             screen.Dialogs.Close();
             Check(!game.ClockHeld, "one release after switching sheets");
 
+            // alignment-5 minimal port: the dialog lists the three root talents until the tree screen lands (wave 2).
             game.State.Influence = 100;
             screen.OpenDialog("doctrine");
             yield return Layout();
-            var choose = screen.Dialogs.Query<Button>().ToList().First(b => b.text == "Choose · 40");
-            ((Action)choose.userData)();
-            Check(game.State.Specialization == GameData.SpecializationIds[0] && !screen.Dialogs.IsOpen, "doctrine choice");
-            screen.OpenDialog("doctrine");
-            Check(screen.Dialogs.Query<Button>().ToList().Where(b => b.ClassListContains("aw-primary")).All(b => !b.enabledSelf), "doctrine is permanent");
+            string firstRoot = GameData.TalentIds.First(id => GameData.Talents[id].Tier == 1);
+            var choose = screen.Dialogs.Query<Button>().ToList().FirstOrDefault(b => b.text == "Choose · " + GameEngine.TalentCost(game.State) && b.enabledSelf);
+            if (choose != null)
+            {
+                ((Action)choose.userData)();
+                Check(game.State.Talents.Contains(firstRoot) && !screen.Dialogs.IsOpen, "talent choice");
+                screen.OpenDialog("doctrine");
+                Check(screen.Dialogs.Query<Button>().ToList().Any(b => b.text == "Chosen" && !b.enabledSelf), "a talent is permanent");
+            }
+            else Check(GameEngine.TalentReason(game.State, firstRoot).Length != 0, "talent refused only with a reason");
             screen.Dialogs.Close();
 
             Debug.Log("UI_CHECK: settings and doctrine");

@@ -1,5 +1,7 @@
 # 02 — Economy
 
+> **`alignment-5` (2026-11-21, juego 0.7.0):** la Influence tiene tres destinos nuevos. El árbol de talentos reemplaza la doctrina: cada nodo cuesta 30 más que el anterior, desde 40 (500 por los 5 sellos de Normal). Enterrar el registro (`bury`) cuesta 50 + 25 por uso anterior (15 en Easy, 40 en Hard; la mitad con Bought press). Restaurar un sitio (`restore`) cuesta 30 por mes recuperado. Los efectos de las doctrinas pasan a las raíces del árbol: Red altars da 35 de Dread por sacrificio, Quiet friends abarata obstruir. Martyrs da 1 de Dread por cada 3 seguidores perdidos ante una amenaza. Véase [Experiencia y loops](02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-5--2026-11-21).
+>
 > **`alignment-4` (2026-11-21):** `conceal` cuesta 20 + la mitad de la awareness solo cuando también baja la awareness mundial, lo que puede hacer una vez cada 6 meses en todo el mundo. El resto del tiempo cuesta 20 de Influence y solo limpia la exposición local. Véase [Experiencia y loops](02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-4--2026-11-21).
 >
 > **`alignment-3` (2026-11-12):** Silenciar una amenaza cuesta 20 de Dread por severidad (13 con Harbinger); dispersar es gratis pero la célula no recluta ni ingresa durante 8 meses. Véase [Experiencia y loops](02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-3--2026-11-12).

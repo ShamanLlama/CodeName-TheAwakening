@@ -44,8 +44,8 @@ namespace Awakening.Core.Dev
                 regions[id] = new Dictionary<string, object>
                 {
                     ["recruitment"] = Derived.RecruitmentPerMonth(state, r), ["income"] = Derived.RegionIncome(r),
-                    ["siteRequirement"] = Derived.SiteRequirement(r), ["siteLabel"] = Derived.SiteLabel(r), ["threat"] = Threats.Describe(r),
-                    ["consequences"] = r.Threat != null ? ConsequencesJson(Threats.Consequences(r)) : null
+                    ["siteRequirement"] = Derived.SiteRequirement(r), ["siteLabel"] = Derived.SiteLabel(r), ["threat"] = Threats.Describe(state, r),
+                    ["consequences"] = r.Threat != null ? ConsequencesJson(Threats.Consequences(state, r)) : null
                 };
             }
             var forecast = Forecast.Ritual(state);
@@ -84,13 +84,17 @@ namespace Awakening.Core.Dev
             if (withPreviews) snapshot["previews"] = Previews(state);
             return snapshot;
         }
+        /// <summary>The root talent that carries a retired doctrine's effect.</summary>
+        public static string DoctrineRoot(string doctrine) => doctrine == "recruitment" ? "swelling_flock" : doctrine == "infiltration" ? "quiet_friends" : doctrine == "terror" ? "red_altars" : doctrine;
         static CommandResult Command(GameState state, Dictionary<string, object> command)
         {
             switch (Str(command, "op"))
             {
                 case "place": return GameEngine.PlaceStartingFoothold(state, Str(command, "region"));
                 case "action": return GameEngine.PerformAction(state, Str(command, "id"), Str(command, "region"));
-                case "doctrine": return GameEngine.ChooseSpecialization(state, Str(command, "choice"));
+                // The Godot scripts chose a doctrine; alignment-5 takes the root talent that keeps its effect.
+                case "doctrine": return GameEngine.TakeTalent(state, DoctrineRoot(Str(command, "choice")));
+                case "talent": return GameEngine.TakeTalent(state, Str(command, "id"));
                 case "awaken": return GameEngine.StartAwakening(state);
                 default: throw new InvalidDataException("Unknown golden command: " + command["op"]);
             }
@@ -208,7 +212,7 @@ namespace Awakening.Core.Dev
                 output?.WriteLine("rewrote " + Path.GetFileName(path));
             }
             var runs = new List<object>();
-            foreach (var pair in new[] { new[] { "early", "rlyeh" }, new[] { "late", "dagon" }, new[] { "hub", "the-deep" }, new[] { "early", "resume" } })
+            foreach (var pair in new[] { new[] { "early", "rlyeh" }, new[] { "late", "dagon" }, new[] { "terror", "the-deep" }, new[] { "early", "resume" } })
                 runs.Add(new Dictionary<string, object> { ["strategy"] = pair[0], ["seed"] = pair[1], ["state"] = PlainState(Playthrough.Play(pair[0], pair[1])) });
             Write(Path.Combine(directory, "policy-endings.json.gz"), new Dictionary<string, object> { ["ruleset"] = Balance.Ruleset, ["runs"] = runs });
             output?.WriteLine("rewrote policy-endings.json.gz");

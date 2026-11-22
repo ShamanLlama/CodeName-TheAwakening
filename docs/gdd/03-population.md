@@ -1,5 +1,7 @@
 # 03 — Population
 
+> **`alignment-5` (2026-11-21, juego 0.7.0):** Mysticism tiene efecto (D15). Manifestar en una región de Mysticism m suma `8 × (1 − (m − 50)/100)` de awareness y convierte `65 × (1 + (m − 50)/100)` negadores y `50 × (1 + (m − 50)/100)` desprevenidos, redondeando cada cifra. Las regiones místicas (África, América Latina, Asia del Sur y Asia Occidental) manifiestan con menos awareness y convierten más; Oceanía (55) solo convierte algo más; las escépticas (Europa, América del Norte y Asia Oriental), al revés. `Derived.MysticismNote` da la línea del panel. Véase [Experiencia y loops](02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-5--2026-11-21).
+
 Every region holds five population buckets (`Population`, `src/game/types.ts`):
 
 | Bucket | Meaning |

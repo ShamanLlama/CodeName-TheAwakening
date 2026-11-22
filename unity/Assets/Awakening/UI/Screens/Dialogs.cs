@@ -309,18 +309,19 @@ namespace Awakening.UI
         {
             var s = _game.State;
             _width = 860;
-            Title("Choose a Doctrine");
-            int cost = GameData.SpecializationCost;
+            // alignment-5 minimal port: the three root talents stand in for the doctrines until the tree screen lands (wave 2).
+            Title("Take a Talent");
+            int cost = GameEngine.TalentCost(s);
             int missing = cost - (int)Math.Floor(s.Influence);
-            _content.Add(SheetUI.Body($"One per run, for {cost} Influence. The choice is permanent.", 17, Palette.Muted, Fonts.Italic));
-            if (s.Specialization == null && missing > 0) _content.Add(SheetUI.Body($"You have {Math.Floor(s.Influence)} Influence; {missing} more to choose.", 16, Palette.Warn, Fonts.BodyBold));
+            _content.Add(SheetUI.Body($"The next talent costs {cost} Influence. Talents are permanent.", 17, Palette.Muted, Fonts.Italic));
+            if (missing > 0) _content.Add(SheetUI.Body($"You have {Math.Floor(s.Influence)} Influence; {missing} more to choose.", 16, Palette.Warn, Fonts.BodyBold));
             var row = Kit.HBox(Kit.Compact ? 8 : 12);
             row.style.alignItems = Align.Stretch;
             _content.Add(row);
-            foreach (string id in GameData.SpecializationIds)
+            foreach (string id in GameData.TalentIds.Where(t => GameData.Talents[t].Tier == 1))
             {
-                var def = GameData.Specializations[id];
-                bool chosen = s.Specialization == id;
+                var def = GameData.Talents[id];
+                bool chosen = GameEngine.HasTalent(s, id);
                 var card = Kit.Panel(Palette.PaperLight, chosen ? Palette.Cult : Palette.PaperEdge, new Vector4(18, 16, 18, 16));
                 if (chosen) card.style.borderLeftWidth = card.style.borderRightWidth = card.style.borderTopWidth = card.style.borderBottomWidth = 2;
                 SheetUI.Equal(card);
@@ -332,8 +333,8 @@ namespace Awakening.UI
                 var text = SheetUI.Body(def.Description, 16, Palette.Muted);
                 text.style.flexGrow = 1;
                 box.Add(text);
-                var pick = SheetUI.Button(chosen ? "Chosen" : $"Choose · {cost}", () => { _game.ChooseDoctrine(id); Close(); }, true, 0);
-                pick.SetEnabled(s.Specialization == null && s.Influence >= cost && GameEngine.IsActive(s));
+                var pick = SheetUI.Button(chosen ? "Chosen" : $"Choose · {cost}", () => { _game.TakeTalent(id); Close(); }, true, 0);
+                pick.SetEnabled(GameEngine.TalentReason(s, id).Length == 0);
                 box.Add(pick);
                 row.Add(card);
             }

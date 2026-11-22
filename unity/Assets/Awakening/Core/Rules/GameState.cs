@@ -18,7 +18,10 @@ namespace Awakening.Core.Rules
         public double Influence;
         public double Dread;
         public double Awareness;
-        public string Specialization;
+        /// <summary>Talent ids taken this run, in order (alignment-5; replaces the doctrine).</summary>
+        public List<string> Talents = new List<string>();
+        /// <summary>Times Bury the record was used this run; each use raises its price.</summary>
+        public int BuryUses;
         public int FinalProgress;
         public RegionMap Regions = new RegionMap();
         public List<LogEntry> Log = new List<LogEntry>();
@@ -35,6 +38,7 @@ namespace Awakening.Core.Rules
             var copy = (GameState)MemberwiseClone();
             copy.Regions = Regions?.Clone();
             copy.Log = Log.Select(entry => entry.Clone()).ToList();
+            copy.Talents = new List<string>(Talents);
             copy.Telemetry = Telemetry?.Clone();
             return copy;
         }
@@ -89,6 +93,8 @@ namespace Awakening.Core.Rules
         public bool Invested;
         public int Progress;
         public bool Dormant;
+        /// <summary>Preparation months the last ignored occult threat took, which Restore the site can still buy back (0 = nothing).</summary>
+        public int Recoverable;
 
         public Site Clone()
         {
@@ -219,6 +225,17 @@ namespace Awakening.Core.Rules
         public int PreparationLost;
         public double IncomeLost, ExposureAdded;
         public bool InterruptsSite;
+    }
+    /// <summary>One answer to a region's threat, as it stands now.</summary>
+    public sealed class ThreatOption
+    {
+        /// <summary>"counter", "scatter" or "silence".</summary>
+        public string Response;
+        public bool Ok;
+        /// <summary>"" when legal; otherwise why not (cooldown, missing Dread or Influence, ...).</summary>
+        public string Reason;
+        /// <summary>What it costs, in one short phrase.</summary>
+        public string Cost;
     }
     public sealed class RitualForecast { public bool Urgent; public string Message; }
     /// <summary>Whether the final rite still fits before the deadline, derived from the current sites.</summary>

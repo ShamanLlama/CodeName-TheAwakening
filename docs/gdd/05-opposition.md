@@ -1,5 +1,7 @@
 # 05 — Opposition
 
+> **`alignment-5` (2026-11-21, juego 0.7.0):** `Threats.Options` dice al aparecer cada amenaza si se puede obstruir, dispersar y silenciar, por qué no (en espera N meses, falta Influence o Dread) y cuánto cuesta; `Threats.Cornered` marca la amenaza que no se puede obstruir ni silenciar. Nodos del árbol que cambian las respuestas: Quiet friends (2 meses más de aviso, obstruir ⅔), Sleeper cells (dispersar 5 meses), Red altars y Mute witnesses (silenciar más barato y con menos awareness), Martyrs y Scapegoats (aceptar el golpe da Dread o baja la awareness) y Offerings to the deep (un sacrificio termina la amenaza). Una amenaza oculta ignorada quita 4 meses en Easy y 6 en Normal y Hard, y esos meses se pueden restaurar. Véase [Experiencia y loops](02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-5--2026-11-21).
+>
 > **`alignment-3` (2026-11-12):** una amenaza tiene tres respuestas. `counter` no cambia. `scatter` es gratis: la célula pasa 8 meses oculta, sin reclutar ni ingresar, su sitio no cuenta y no atrae amenazas nuevas (24 meses de cooldown). `silence` cuesta 20 de Dread y +3 de awareness por severidad (12 meses de cooldown). Véase [Experiencia y loops](02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-3--2026-11-12). El resto de este capítulo describe `alignment-1`.
 
 The world is not an AI opponent. It is a scheduled pressure system in

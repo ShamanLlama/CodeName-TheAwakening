@@ -437,7 +437,7 @@ namespace Awakening.Core.Playtest
         {
             if (!(value is Dictionary<string, object> entry) || !ValidId(Get(entry, "event_id")) || !Integer(Get(entry, "sequence"), MaxSequence) || Num(entry, "sequence") < 1 || !Integer(Get(entry, "game_month"), 224)) return false;
             if (!In(Get(entry, "phase"), "placing", "playing", "alignment", "awakening", "ended") || !(Get(entry, "data") is Dictionary<string, object>) || !(Get(entry, "clock") is Dictionary<string, object> clock)) return false;
-            if (!In(Get(entry, "type"), "run_started", "capture_started", "session_started", "starting_region_selected", "action_performed", "doctrine_selected", "awakening_started", "phase_changed", "checkpoint_reached", "time_checkpoint", "capture_gap", "run_finished", "run_abandoned", "threat_spawned", "threat_resolved", "month_snapshot", "speed_changed")) return false;
+            if (!In(Get(entry, "type"), "run_started", "capture_started", "session_started", "starting_region_selected", "action_performed", "doctrine_selected", "talent_taken", "awakening_started", "phase_changed", "checkpoint_reached", "time_checkpoint", "capture_gap", "run_finished", "run_abandoned", "threat_spawned", "threat_resolved", "month_snapshot", "speed_changed")) return false;
             return ValidClock(clock);
         }
         static bool ValidClock(Dictionary<string, object> clock)

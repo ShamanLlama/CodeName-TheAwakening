@@ -228,7 +228,7 @@ namespace Awakening.Core.Tests
             done.Regions["africa"].Threat = new Threat { Kind = "investigation", DueMonth = 30, Severity = 1 };
             Assert.StartsWith("Available in", GameEngine.PreviewAction(done, "silence", "africa").Reason);
             Assert.True(GameEngine.PreviewAction(done, "counter", "africa").Ok);
-            var harbinger = Threatened(2); harbinger.Specialization = "terror";
+            var harbinger = Threatened(2); harbinger.Talents.Add("red_altars");
             Assert.Equal(2 * Balance.SilenceSeverityDreadTerror, GameEngine.PreviewAction(harbinger, "silence", "africa").Dread);
             Assert.False(GameEngine.PreviewAction(Start(), "silence", "africa").Ok);
         }
@@ -248,10 +248,10 @@ namespace Awakening.Core.Tests
         public void EveryConspicuousActionStatesItsAwarenessPrice()
         {
             var s = Threatened(); s.Regions["africa"].Threat = null; s.Dread = 200.0;
-            Assert.Equal(Balance.ManifestAwareness, GameEngine.PreviewAction(s, "manifest", "africa").Awareness);
+            Assert.Equal(Derived.ManifestAwareness("africa"), GameEngine.PreviewAction(s, "manifest", "africa").Awareness);
             Assert.Equal(Balance.SiteAwareness, GameEngine.PreviewAction(s, "prepare", "africa").Awareness);
             foreach (string id in new[] { "recruit", "sacrifice", "conceal", "counter", "scatter" }) Assert.Equal(0, GameEngine.PreviewAction(s, id, "africa").Awareness);
-            Assert.Equal(Balance.ManifestAwareness, GameEngine.PerformAction(s, "manifest", "africa").State.Awareness);
+            Assert.Equal(Derived.ManifestAwareness("africa"), GameEngine.PerformAction(s, "manifest", "africa").State.Awareness);
             Assert.Equal(Balance.SiteAwareness, GameEngine.PerformAction(s, "prepare", "africa").State.Awareness);
         }
     }

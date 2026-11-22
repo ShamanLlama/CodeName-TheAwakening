@@ -1,6 +1,6 @@
 # Experiencia, loops y sistemas
 
-**Versión:** 0.6 · **Fecha:** 2026-11-21 · **Estado:** síntesis de `alignment-4` (juego 0.6.0, Unity); pilares sin cambios.
+**Versión:** 0.7 · **Fecha:** 2026-11-21 · **Estado:** síntesis de `alignment-5` (juego 0.7.0, Unity); pilares sin cambios.
 
 ## Pilares de la base actual
 
@@ -38,16 +38,19 @@ en pausa.
 | Crecimiento | Reclutar en secreto o hacer público el culto | Más seguidores frente a evidencia y oposición |
 | Expansión | Abrir una célula en una región conectada | Nuevo potencial económico y ritual; más frentes |
 | Sacrificio | Consumir seguidores y elegir dónde hacerlo | Dread inmediato; menos ingreso y posible pérdida de apoyo |
-| Contención | Ocultar evidencia; ante cada amenaza, obstruir, dispersar, silenciar o aceptar el golpe | Menor presión o daño evitado, a cambio de Influence, meses de la célula, Dread y awareness, o seguidores. Ocultar baja la awareness mundial solo una vez cada 6 meses: entre medio, limpia solo la evidencia local |
+| Contención | Ocultar evidencia o enterrar el registro; ante cada amenaza, obstruir, dispersar, silenciar o aceptar el golpe | Menor presión o daño evitado, a cambio de Influence, meses de la célula, Dread y awareness, o seguidores. Ocultar baja la awareness mundial solo una vez cada 6 meses (9 en Hard): entre medio, limpia solo la evidencia local. Enterrar el registro baja 5 de awareness al momento, por una Influence que sube con cada uso |
+| Talentos | Qué nodo tomar cuando se abre un sello y qué rama cerrar | Una regla que cambia a favor del plan elegido, a cambio de Influence creciente y de los nodos que ya no se podrán tomar |
+| Reparación | Recuperar meses que una amenaza oculta quitó a un sitio | Margen del rito a cambio de Influence y exposición |
 | Creencia | Manifestar lo imposible | Más población reclutable; mayor atención y resistencia |
 | Oportunidades | Aprovechar un presagio o convertir una figura | Dread, aceleración o beneficio secreto; coste y plazo |
 | Mantenimiento | Cuándo financiar cada sitio y cuánta Influence reservar | Margen de calendario frente a 1 Influence/mes por sitio durante toda la partida |
 | Final | Conservar sitios listos, pagarlos y recuperar interrupciones; si el rito ya no cabe, cerrar la partida | Avance del rito frente al calendario y a la caza de sitios. El margen del rito (último inicio menos inicio más temprano) dice cuántos meses se pueden perder |
 
 Sacrificar reduce el crecimiento futuro de awareness al reducir el culto; no elimina
-el conocimiento ya acumulado. La acción de ocultar evidencia sí puede reducirlo, a un
-precio que sube con la awareness y como mucho una vez cada 6 meses en todo el mundo
-(`alignment-4`).
+el conocimiento ya acumulado. Ocultar evidencia sí puede reducirlo, a un precio que sube
+con la awareness y como mucho una vez cada 6 meses en todo el mundo (`alignment-4`).
+Desde `alignment-5` también lo reducen enterrar el registro y algunos nodos del árbol
+(Scapegoats, Bought press, y A faith among faiths frena su crecimiento).
 
 ## Cambios de `alignment-2` — 2026-11-02
 
@@ -206,21 +209,112 @@ ocultamientos (meta 0), ocultar por debajo del 15 % de las acciones, awareness f
 victorias entre 35 y 75, y órdenes después del mes 212 sin rito iniciado (meta 0). Preguntar
 si entendieron por qué perdieron y si cerrar la partida les pareció justo.
 
+## Cambios de `alignment-5` — 2026-11-21
+
+**Problema.** En la primera partida humana con 0.6.0 (2026-11-21, Normal) el jugador perdió
+por awareness en el mes 215, dos meses antes de terminar el rito. Una amenaza oculta ignorada
+en el mes 185 le quitó 6 meses a su tercer sitio: solo podía dispersarla, porque obstruir
+estaba en espera y no le alcanzaba el Dread para silenciar. Terminó con unos 700 de Influence
+sin gastar (870 en el mes 168) y dijo «no tenía en qué gastar», «la awareness no hay cómo
+bajarla con nada más» que ocultar y «un error me costó la partida». Además, la estrategia de
+culto público del bot había caído de 21/48 a 5/48 con `alignment-4`.
+
+**Objetivo.** Dar destino a la Influence, una segunda forma de bajar la awareness, una forma
+de reparar un error y opciones de estrategia que cada partida obligue a elegir, sin tocar la
+regla de ocultar. Decisiones del usuario del 2026-11-21: el árbol vive dentro de la partida y
+no se completa en una; cada dificultad obliga a pensar; Mysticism tiene efecto; varias formas
+de ganar y de perder.
+
+| Cambio | Regla | Pilar que refuerza | Condición de legibilidad |
+| --- | --- | --- | --- |
+| Árbol de talentos | Reemplaza la doctrina. Tres ramas (Congregation, Hidden hand, Harbinger) de 4 nodos: una raíz, dos nodos medios excluyentes y un remate que pide la raíz y uno de los medios. Los sellos se abren con el tiempo (Normal: meses 24, 64, 104, 144 y 176) y no se acumulan. Cada nodo cuesta 30 más que el anterior, desde 40 (40 + 70 + 100 + 130 + 160 = 500). Sin reespecialización. Con 5 sellos se toma como mucho una rama entera y dos nodos de otra. Las raíces conservan el efecto de la doctrina | 2: elegir qué cerrar; la Influence sobrante tiene un uso que compite con los demás | `TalentReason` da la razón exacta de cada nodo cerrado (sello, requisito, hermano elegido, Influence). El árbol en pantalla llega con la interfaz de 0.7.0 |
+| Enterrar el registro (`bury`) | Acción regional con célula: −5 de awareness mundial por 50 de Influence + 25 por cada uso anterior (15 en Easy, 40 en Hard); +8 de exposición local y 6 meses de cooldown regional. No comparte el descanso mundial de ocultar | 1: la Influence compra tiempo frente al reloj que mata, cada vez más cara | La vista previa da el efecto y el precio del próximo entierro |
+| Restaurar el sitio (`restore`) | Cuando una amenaza oculta ignorada quita meses a un sitio, el sitio guarda esa pérdida (`Site.Recoverable`; la siguiente pérdida la reemplaza). Restaurar devuelve la mitad, redondeando hacia arriba, a 30 de Influence por mes, con +10 de exposición. Una vez por pérdida | 4: un error tiene arreglo, con precio | Solo aparece cuando hay meses que recuperar; la vista previa dice cuántos |
+| Respuestas al aparecer | `Threats.Options` dice, para obstruir, dispersar y silenciar, si se puede, por qué no y cuánto cuesta. `Threats.Cornered` es verdadero si no se puede obstruir ni silenciar | 2 y 4: el jugador sabe desde el primer mes qué podrá hacer | La interfaz lo muestra en la ficha de la amenaza cuando aparece |
+| Mysticism | Manifestar en una región de Mysticism m suma `8 × (1 − (m − 50)/100)` de awareness y convierte `65 × (1 + (m − 50)/100)` negadores y `50 × (1 + (m − 50)/100)` desprevenidos, todo redondeado. África (70): 6 de awareness, 78 y 60. Europa (30): 10, 52 y 40 | 3: la ubicación cambia el plan también al manifestar | `Derived.MysticismNote` da la línea del panel |
+| Dificultad con reglas | Easy: 6 sellos, una amenaza oculta quita 4 meses, enterrar sube 15 por uso. Normal: 5 sellos, 6 meses, +25. Hard: 4 sellos, 6 meses, +40 y el efecto mundial de ocultar descansa 9 meses. Los multiplicadores de reclutamiento, presión y aviso no cambian | D16 y «cada modo obliga a pensar» | `DifficultyDefinition.Rule` da la línea de la pantalla de inicio |
+| Caza de sitios | Desde el mes 200, la presión sobre regiones con sitio sube +0,3 por tirada (antes +0,15) | 2: un final defendido; compensa el poder que da el árbol | Sin texto nuevo: el aviso del mes 176 ya existe |
+
+**Los 12 nodos.** Los remates piden la raíz y cualquiera de los dos medios.
+
+| Rama | Raíz (tier 1) | Medio A (tier 2) | Medio B (tier 2) | Remate (tier 3) |
+| --- | --- | --- | --- | --- |
+| Congregation | **Swelling flock**: +35 % de reclutamiento automático | **Open worship**: las células públicas reclutan ×2,5 (no ×2), la awareness no las frena, no suman awareness mensual y hacerse público no alarma al mundo | **Martyrs**: los seguidores perdidos por una amenaza dan 1 de Dread por cada 3 | **A faith among faiths**: el tamaño del culto suma la mitad de awareness cada mes |
+| Hidden hand | **Quiet friends**: las amenazas llegan 2 meses más tarde y obstruir cuesta un tercio menos | **Sleeper cells**: la célula dispersa vuelve en 5 meses, no en 8 | **Contingency**: restaurar devuelve todos los meses y no suma exposición | **Bought press**: enterrar baja 8 (no 5) y su precio sube la mitad de rápido |
+| Harbinger | **Red altars**: el sacrificio da 35 de Dread, manifestar cuesta 15 y silenciar un tercio menos | **Mute witnesses**: silenciar suma 2 de awareness por severidad, no 3 | **Scapegoats**: una amenaza que cae baja la awareness 1 por severidad | **Offerings to the deep**: un sacrificio en una región amenazada termina la amenaza, con +1 de awareness |
+
+Bajan la awareness tres nodos de dos ramas: Bought press, Scapegoats y A faith among faiths.
+El margen contra el error está en Contingency y Sleeper cells.
+
+**Descartes medidos (bot, Normal, 48 seeds).**
+- Offerings con +3 de awareness: la política Harbinger bajó a 10/48 (41/48 con 0). Queda en +1.
+- Scapegoats con −2 por severidad: 47/48 para Harbinger. Queda en −1 (31/48).
+- La palanca del culto público no era el lastre de awareness sino la awareness que suma
+  hacerse público (+5 por región) y el goteo de las células públicas. Sin Open worship, un
+  culto que se hace público en el mes 64 gana 6/48; escondido, 32/48; público con Open
+  worship, 41/48. Open worship hace que el culto público sea la mejor opción de su rama, no
+  una trampa.
+- Precios del árbol más bajos (30, 50, 70…) no ayudaron al bot: el cuello está en cuándo
+  llega cada nodo, no en cuánto cuesta.
+- Caza de sitios: con +0,15 el total fue 111/144 (38/42/31); con +0,25, 103/144; con +0,3,
+  95/144.
+
+**Medición (bot, no humanos).** `dotnet run --project core-tests/Tools -- measure --seeds=48
+--difficulty=normal|easy|hard`. Una política por rama:
+- **early** toma Congregation (Swelling flock, Open worship, A faith among faiths) y se hace
+  pública cuando tiene Open worship (o desde el mes 120);
+- **late** toma Hidden hand (Quiet friends, Contingency, Bought press) y se hace pública en el
+  mes 160;
+- **terror** (antes «hub») toma Harbinger (Red altars, Scapegoats, Offerings) y nunca se hace
+  pública.
+
+Las tres compran nodos en cuanto se abre un sello y ahorran para el siguiente mientras la
+awareness está por debajo de 50. Entierran con Influence sobrante desde 60 de awareness y
+restauran cuando sobra Influence. No silencian si la awareness pasaría de 75.
+
+| Estrategia | Normal | Easy | Hard |
+| --- | --- | --- | --- |
+| early (Congregation, culto público) | 5 → 29 | 17 → 48 | 1 → 0 |
+| late (Hidden hand) | 45 → 38 | 48 → 48 | 21 → 10 |
+| terror (Harbinger) | 30 → 28 | 46 → 47 | 5 → 7 |
+| Total | 80/144 → 95/144 | 111/144 → 143/144 | 27/144 → 17/144 |
+
+Criterios del plan: total en Normal entre 80 y 105, cada política al menos 12/48 y ninguna
+más de 15 por encima de otra (máximo 38, mínimo 28), y Easy por encima de Normal y Hard por
+debajo. Se cumplen. En Normal cada política toma 3 nodos de mediana; entierran en 2, 21 y 11
+de 48 partidas, y restauran en 20, 26 y 10.
+
+**Riesgos.**
+- Easy queda en 143/144 para el bot. Es una política que conoce el juego, no un jugador
+  nuevo, pero si los jugadores también ganan siempre, Easy dejaría de obligar a pensar.
+- Hard baja de 27 a 17 y el culto público no gana ninguna (0/48): en Hard hay una sola
+  estrategia fuerte (late) y otra débil.
+- La caza de sitios a +0,3 es un cambio de la regla base, no del árbol: el final se vuelve
+  más duro para todos.
+- Ninguna política del bot sigue Mute witnesses, Martyrs ni Sleeper cells (late tiene Martyrs
+  como quinto nodo y casi nunca llega a él): su balance solo está cubierto por las pruebas
+  unitarias.
+- Offerings puede volver a ser una trampa si un jugador sacrifica en cada amenaza: cada
+  sacrificio suma +12 de exposición.
+
+**Comprobación con jugadores.** Con `awakening-4`: reparto de ramas, meses con sellos sin
+usar (mediana menor a 12), usos de enterrar y restaurar, amenazas acorraladas al aparecer,
+Influence sin gastar al final (hoy ~700) y si alguna rama gana mucho más que otra. Preguntar
+«¿qué nodo descartaste y por qué?».
+
 ## Acciones y progresión actuales
 
-El conjunto actual tiene catorce acciones: `recruit`, `expand`, `sacrifice`, `reveal`,
+El conjunto actual tiene dieciséis acciones: `recruit`, `expand`, `sacrifice`, `reveal`,
 `hide`, `conceal`, `manifest`, `prepare`, `counter`, `scatter`, `silence`, `exploit`,
-`convert` y `reveal_figure`. Sus condiciones y costes están en los datos y en `previewAction`;
-las referencias detalladas del índice explican cada sistema.
+`convert`, `reveal_figure`, `bury` y `restore`. Sus condiciones y costes están en los datos y
+en `previewAction`; las referencias detalladas del índice explican cada sistema.
 
-Una doctrina por partida especializa reclutamiento (**Congregation**, +35 % de
-reclutamiento automático), infiltración (**Hidden hand**, las amenazas llegan 2 meses
-después y obstruir cuesta un tercio menos) o terror ritual (**Harbinger**, el sacrificio
-da 35 de Dread, manifestar cuesta 15 y silenciar un tercio menos). Se compra una vez,
-por 40 de Influence. La progresión consiste en ampliar
-la red, financiar sitios y alcanzar el final; no se documenta un sistema actual de
-desbloqueos permanentes entre partidas. El árbol de talentos vivirá dentro de cada partida
-(D05) y llega en 0.7.0.
+Desde `alignment-5` la doctrina es la raíz de cada rama del árbol de talentos, que vive
+dentro de la partida (D05): Swelling flock (Congregation), Quiet friends (Hidden hand) y Red
+altars (Harbinger) conservan el efecto de las tres doctrinas. El árbol se describe en
+[Cambios de `alignment-5`](#cambios-de-alignment-5--2026-11-21). La progresión consiste en
+ampliar la red, tomar talentos, financiar sitios y alcanzar el final; no hay desbloqueos
+permanentes entre partidas.
 
 Se gana completando el rito dentro de la ventana con suficientes sitios listos y
 apoyados. Se pierde por conocimiento global máximo o por agotar el calendario. Desde

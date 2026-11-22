@@ -71,6 +71,51 @@ namespace Awakening.Core.Tests
             GoldenTraces.RequireEqual(SaveData.ResultFor(game.State), game.LastResult);
         }
 
+        [Fact]
+        public void TakingATalentSavesLogsAndRefusesWithTheEnginesReason()
+        {
+            var rig = new SessionRig(); var game = rig.Game;
+            var chronicle = new List<GameEvent>();
+            game.Events += entries => chronicle.AddRange(entries);
+            rig.Start();
+            game.TakeTalent("swelling_flock");
+            Assert.True(chronicle.Last().Refused);
+            Assert.Equal("The next seal opens in 24 months.", chronicle.Last().Message);
+            Assert.Empty(game.State.Talents);
+
+            game.Advance(24);
+            game.State.Influence = 100.0;
+            int writes = rig.Writes.Count;
+            game.TakeTalent("swelling_flock");
+            Assert.Equal(new[] { "swelling_flock" }, game.State.Talents);
+            Assert.Equal(60.0, game.State.Influence);
+            Assert.False(chronicle.Last().Refused);
+            Assert.Equal(game.State.Log.Last().Message, chronicle.Last().Message);
+            Assert.True(rig.Writes.Count > writes);
+            Assert.Contains("\"talents\":[\"swelling_flock\"]", rig.Writes.Last());
+            var emitted = rig.Events.Last(e => Equals(e["type"], "talent_taken"));
+            var data = O(emitted, "data");
+            Assert.Equal("swelling_flock", data["talent"]); Assert.Equal("congregation", data["branch"]);
+            Assert.Equal(1, N(data, "tier")); Assert.Equal(1, N(data, "slot")); Assert.Equal(40, N(O(data, "spent"), "influence"));
+
+            game.TakeTalent("open_worship");
+            Assert.True(chronicle.Last().Refused);
+            Assert.Equal("The next seal opens in 40 months.", chronicle.Last().Message);
+        }
+
+        [Fact]
+        public void BuryAndRestoreRunThroughTheSessionAsActions()
+        {
+            var rig = new SessionRig(); var game = rig.Game;
+            rig.Start();
+            game.State.Awareness = 20.0; game.State.Influence = 200.0;
+            game.Act("bury", "africa");
+            Assert.Equal(15.0, game.State.Awareness); Assert.Equal(1, game.State.BuryUses);
+            var emitted = rig.Events.Last(e => Equals(e["type"], "action_performed"));
+            Assert.Equal("bury", O(emitted, "data")["action"]);
+            Assert.Equal(50, N(O(O(emitted, "data"), "spent"), "influence"));
+        }
+
         // Protects actual command emission, including dynamic costs and refused decisions; capture-only tests supply costs by hand.
         [Theory]
         [MemberData(nameof(GoldenTests.Traces), MemberType = typeof(GoldenTests))]
@@ -97,7 +142,7 @@ namespace Awakening.Core.Tests
                         case "action":
                             GoldenTraces.RequireEqual(command["preview"], GoldenTraces.PreviewJson(GameEngine.PreviewAction(before, (string)command["id"], (string)command["region"])));
                             game.Act((string)command["id"], (string)command["region"]); break;
-                        case "doctrine": game.ChooseDoctrine((string)command["choice"]); break;
+                        case "doctrine": game.TakeTalent(GoldenTraces.DoctrineRoot((string)command["choice"])); break;
                         case "awaken": game.Awaken(); break;
                         default: throw new InvalidDataException("Unknown command");
                     }
@@ -114,7 +159,7 @@ namespace Awakening.Core.Tests
                     AssertTransitions(before, game.State, rig.Events.Skip(count).ToList(), ref firstSiteSeen);
                     var emitted = rig.Events.Skip(count).First();
                     string kind = (string)command["op"];
-                    Assert.Equal(kind == "place" ? "starting_region_selected" : kind == "action" ? "action_performed" : kind == "doctrine" ? "doctrine_selected" : "awakening_started", emitted["type"]);
+                    Assert.Equal(kind == "place" ? "starting_region_selected" : kind == "action" ? "action_performed" : kind == "doctrine" ? "talent_taken" : "awakening_started", emitted["type"]);
                     var data = O(emitted, "data");
                     if (kind == "place") { Assert.False(data.ContainsKey("spent")); continue; }
                     var spent = O(data, "spent");
@@ -193,7 +238,7 @@ namespace Awakening.Core.Tests
             region.Population.Followers = 150; region.Site.Invested = true; region.Site.Progress = 20;
             region.Threat = new Threat { Kind = "occult", Severity = 2, DueMonth = 1 };
             g.State.Influence = 0; g.State.Dread = 0;
-            var expected = Threats.Consequences(region);
+            var expected = Threats.Consequences(g.State, region);
             g.Advance(1);
             var data = O(Assert.Single(r.Events, e => Equals(e["type"], "threat_resolved")), "data");
             Assert.Equal("ignored", data["response"]);

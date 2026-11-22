@@ -1,6 +1,6 @@
 # Decisiones pendientes
 
-**Versión:** 0.6 · **Fecha:** 2026-11-21 · **Estado:** D01–D05 y D08–D17 confirmadas; D07 con respuesta parcial; D06 pendiente.
+**Versión:** 0.7 · **Fecha:** 2026-11-21 · **Estado:** D01–D05 y D08–D17 confirmadas; D05 y D15 implementadas en `alignment-5` (juego 0.7.0); D07 con respuesta parcial; D06 pendiente.
 
 Este registro distingue las decisiones confirmadas de las preguntas abiertas.
 La primera etapa del GDD documenta la implementación; los objetivos futuros
@@ -27,7 +27,11 @@ dirección de las builds 0.6.0–0.8.0; no describen funciones ya disponibles sa
 indica.
 
 1. **D05 — El árbol de talentos vive dentro de cada partida.** No hay poder que persista
-   entre partidas. Llega en 0.7.0.
+   entre partidas. **Cerrada en 0.7.0 (`alignment-5`):** reemplaza la doctrina; tres ramas
+   (Congregation, Hidden hand, Harbinger) de raíz, dos nodos medios excluyentes y remate, 12
+   nodos; sellos que se abren con el tiempo (6, 5 y 4 según la dificultad) y precio creciente
+   en Influence, así que una partida no lo completa. Detalle en
+   [Experiencia y loops](../02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-5--2026-11-21).
 2. **D04 — Voz lovecraftiana y sucesos ficticios.** El horror habla con registro
    lovecraftiano. Los eventos escritos usan sucesos ficticios con sabor de 1908–1926, no
    hechos históricos reales.
@@ -36,8 +40,13 @@ indica.
 4. **D13 — Los eventos escritos pausan el juego.** Llegan en 0.8.0.
 5. **D14 — Se puede cerrar la partida cuando el rito ya no cabe.** Termina como derrota.
    Entra en 0.6.0 con `alignment-4`.
-6. **D15 — Mysticism tendrá efecto.** Se diseña junto con el árbol en 0.7.0; en 0.6.0 no
-   cambia.
+6. **D15 — Mysticism tiene efecto.** **Cerrada en 0.7.0 (`alignment-5`):** es un rasgo
+   regional que actúa sobre manifestar. En una región de Mysticism m, manifestar suma
+   `8 × (1 − (m − 50)/100)` de awareness y convierte un `(m − 50)` % más (o menos) de negadores
+   y desprevenidos. Va de 6 de awareness en África a 10 en Europa. Se eligió manifestar porque
+   es la acción que describe el rasgo («apertura a lo imposible») y porque no toca el
+   reclutamiento, ya cargado por el árbol. El panel lo explica en una línea
+   (`Derived.MysticismNote`).
 7. **D16 — Easy no tiene que ganarse a la primera, pero no debe abrumar.**
 8. **D17 — Definición de «completo».** Árbol probado, gente externa jugando, balance
    sentido, varios caminos para ganar y varias formas de perder.
@@ -48,7 +57,7 @@ indica.
   definitivo? El registro quedó en D04: voz lovecraftiana.
 - **Profundidad entre partidas.** Respondido en D05: el árbol vive dentro de cada
   partida. Queda por decidir si hay escenarios o variantes entre partidas además de
-  semilla, inicio, dificultad y doctrina.
+  semilla, inicio, dificultad y talentos.
 - **Presentación.** ¿El mapa y el arte procedural son la dirección final o una base
   temporal? ¿Queremos música, ilustraciones o una representación del despertar?
 - **Público e idiomas.** ¿A quién queremos llegar primero y en qué idioma? Hoy los
@@ -64,7 +73,7 @@ indica.
 | D02 | Duración objetivo | Confirmada; falta medir | 15–30 minutos por partida — 2026-10-28. El rango incluye la pausa y la planificación — 2026-11-21 | Mapa y ritmo, balance y playtesting |
 | D03 | Experiencia buscada | Confirmada | Mezcla de estrategia, narrativa y horror — 2026-10-28 | Pilares, narrativa, arte y audio |
 | D04 | Identidad y tono | Confirmada | Se admiten sucesos escritos además de la crónica sistémica — 2026-11-12. Voz lovecraftiana; los sucesos son ficticios, con sabor de época, no históricos — 2026-11-21. Quién dirige el culto sigue abierto | Visión y narrativa |
-| D05 | Progresión entre partidas | Confirmada | Dirección quiere un árbol de talentos que dé opciones y estrategias distintas, con puntos que el jugador gasta — 2026-11-12. El árbol vive dentro de cada partida, sin poder que persista entre partidas; llega en 0.7.0 — 2026-11-21 | Game Design y alcance |
+| D05 | Progresión entre partidas | Confirmada e implementada | Dirección quiere un árbol de talentos que dé opciones y estrategias distintas, con puntos que el jugador gasta — 2026-11-12. El árbol vive dentro de cada partida, sin poder que persista entre partidas — 2026-11-21. Implementado en `alignment-5` (juego 0.7.0): 12 nodos en tres ramas, sellos por tiempo según la dificultad, reemplaza la doctrina — 2026-11-21 | Game Design, balance y alcance |
 | D06 | Presentación final | Pendiente | — | Arte, audio y producción |
 | D07 | Público, idiomas y dispositivos | Parcial | Dispositivos resueltos en D12: escritorio para Steam y web para la beta — 2026-11-17. Público e idiomas siguen pendientes | Público, UX y plataforma |
 | D08 | Entrega y recursos | Confirmada | Juego gratuito, corto y completo; no una demo ni un producto de pago — 2026-11-12. Plataformas en D12; fechas por definir | Producción y negocio |
@@ -74,7 +83,7 @@ indica.
 | D12 | Motor y plataformas | Confirmada | El juego pasa de Godot a Unity 6.3 LTS (solo versiones LTS, nada experimental) para salir principalmente en **Steam** con un ejecutable de escritorio. La build web de itch.io queda para pruebas y para compartir la beta de forma sencilla y controlada con GTC Playtest Lab — 2026-11-17, confirmada el 2026-11-18. Juego 0.5.0 | Visión, base técnica, producción, público y UI/UX |
 | D13 | Eventos escritos y tiempo | Confirmada | Los eventos escritos pausan el juego; llegan en 0.8.0 — 2026-11-21 | Narrativa, UI/UX y ritmo |
 | D14 | Cierre voluntario | Confirmada | El jugador puede cerrar la partida, como derrota, cuando el rito ya no cabe — 2026-11-21. `alignment-4`, juego 0.6.0 | Game Design, rituales, UI/UX y playtesting |
-| D15 | Mysticism | Confirmada | Tendrá efecto; se diseña con el árbol en 0.7.0. En 0.6.0 no cambia — 2026-11-21 | Población, regiones y Game Design |
+| D15 | Mysticism | Confirmada e implementada | Tendrá efecto; se diseña con el árbol en 0.7.0 — 2026-11-21. En `alignment-5` (juego 0.7.0) cambia la awareness y las conversiones de manifestar: `8 × (1 − (m − 50)/100)` de awareness y `(m − 50)` % más o menos de conversiones — 2026-11-21 | Población, regiones, balance y Game Design |
 | D16 | Dificultad Easy | Confirmada | Easy no tiene que ganarse en la primera partida, pero no debe abrumar — 2026-11-21 | Balance y playtesting |
 | D17 | Definición de «completo» | Confirmada | Árbol probado, gente externa jugando, balance sentido, varios caminos para ganar y varias formas de perder — 2026-11-21 | Producción, alcance y playtesting |
 
