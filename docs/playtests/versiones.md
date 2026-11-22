@@ -102,6 +102,15 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
   - Si Normal deja de sentirse fácil.
   - Pregunta: «¿el remate cambió tu plan?».
 - **Límites:** sin jugadores externos ni teléfono físico todavía; las capturas son del ejecutable de desarrollo Linux.
+- **GTC (2026-11-22 UTC):**
+  - Primero se desplegó GTC `0598d2d`, con el contrato `awakening-5`, el resumen del Lab y la migración `0012`.
+  - Después se creó la build «The Awakening 0.8.0 · alignment-6 · Unity» (`ee5509c`, adaptador `awakening-5`).
+  - La ronda se abrió en pausa. Un lote real `awakening-5` respondió `503 collection_paused`, así que el contrato pasó la validación. La build se probó en el host y la ronda se habilitó; cierra el 2026-12-06.
+  - La ronda 0.7.0 se cerró con 1 partida, la que motivó esta versión.
+- **Publicación:**
+  - Upload `20729497` en itch.io, único archivo jugable: `the-awakening-0.8.0-pilot.zip`, 9,0 MB, exportado desde un checkout limpio de `ee5509c`.
+  - Los archivos alojados son idénticos al export. La build arranca sin errores y no envía nada antes de que el jugador responda.
+  - La página pasa a «Novedad de 0.8.0 / New in 0.8.0».
 
 ### 0.7.0 — árbol de talentos, enterrar el registro y recuperar sitios
 
