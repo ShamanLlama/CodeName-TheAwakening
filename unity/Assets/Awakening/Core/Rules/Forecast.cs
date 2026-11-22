@@ -31,7 +31,8 @@ namespace Awakening.Core.Rules
         /// </summary>
         public static RiteMargin Margin(GameState state)
         {
-            var result = new RiteMargin { LatestStart = Balance.LatestRiteStart, EarliestStart = -1, Started = state.Status == "awakening" };
+            int riteMonths = GameEngine.RiteMonthsFor(state);
+            var result = new RiteMargin { LatestStart = Balance.Deadline - riteMonths, EarliestStart = -1, Started = state.Status == "awakening" };
             var best = new List<int>();
             foreach (string id in GameData.RegionIds)
             {
@@ -56,7 +57,7 @@ namespace Awakening.Core.Rules
                 result.Margin = result.LatestStart - result.EarliestStart;
             }
             if (GameEngine.IsOver(state)) result.Fits = state.Status == "won";
-            else if (result.Started) result.Fits = Balance.Deadline - state.ElapsedMonths >= Balance.FinalMonths - state.FinalProgress;
+            else if (result.Started) result.Fits = Balance.Deadline - state.ElapsedMonths >= riteMonths - state.FinalProgress;
             else
             {
                 best.Sort();
@@ -64,12 +65,48 @@ namespace Awakening.Core.Rules
             }
             return result;
         }
+        /// <summary>
+        /// The final rite as data (alignment-6). Advancing assumes nothing else happens before the month passes: cells whose
+        /// scattering ends then count again. Blockers are listed only while the rite is under way and halted: the sites that
+        /// carried it when it began, and any other prepared site, that do not count now.
+        /// </summary>
+        public static RiteStatus Rite(GameState state)
+        {
+            bool started = state.Status == "awakening" || GameEngine.IsOver(state) && state.RiteSites.Count > 0;
+            var result = new RiteStatus { Started = started, Progress = state.FinalProgress, Required = GameEngine.RiteMonthsFor(state) };
+            if (state.Status != "awakening") return result;
+            var reasons = new List<RiteBlocker>();
+            int counting = 0;
+            foreach (string id in GameData.RegionIds)
+            {
+                var r = state.Regions[id];
+                bool candidate = state.RiteSites.Contains(id) || r.Site.Invested && r.Site.Progress >= Balance.SiteMonths;
+                if (!candidate) continue;
+                string reason = BlockReason(state, r);
+                if (reason == null) counting++;
+                else reasons.Add(new RiteBlocker { Region = id, Reason = reason });
+            }
+            result.Advancing = counting >= Balance.RequiredSites && state.FinalProgress < state.RiteMonthsRequired;
+            if (!result.Advancing) result.Blockers = reasons;
+            return result;
+        }
+        /// <summary>Why this site will not count next month; null when it will.</summary>
+        static string BlockReason(GameState state, RegionState r)
+        {
+            if (!r.Site.Invested) return "destroyed";
+            if (r.Site.Dormant) return "dormant";
+            if (r.Scattered && r.ScatteredUntil > state.ElapsedMonths + 1) return "scattered";
+            if (r.Population.Followers < Derived.SiteRequirement(r)) return "unsupported";
+            if (r.Site.Progress < Balance.SiteMonths) return "unprepared";
+            return null;
+        }
         static RitualForecast Timetable(GameState state)
         {
             int ready = Derived.ReadySites(state);
+            int riteMonths = GameEngine.RiteMonthsFor(state);
             if (state.Status == "awakening")
             {
-                int remaining = Balance.FinalMonths - state.FinalProgress;
+                int remaining = state.RiteMonthsRequired - state.FinalProgress;
                 int left = Balance.Deadline - state.ElapsedMonths;
                 return new RitualForecast { Urgent = ready < Balance.RequiredSites || left <= remaining,
                     Message = F("Final rite: {0} supported months needed; {1} months remain.", remaining, left) + (ready < Balance.RequiredSites ? " Restore three supported sites now." : "") };
@@ -82,15 +119,15 @@ namespace Awakening.Core.Rules
             if (remainingPreparations.Count >= Balance.RequiredSites)
             {
                 int preparation = remainingPreparations[Balance.RequiredSites - 1];
-                int earliest = Math.Max(Balance.PreparationMonths, state.ElapsedMonths + preparation) + Balance.FinalMonths;
+                int earliest = Math.Max(Balance.PreparationMonths, state.ElapsedMonths + preparation) + riteMonths;
                 int unsupported = 0;
                 foreach (var r in sites) if (!Derived.Supported(r)) unsupported++;
                 string message;
                 if (earliest > Balance.Deadline)
-                    message = F("Preparation is too late: these sites need {0} months, then the final rite needs 12. Accelerate preparation or the window closes {1} months too soon.", preparation, earliest - Balance.Deadline);
+                    message = F("Preparation is too late: these sites need {0} months, then the final rite needs {2}. Accelerate preparation or the window closes {1} months too soon.", preparation, earliest - Balance.Deadline, riteMonths);
                 else
                     message = (state.ElapsedMonths >= Balance.PreparationMonths && ready >= 3 ? "The stars are right — begin the final rite. " : F("Funded sites need up to {0} more preparation months. ", preparation))
-                        + "The final rite needs 12 months and 100 Dread." + (unsupported != 0 ? F(" Restore follower support at {0} site(s).", unsupported) : "");
+                        + F("The final rite needs {0} months and {1} Dread.", riteMonths, Balance.FinalDread) + (unsupported != 0 ? F(" Restore follower support at {0} site(s).", unsupported) : "");
                 return new RitualForecast { Urgent = earliest > Balance.Deadline || unsupported > 0 || state.ElapsedMonths >= Balance.PreparationMonths, Message = message };
             }
             int monthsLeft = Balance.LatestSiteStart - state.ElapsedMonths;

@@ -32,7 +32,7 @@ namespace Awakening.Core.Playtest
             switch (kind)
             {
                 case "run_started": case "capture_started":
-                    return Keys(data, "difficulty", "seed", "ruleset") && In(Get(data, "difficulty"), "easy", "normal", "hard") && Get(data, "seed") is string seed && Characters(seed) >= 1 && Characters(seed) <= 64 && Equals(Get(data, "ruleset"), "alignment-5")
+                    return Keys(data, "difficulty", "seed", "ruleset") && In(Get(data, "difficulty"), "easy", "normal", "hard") && Get(data, "seed") is string seed && Characters(seed) >= 1 && Characters(seed) <= 64 && Equals(Get(data, "ruleset"), "alignment-6")
                         && Num(entry, "sequence") == 1 && Num(clock, "elapsed_ms") == 0 && (kind != "run_started" || phase == "placing" && month == 0);
                 case "session_started":
                     return Keys(data, "mode") && In(Get(data, "mode"), "new", "resume", "partial") && Num(clock, "elapsed_ms") == 0;

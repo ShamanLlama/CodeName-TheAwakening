@@ -76,7 +76,7 @@ namespace Awakening.Core.Tests
         }
 
         [Fact]
-        public void RealSessionOrdersEmitTalentsBurialsRestorationAndOfferings()
+        public void RealSessionOrdersEmitTalentsBurialsAndRestoration()
         {
             // A small manual policy uses only accepted game commands, with no resource/state grants.
             var game = Session();
@@ -89,10 +89,9 @@ namespace Awakening.Core.Tests
                 if (region.Threat != null)
                 {
                     // Let an occult threat land once so restore has a real loss to repair.
-                    if (GameEngine.HasTalent(game.State, "offerings") && region.Population.Followers > 150) act("sacrifice");
-                    else if (restored || region.Threat.Kind != "occult" || region.Site.Progress < 6) act("counter");
+                    if (restored || region.Threat.Kind != "occult" || region.Site.Progress < 6) act("counter");
                 }
-                foreach (string talent in new[] { "red_altars", "scapegoats", "offerings" })
+                foreach (string talent in new[] { "red_altars", "scapegoats", "dreams_of_rlyeh" })
                 {
                     if (GameEngine.HasTalent(game.State, talent)) continue;
                     if (GameEngine.TalentReason(game.State, talent) == "") game.TakeTalent(talent);
@@ -110,12 +109,9 @@ namespace Awakening.Core.Tests
                 game.Advance(1);
             }
             var events = Events(game);
-            Assert.Contains(events, e => Equals(e["type"], "talent_taken") && Equals(O(e, "data")["talent"], "offerings"));
+            Assert.Contains(events, e => Equals(e["type"], "talent_taken") && Equals(O(e, "data")["talent"], "dreams_of_rlyeh"));
             foreach (string action in new[] { "bury", "restore" })
                 Assert.True(events.Any(e => Equals(e["type"], "action_performed") && Equals(O(e, "data")["action"], action)), "Missing action: " + action);
-            var offerings = events.Where(e => Equals(e["type"], "threat_resolved") && Equals(O(e, "data")["response"], "offering")).ToList();
-            Assert.NotEmpty(offerings);
-            Assert.All(offerings, e => Assert.All(O(O(e, "data"), "losses").Values, v => Assert.Equal(0, Convert.ToDouble(v))));
             Assert.DoesNotContain(events, e => Equals(e["type"], "doctrine_selected"));
             Assert.Equal(game.State.Telemetry.Sacrificed, events.Where(e => Equals(e["type"], "action_performed")).Sum(e => N(O(O(e, "data"), "spent"), "followers")), 8);
             var snapshot = O(events.Last(e => Equals(e["type"], "month_snapshot")), "data");
@@ -142,7 +138,7 @@ namespace Awakening.Core.Tests
             game.SetParticipation(false);
             game.SetParticipation(true);
             var start = Assert.Single(Events(game), e => Equals(e["type"], "capture_started"));
-            Assert.Equal("alignment-5", O(start, "data")["ruleset"]);
+            Assert.Equal(Balance.Ruleset, O(start, "data")["ruleset"]);
             Export(game, "partial-alignment5");
         }
     }

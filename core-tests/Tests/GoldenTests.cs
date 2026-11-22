@@ -55,9 +55,11 @@ namespace Awakening.Core.Tests
         // value, command result and every preview other than those of the changed actions. The divergences:
         // concealing while its world effect rests (alignment-4), manifesting (Mysticism), choosing a doctrine (now a
         // talent), an occult threat against a site on Easy (4 months, not 6) and the site hunt from month 200 (0.3, not 0.15).
+        // alignment-6 adds three more: threat pressure from month 100 (+0.05), the site hunt (0.6) and Easy's threat
+        // pressure (1.0, not 0.75), which can change any threat roll on Easy from the first one (month 4).
         [Theory]
         [MemberData(nameof(GodotTraces))]
-        public void GodotTracesStillMatchUntilAlignment5Diverges(string file)
+        public void GodotTracesStillMatchUntilAlignment6Diverges(string file)
         {
             var trace = GoldenTraces.LoadTrace(Path.Combine(GodotGoldenDirectory, file));
             var state = GameEngine.CreateGameState((string)trace["difficulty"], (string)trace["seed"]);
@@ -68,7 +70,9 @@ namespace Awakening.Core.Tests
                 var commands = ((List<object>)step["commands"]).Cast<Dictionary<string, object>>().ToList();
                 double months = Convert.ToDouble(step["months"], CultureInfo.InvariantCulture);
                 bool diverges = commands.Any(c => (string)c["op"] == "doctrine" || (string)c["op"] == "action" && (string)c["id"] == "manifest")
-                    || state.ElapsedMonths + months >= Balance.PreparationMonths && state.Regions.Values.Any(r => r.Site.Invested);
+                    || state.ElapsedMonths + months >= Balance.PreparationMonths && state.Regions.Values.Any(r => r.Site.Invested)
+                    || state.ElapsedMonths + months >= Balance.MidgamePressureMonth
+                    || state.Difficulty == "easy" && state.Status != "placing" && state.ElapsedMonths + months >= Balance.ThreatRollMonths;
                 foreach (var command in commands)
                 {
                     if (diverges || (string)command["op"] == "action" && (string)command["id"] == "conceal" && GameEngine.ConcealWorldCooldown(state) > 0 && state.Awareness > 0)
@@ -106,6 +110,7 @@ namespace Awakening.Core.Tests
             plain.Remove("resultCode");
             plain.Remove("talents");
             plain.Remove("buryUses");
+            foreach (string key in new[] { "talentYield", "capstonesUsed", "riteMonthsRequired", "riteSites" }) plain.Remove(key);
             plain["specialization"] = null;
             foreach (Dictionary<string, object> region in ((Dictionary<string, object>)plain["regions"]).Values)
                 ((Dictionary<string, object>)region["site"]).Remove("recoverable");

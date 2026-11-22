@@ -34,6 +34,7 @@ namespace Awakening.Core.Dev
                 var influence = new List<double>(); var awareness = new List<double>(); var dread = new List<double>(); var landed = new List<double>();
                 var used = Responses.ToDictionary(r => r, r => new List<double>());
                 var talents = new List<double>(); var buried = new List<double>(); var restored = new List<double>();
+                int processions = 0, forgotten = 0, dreamt = 0, dreamMonths = 0, forgottenWins = 0, processionWins = 0, dreamWins = 0;
                 for (int i = 0; i < seeds; i++)
                 {
                     int previous = 0;
@@ -50,6 +51,11 @@ namespace Awakening.Core.Dev
                     else lostDeadline++;
                     influence.Add(final.Influence); awareness.Add(final.Awareness); dread.Add(final.Dread); landed.Add(final.Telemetry.RaidLosses);
                     talents.Add(final.Talents.Count); buried.Add(final.BuryUses);
+                    bool won = final.Status == "won";
+                    if (final.RiteMonthsRequired < Balance.FinalMonths) { processions++; if (won) processionWins++; }
+                    if (final.CapstonesUsed.Contains("world_forgets")) { forgotten++; if (won) forgottenWins++; }
+                    int dreams = (int)GameEngine.TalentYieldOf(final, "dreams_of_rlyeh");
+                    if (dreams > 0) { dreamt++; dreamMonths += dreams; if (won) dreamWins++; }
                     restored.Add(final.Telemetry.Actions.TryGetValue("restore", out int restores) ? restores : 0);
                     foreach (string response in Responses) used[response].Add(final.Telemetry.Actions.TryGetValue(response, out int count) ? count : 0);
                 }
@@ -64,6 +70,9 @@ namespace Awakening.Core.Dev
                 output.WriteLine(string.Format(CultureInfo.InvariantCulture,
                     "{0,-6} talents {1} · bury {2} (runs with any {3}) · restore {4} (runs with any {5})",
                     "", Print(Median(talents), 1), Print(Median(buried), 1), buried.Count(b => b > 0), Print(Median(restored), 1), restored.Count(r => r > 0)));
+                output.WriteLine(string.Format(CultureInfo.InvariantCulture,
+                    "{0,-6} capstones: procession {1} (won {2}) · world forgets {3} (won {4}) · dreams {5} runs, {6} rite months (won {7})",
+                    "", processions, processionWins, forgotten, forgottenWins, dreamt, dreamMonths, dreamWins));
             }
             output.WriteLine(string.Format(CultureInfo.InvariantCulture, "total wins {0}/{1}", totalWins, seeds * Strategies.Length));
         }

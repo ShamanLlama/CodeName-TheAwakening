@@ -224,6 +224,27 @@ namespace Awakening.Core.Session
             });
         }
 
+        /// <summary>
+        /// Invoke a capstone that acts once (alignment-6: The world forgets). Saves and reports the log line like TakeTalent;
+        /// no playtest event yet (awakening-5 adds capstone_invoked).
+        /// </summary>
+        public void InvokeCapstone(string talentId)
+        {
+            LabTouch();
+            if (State == null) return;
+            CommandResult result = GameEngine.InvokeCapstone(State, talentId);
+            if (!result.Ok)
+            {
+                Events?.Invoke(new List<GameEvent> { new GameEvent { Id = -1, Month = State.ElapsedMonths, Message = result.Message, Refused = true } });
+                return;
+            }
+            State = result.State;
+            LabSync();
+            Commit();
+            LogEntry last = State.Log[State.Log.Count - 1];
+            Events?.Invoke(new List<GameEvent> { new GameEvent { Id = last.Id, Month = last.Month, Message = last.Message } });
+        }
+
         public void Awaken()
         {
             LabTouch();

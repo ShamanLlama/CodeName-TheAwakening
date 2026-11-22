@@ -58,12 +58,14 @@ namespace Awakening.Core.Rules
                     {
                         double before = state.Dread;
                         GameEngine.GrantDread(state, Js.RoundHalfUp(loss * Balance.MartyrDreadPerFollower));
+                        GameEngine.AddYield(state, "martyrs", state.Dread - before);
                         if (state.Dread > before) detail += " The martyrs feed the dark: +" + Js.Fixed(state.Dread - before, 0) + " Dread.";
                     }
                     if (GameEngine.HasTalent(state, "scapegoats") && state.Awareness > 0)
                     {
                         double before = state.Awareness;
                         state.Awareness = Derived.ClampPct(state.Awareness - Balance.ScapegoatSeverityAwareness * threat.Severity);
+                        GameEngine.AddYield(state, "scapegoats", before - state.Awareness);
                         detail += " Scapegoats take the blame: −" + Js.Fixed(before - state.Awareness, 0) + " world awareness.";
                     }
                     Derived.AddLog(state, regionName + " loses " + Js.Fixed(loss, 0) + " followers to " + threat.Kind + "; income −" + Js.Fixed(c.IncomeLost, 2) + "/month." + detail);
@@ -71,21 +73,27 @@ namespace Awakening.Core.Rules
             }
         }
         public static bool SiteHunt(GameState state) => state.ElapsedMonths >= Balance.PreparationMonths;
+        /// <summary>Chance that this region's cell draws a threat at the next roll (every Balance.ThreatRollMonths months).</summary>
+        public static double ThreatPressure(GameState state, string id)
+        {
+            var r = state.Regions[id];
+            bool hunt = SiteHunt(state);
+            double believers = r.Population.Believers / Math.Max(1.0, Derived.LivePopulation(r));
+            return (0.02 + r.Exposure / 500.0 + (r.Public ? 0.1 : 0.0) + (r.Site.Invested ? 0.12 : 0.0) + (hunt && r.Site.Invested ? Balance.FinaleSitePressure : 0.0)
+                + state.Awareness / 1500.0 + believers * 0.15 + r.Madness / 2000.0 + (state.ElapsedMonths >= Balance.MidgamePressureMonth ? Balance.MidgamePressure : 0.0))
+                * GameData.Difficulties[state.Difficulty].Pressure * (0.6 + GameData.Regions[id].InstitutionalResistance / 150.0);
+        }
         public static void Tick(GameState state)
         {
             if (state.ElapsedMonths == Balance.PreparationMonths - Balance.FinaleWarningMonths)
                 Derived.AddLog(state, F("The world senses the coming alignment. In {0} months threats against ritual sites will intensify; keep Influence in reserve.", Balance.FinaleWarningMonths));
-            bool hunt = SiteHunt(state);
             if (state.ElapsedMonths % Balance.ThreatRollMonths == 0)
             {
                 foreach (string id in GameData.RegionIds)
                 {
                     var r = state.Regions[id];
                     if (r.Population.Followers <= 0 || r.Threat != null || r.Scattered) continue;
-                    double believers = r.Population.Believers / Math.Max(1.0, Derived.LivePopulation(r));
-                    double pressure = (0.02 + r.Exposure / 500.0 + (r.Public ? 0.1 : 0.0) + (r.Site.Invested ? 0.12 : 0.0) + (hunt && r.Site.Invested ? Balance.FinaleSitePressure : 0.0)
-                        + state.Awareness / 1500.0 + believers * 0.15 + r.Madness / 2000.0)
-                        * GameData.Difficulties[state.Difficulty].Pressure * (0.6 + GameData.Regions[id].InstitutionalResistance / 150.0);
+                    double pressure = ThreatPressure(state, id);
                     if (Random(state) < pressure) ScheduleThreat(state, id);
                 }
             }

@@ -34,7 +34,7 @@ namespace Awakening.Core.Save
     public static class SaveData
     {
         public const int SaveVersion = 2;
-        public static readonly string[] RetiredRulesets = { "alignment-1", "alignment-2", "alignment-3", "alignment-4" };
+        public static readonly string[] RetiredRulesets = { "alignment-1", "alignment-2", "alignment-3", "alignment-4", "alignment-5" };
         public static readonly string[] ResultCodes = { "awakened", "world_awareness", "deadline", "conceded" };
         public const string RetiredNotice = "Your unfinished run used older rules (%s) and cannot continue under %s. Settings and playtest records are kept; start a new run.";
         public static SaveEnvelope DefaultSave() => new SaveEnvelope();
@@ -87,7 +87,12 @@ namespace Awakening.Core.Save
                 || !Integer(Get(v, "speed"), 2) || !Number(Get(v, "influence"), Balance.InfluenceCap)
                 || !Number(Get(v, "dread"), Balance.DreadCap) || !Number(Get(v, "awareness"), 100)
                 || !TalentsValid(Get(v, "talents"), Get(v, "difficulty") as string) || !Integer(Get(v, "buryUses"), 1000)
-                || !Integer(Get(v, "finalProgress"), Balance.FinalMonths) || !Integer(Get(v, "nextLogId"))
+                || !(Get(v, "riteMonthsRequired") is object riteMonths) || !Integer(riteMonths, Balance.FinalMonths)
+                || N(riteMonths) != Balance.FinalMonths && N(riteMonths) != Balance.ProcessionRiteMonths
+                || !Integer(Get(v, "finalProgress"), N(riteMonths)) || !Integer(Get(v, "nextLogId"))
+                || !YieldsValid(Get(v, "talentYield"), Get(v, "talents")) || !CapstonesValid(Get(v, "capstonesUsed"), Get(v, "talents"))
+                || !(Get(v, "riteSites") is List<object> riteSites) || riteSites.Count > GameData.RegionIds.Length
+                || riteSites.Any(id => !OneOf(id, GameData.RegionIds)) || riteSites.Distinct().Count() != riteSites.Count
                 || Get(v, "resultReason") != null && !(v["resultReason"] is string) || Record(Get(v, "regions")) == null
                 || Get(v, "worldConcealReadyAt") != null && !Integer(v["worldConcealReadyAt"], Balance.Deadline + GameData.Difficulties.Values.Max(d => d.ConcealWorldMonths))
                 || Get(v, "resultCode") != null && !OneOf(v["resultCode"], ResultCodes)) return false;
@@ -98,7 +103,9 @@ namespace Awakening.Core.Save
             bool conceded = Equals(code, "conceded");
             if (status == "placing" && month != 0 || status == "playing" && month >= Balance.PreparationMonths
                 || new[] { "alignment", "awakening", "won" }.Contains(status) && month < Balance.PreparationMonths
-                || status == "won" && N(v["finalProgress"]) != Balance.FinalMonths
+                || status == "won" && N(v["finalProgress"]) != N(v["riteMonthsRequired"])
+                || (status == "awakening" || status == "won") && ((List<object>)v["riteSites"]).Count < Balance.RequiredSites
+                || (status == "placing" || status == "playing" || status == "alignment") && (((List<object>)v["riteSites"]).Count != 0 || N(v["riteMonthsRequired"]) != Balance.FinalMonths)
                 || status == "lost" && month != Balance.Deadline && N(v["awareness"]) < 100 && !conceded
                 || new[] { "won", "lost" }.Contains(status) && N(v["speed"]) != 0) return false;
             foreach (string id in GameData.RegionIds)
@@ -169,6 +176,18 @@ namespace Awakening.Core.Save
                 taken.Add(id);
             }
             return true;
+        }
+        /// <summary>Yields only for taken talents, each a finite amount of at least zero.</summary>
+        static bool YieldsValid(object value, object talents)
+        {
+            if (!(value is Dictionary<string, object> yields) || !(talents is List<object> taken)) return false;
+            return yields.All(e => taken.Contains(e.Key) && Number(e.Value, 1e9));
+        }
+        /// <summary>Distinct invokable capstones the run has taken.</summary>
+        static bool CapstonesValid(object value, object talents)
+        {
+            if (!(value is List<object> used) || !(talents is List<object> taken) || used.Distinct().Count() != used.Count) return false;
+            return used.All(id => id is string s && GameEngine.IsInvokable(s) && taken.Contains(s));
         }
         public static SaveEnvelope DecodeSave(string raw)
         {

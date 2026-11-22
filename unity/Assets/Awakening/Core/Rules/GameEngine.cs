@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 
@@ -26,7 +27,8 @@ namespace Awakening.Core.Rules
                 Version = 2, Ruleset = Balance.Ruleset, Status = "placing", Difficulty = difficulty, Seed = seed,
                 RngState = Rng.SeedToState(seed), ElapsedMonths = 0, Speed = 1,
                 Influence = Balance.StartingInfluence, Dread = Balance.StartingDread, Awareness = 0.0,
-                Talents = new System.Collections.Generic.List<string>(), BuryUses = 0, FinalProgress = 0, Regions = regions, NextLogId = 1, ResultReason = null
+                Talents = new List<string>(), BuryUses = 0, TalentYield = new Dictionary<string, double>(), CapstonesUsed = new List<string>(),
+                RiteMonthsRequired = Balance.FinalMonths, RiteSites = new List<string>(), FinalProgress = 0, Regions = regions, NextLogId = 1, ResultReason = null
             };
         }
         public static CommandResult PlaceStartingFoothold(GameState state, string id)
@@ -39,9 +41,10 @@ namespace Awakening.Core.Rules
             Derived.AddLog(next, "A hidden congregation gathers in " + GameData.Regions[id].Name + F(". The alignment is {0} months away.", Balance.PreparationMonths));
             return Success(next);
         }
+        static int BaseCounterCost(RegionState r) => Balance.CounterSeverityCost * (r.Threat != null ? r.Threat.Severity : 1);
         public static int CounterCost(GameState state, RegionState r)
         {
-            int cost = Balance.CounterSeverityCost * (r.Threat != null ? r.Threat.Severity : 1);
+            int cost = BaseCounterCost(r);
             return HasTalent(state, "quiet_friends") ? (int)Js.RoundHalfUp(cost * 2 / 3.0) : cost;
         }
         public static int SilenceCost(GameState state, RegionState r)
@@ -61,12 +64,10 @@ namespace Awakening.Core.Rules
                 case "prepare": return Balance.SiteAwareness;
                 case "reveal_figure": return Balance.FigureAwareness;
                 case "silence": return (HasTalent(state, "mute_witnesses") ? Balance.MuteWitnessesSeverityAwareness : Balance.SilenceSeverityAwareness) * (r.Threat != null ? r.Threat.Severity : 1);
-                case "sacrifice": return Offers(state, r) ? Balance.OfferingAwareness : 0.0;
+                case "sacrifice": return DreamAdvances(state, regionId) ? Balance.DreamsAwareness : 0.0;
                 default: return 0.0;
             }
         }
-        /// <summary>With Offerings to the deep, a sacrifice in a threatened region also ends its threat.</summary>
-        static bool Offers(GameState state, RegionState r) => r.Threat != null && HasTalent(state, "offerings");
         /// <summary>Months a scattered flock stays hidden (Sleeper cells shortens it).</summary>
         public static int ScatterMonths(GameState state) => HasTalent(state, "sleeper_cells") ? Balance.SleeperScatterMonths : Balance.ScatterMonths;
         /// <summary>Months concealment's world effect rests after use, by difficulty.</summary>
@@ -122,19 +123,120 @@ namespace Awakening.Core.Rules
             next.Influence -= cost;
             next.Telemetry.InfluenceSpent += cost;
             next.Talents.Add(id);
+            next.TalentYield[id] = 0.0;
             Derived.AddLog(next, "The cult takes up " + t.Name + " (" + GameData.Branches[t.Branch].Name + "). "
                 + (t.Excludes != null ? TalentName(t.Excludes) + " is closed for this run." : "No talent is undone."));
             return Success(next);
         }
 
-        // ---- Bury the record and Restore the site (alignment-5) ----
-        public static int BuryStep(GameState s)
+        // ---- What each talent gave (alignment-6) ----
+        /// <summary>Adds to a taken talent's yield; nothing happens for a talent the cult does not hold.</summary>
+        internal static void AddYield(GameState s, string id, double amount)
         {
-            int step = GameData.Difficulties[s.Difficulty].BuryStep;
-            return HasTalent(s, "bought_press") ? (int)Js.RoundHalfUp(step / 2.0) : step;
+            if (!HasTalent(s, id) || !(amount > 0)) return;
+            s.TalentYield[id] = (s.TalentYield.TryGetValue(id, out double value) ? value : 0.0) + amount;
         }
+        public static double TalentYieldOf(GameState s, string id) => s.TalentYield != null && s.TalentYield.TryGetValue(id, out double value) ? value : 0.0;
+        /// <summary>One English line: what the talent has given this run. "" when the talent was not taken.</summary>
+        public static string TalentYieldText(GameState s, string id)
+        {
+            if (s == null || id == null || !HasTalent(s, id)) return "";
+            string n = Js.Fixed(TalentYieldOf(s, id), 0);
+            switch (id)
+            {
+                case "swelling_flock": return "+" + n + " followers so far";
+                case "open_worship": return n + " world awareness spared so far";
+                case "martyrs": return n + " Dread so far";
+                case "quiet_friends": return n + " Influence saved so far";
+                case "sleeper_cells": return n + " months of hiding saved so far";
+                case "contingency": return n + " more preparation months restored so far";
+                case "red_altars": return n + " Dread gained or saved so far";
+                case "mute_witnesses": return n + " world awareness spared so far";
+                case "scapegoats": return n + " world awareness lifted so far";
+                case "great_procession":
+                    if (s.Status == "awakening" || IsOver(s) && s.RiteSites.Count > 0)
+                        return s.RiteMonthsRequired < Balance.FinalMonths
+                            ? F("The rite needs {0} months, not {1}", s.RiteMonthsRequired, Balance.FinalMonths)
+                            : F("Too few walked: the rite needs {0} months", s.RiteMonthsRequired);
+                    return F("{0} of {1} regions worship in public; the rite would need {2} months", ProcessionRegions(s), Balance.ProcessionPublicRegions, RiteMonthsFor(s));
+                case "world_forgets": return s.CapstonesUsed.Contains(id) ? "Invoked: −" + n + " world awareness" : "Not yet invoked";
+                case "dreams_of_rlyeh": return n + " rite months dreamed forward so far";
+                default: return "";
+            }
+        }
+
+        // ---- Capstones (alignment-6) ----
+        /// <summary>Capstones that act once, when invoked from the tree or the ledger, rather than on their own.</summary>
+        public static bool IsInvokable(string talentId) => talentId != null && GameData.InvokableTalentIds.Contains(talentId);
+        /// <summary>"" when the capstone can be invoked now; otherwise why not.</summary>
+        public static string InvokeReason(GameState s, string talentId)
+        {
+            if (!IsInvokable(talentId)) return "This talent is not invoked; it works on its own.";
+            if (s == null || !IsActive(s)) return "Start a run before invoking; completed runs cannot change.";
+            if (!HasTalent(s, talentId)) return "Take " + TalentName(talentId) + " first.";
+            if (s.CapstonesUsed.Contains(talentId)) return "Already invoked this run.";
+            if (s.Awareness <= 0 && GameData.RegionIds.All(id => s.Regions[id].Threat == null)) return "The world has nothing to forget yet.";
+            return "";
+        }
+        /// <summary>The price of invoking, in one line for the confirmation.</summary>
+        public static string InvokeRisk(GameState s, string talentId)
+        {
+            if (talentId != "world_forgets") return "";
+            string risk = F("Every cell goes to ground for {0} months: no recruits, no income, no site progress. Public worship ends.", Balance.WorldForgetsScatterMonths);
+            if (s != null && s.Status == "awakening") risk += F(" The final rite halts for {0} months.", Balance.WorldForgetsScatterMonths);
+            return risk;
+        }
+        public static CommandResult InvokeCapstone(GameState s, string talentId)
+        {
+            string reason = InvokeReason(s, talentId);
+            if (reason.Length != 0) return Fail(s, reason);
+            var next = s.Clone();
+            next.CapstonesUsed.Add(talentId);
+            double before = next.Awareness;
+            next.Awareness = Derived.ClampPct(next.Awareness - Balance.WorldForgetsAwareness);
+            AddYield(next, talentId, before - next.Awareness);
+            int cancelled = 0;
+            foreach (string id in GameData.RegionIds)
+            {
+                var r = next.Regions[id];
+                if (r.Threat != null) { r.Threat = null; cancelled++; }
+                if (r.Population.Followers <= 0) continue;
+                r.Public = false; r.Scattered = true;
+                r.ScatteredUntil = Math.Max(r.ScatteredUntil, next.ElapsedMonths + Balance.WorldForgetsScatterMonths);
+            }
+            Derived.AddLog(next, F("The world forgets: −{0} world awareness, {1} threat(s) dissolve. Every cell goes to ground for {2} months.",
+                Js.Fixed(before - next.Awareness, 0), cancelled, Balance.WorldForgetsScatterMonths));
+            return Success(next);
+        }
+
+        // ---- The final rite (alignment-6) ----
+        /// <summary>Regions with a cell that worships in public now.</summary>
+        public static int ProcessionRegions(GameState s) => GameData.RegionIds.Count(id => s.Regions[id].Public && s.Regions[id].Population.Followers > 0);
+        /// <summary>Months the final rite needs: fixed once begun; before that, what it would need if begun now.</summary>
+        public static int RiteMonthsFor(GameState s)
+        {
+            if (s.Status == "awakening" || IsOver(s) && s.RiteSites.Count > 0) return s.RiteMonthsRequired;
+            return HasTalent(s, "great_procession") && ProcessionRegions(s) >= Balance.ProcessionPublicRegions ? Balance.ProcessionRiteMonths : Balance.FinalMonths;
+        }
+        /// <summary>The final rite is under way as The Great Procession.</summary>
+        public static bool InProcession(GameState s) => s.Status == "awakening" && s.RiteMonthsRequired < Balance.FinalMonths;
+        static bool SiteReady(RegionState r) => r.Site.Invested && !r.Site.Dormant && r.Site.Progress >= Balance.SiteMonths && Derived.Supported(r);
+        /// <summary>During the rite, whether this region's site is one the rite cannot spare: without it fewer than three sites stand.</summary>
+        static bool CarriesRite(GameState s, string regionId) => s.Status == "awakening" && SiteReady(s.Regions[regionId]) && Derived.ReadySites(s) - 1 < Balance.RequiredSites;
+        /// <summary>With Dreams of R'lyeh, whether a sacrifice here now carries the rite a month forward: three supported sites must still stand after it.</summary>
+        public static bool DreamAdvances(GameState s, string regionId)
+        {
+            if (s.Status != "awakening" || !HasTalent(s, "dreams_of_rlyeh") || s.FinalProgress >= s.RiteMonthsRequired) return false;
+            var r = s.Regions[regionId];
+            int ready = Derived.ReadySites(s);
+            if (SiteReady(r) && r.Population.Followers - Balance.SacrificeFollowers < Derived.SiteRequirement(r)) ready--;
+            return ready >= Balance.RequiredSites;
+        }
+
+        // ---- Bury the record and Restore the site (alignment-5) ----
+        public static int BuryStep(GameState s) => GameData.Difficulties[s.Difficulty].BuryStep;
         public static int BuryCost(GameState s) => Balance.BuryBaseCost + BuryStep(s) * s.BuryUses;
-        public static int BuryAwareness(GameState s) => HasTalent(s, "bought_press") ? Balance.BoughtPressAwareness : Balance.BuryAwareness;
+        public static int BuryAwareness(GameState s) => Balance.BuryAwareness;
         /// <summary>Preparation months Restore the site would return in this region now.</summary>
         public static int RestoreMonths(GameState s, string regionId)
         {
@@ -188,6 +290,7 @@ namespace Awakening.Core.Rules
             if (reason.Length == 0 && id == "expand" && Derived.TotalFollowers(state) > 0 && !HasAdjacentCell(state, regionId)) reason = "Requires a cult in an adjacent region.";
             if (reason.Length == 0 && id == "reveal" && r.Public) reason = "Worship is already public.";
             if (reason.Length == 0 && id == "hide" && !r.Public) reason = "This cult is already underground.";
+            if (reason.Length == 0 && id == "hide" && InProcession(state)) reason = "The Great Procession does not turn back underground.";
             if (reason.Length == 0 && id == "conceal" && r.Exposure <= EvidenceFloor(r) && !ConcealsWorld(state))
                 reason = state.Awareness <= 0 ? "Nothing to conceal. Public rites remain visible."
                     : F("Nothing to conceal here. The world effect returns in {0} months.", ConcealWorldCooldown(state));
@@ -210,10 +313,15 @@ namespace Awakening.Core.Rules
             {
                 case "sacrifice":
                     int gain = SacrificeDread(state);
+                    bool dream = DreamAdvances(state, regionId);
                     effect = "+" + Js.Fixed(Math.Min(gain, Balance.DreadCap - state.Dread), 0) + " Dread. " + Js.Fixed(Math.Max(0.0, p.Followers - costFollowers), 0)
                         + " followers remain; income falls by " + Js.Fixed(costFollowers * Balance.InfluencePerFollower, 2) + "/month."
-                        + (Offers(state, r) ? " The hunters take the offering and the threat here ends." : "");
-                    risk = (Offers(state, r) ? "+" + Js.Num(costAwareness) + " world awareness, " : "") + "+12 Exposure. Fewer than " + Js.Num(Derived.SiteRequirement(r)) + " followers interrupts this site's ritual.";
+                        + (dream ? F(" The dream carries the final rite one month forward ({0}/{1}).", state.FinalProgress + 1, state.RiteMonthsRequired) : "");
+                    risk = (dream ? "+" + Js.Num(costAwareness) + " world awareness, " : "") + "+12 Exposure. Fewer than " + Js.Num(Derived.SiteRequirement(r)) + " followers interrupts this site's ritual.";
+                    if (CarriesRite(state, regionId) && p.Followers - costFollowers < Derived.SiteRequirement(r))
+                        risk += " The final rite halts until this site again holds " + Js.Num(Derived.SiteRequirement(r)) + " followers.";
+                    else if (state.Status == "awakening" && HasTalent(state, "dreams_of_rlyeh") && !dream && state.FinalProgress < state.RiteMonthsRequired)
+                        risk += " The dream does not carry: three supported sites must stand after the knife.";
                     break;
                 case "reveal":
                     risk = "+18 Exposure" + (r.Revealed ? "" : ", +" + Js.Num(costAwareness) + " world awareness") + "; recruitment backlash for 6 months, then full public growth.";
@@ -221,7 +329,8 @@ namespace Awakening.Core.Rules
                 case "scatter":
                     effect = "The threat finds nobody. −" + Js.Fixed(Math.Min(Balance.ScatterExposure, Math.Max(0.0, r.Exposure - (r.Site.Invested ? 40.0 : 0.0))), 0) + " Exposure.";
                     risk = F("For {0} months this cell recruits nobody and earns nothing (−{1} Influence/month).", ScatterMonths(state), Js.Fixed(Derived.RegionIncome(r), 2))
-                        + (r.Site.Invested ? " Its ritual site stalls and cannot carry the final rite." : "") + (r.Public ? " Public worship ends." : "");
+                        + (r.Site.Invested ? " Its ritual site stalls and cannot carry the final rite." : "") + (r.Public ? " Public worship ends." : "")
+                        + (CarriesRite(state, regionId) ? F(" The final rite halts while this site hides: {0} months.", ScatterMonths(state)) : "");
                     break;
                 case "silence":
                     effect = "The threat ends tonight.";
@@ -287,13 +396,20 @@ namespace Awakening.Core.Rules
                     r.Exposure = Derived.ClampPct(r.Exposure + 3);
                     break;
                 case "sacrifice":
-                    bool offering = Offers(next, r);
+                    bool dream = DreamAdvances(state, regionId);
                     t.Sacrificed += Derived.LoseFollowers(r, preview.Followers);
+                    double dreadBefore = next.Dread;
                     GrantDread(next, SacrificeDread(next));
+                    AddYield(next, "red_altars", next.Dread - dreadBefore - Math.Min(Balance.SacrificeDread, Balance.DreadCap - dreadBefore));
                     r.Exposure = Derived.ClampPct(r.Exposure + 12);
-                    if (offering) r.Threat = null;
+                    if (dream)
+                    {
+                        next.FinalProgress = Math.Min(next.RiteMonthsRequired, next.FinalProgress + 1);
+                        AddYield(next, "dreams_of_rlyeh", 1);
+                    }
                     break;
                 case "reveal":
+                    if (!r.Revealed && HasTalent(next, "open_worship")) AddYield(next, "open_worship", Balance.RevealAwareness);
                     r.Public = true; r.Revealed = true;
                     r.Exposure = Derived.ClampPct(r.Exposure + 18);
                     r.BacklashUntil = Math.Max(r.BacklashUntil, next.ElapsedMonths + 6);
@@ -309,6 +425,7 @@ namespace Awakening.Core.Rules
                     }
                     break;
                 case "manifest":
+                    AddYield(next, "red_altars", GameData.Actions["manifest"].Dread - preview.Dread);
                     var p = r.Population;
                     double denied = Math.Min(p.Deniers, Derived.ManifestDeniers(regionId));
                     double unaware = Math.Min(p.Unaware, Derived.ManifestUnaware(regionId));
@@ -321,13 +438,22 @@ namespace Awakening.Core.Rules
                     r.Exposure = Math.Max(40.0, r.Exposure);
                     Director.ScheduleThreat(next, regionId, true);
                     break;
-                case "counter": r.Threat = null; t.ThreatsCountered++; break;
+                case "counter":
+                    AddYield(next, "quiet_friends", BaseCounterCost(state.Regions[regionId]) - preview.Influence);
+                    r.Threat = null; t.ThreatsCountered++;
+                    break;
                 case "scatter":
+                    AddYield(next, "sleeper_cells", Balance.ScatterMonths - ScatterMonths(next));
                     r.Threat = null; r.Public = false; r.Scattered = true;
                     r.ScatteredUntil = next.ElapsedMonths + ScatterMonths(next);
                     r.Exposure = Math.Max(EvidenceFloor(r), r.Exposure - Balance.ScatterExposure);
                     break;
-                case "silence": r.Threat = null; r.Exposure = Derived.ClampPct(r.Exposure + Balance.SilenceExposure); break;
+                case "silence":
+                    int severity = r.Threat.Severity;
+                    AddYield(next, "red_altars", Balance.SilenceSeverityDread * severity - preview.Dread);
+                    AddYield(next, "mute_witnesses", Balance.SilenceSeverityAwareness * severity - preview.Awareness);
+                    r.Threat = null; r.Exposure = Derived.ClampPct(r.Exposure + Balance.SilenceExposure);
+                    break;
                 case "exploit":
                     if (r.Opportunity.Kind == "nightmare") GrantDread(next, 30);
                     else r.Site.Progress = Math.Min(Balance.SiteMonths, r.Site.Progress + 8);
@@ -344,7 +470,9 @@ namespace Awakening.Core.Rules
                     r.Exposure = Derived.ClampPct(r.Exposure + Balance.BuryExposure);
                     break;
                 case "restore":
-                    r.Site.Progress = Math.Min(Balance.SiteMonths, r.Site.Progress + RestoreMonths(state, regionId));
+                    int restored = RestoreMonths(state, regionId);
+                    AddYield(next, "contingency", restored - Math.Min(restored, (r.Site.Recoverable + 1) / 2));
+                    r.Site.Progress = Math.Min(Balance.SiteMonths, r.Site.Progress + restored);
                     r.Site.Recoverable = 0;
                     if (!HasTalent(state, "contingency")) r.Exposure = Derived.ClampPct(r.Exposure + Balance.RestoreExposure);
                     break;
@@ -402,7 +530,8 @@ namespace Awakening.Core.Rules
             if (state.Status != "alignment") return state.Status == "playing" ? F("The stars align in {0} months.", Balance.PreparationMonths - state.ElapsedMonths) : "The final rite is not available now.";
             if (Derived.ReadySites(state) < Balance.RequiredSites) return F("Need {0} prepared sites, each supported by a quarter of its region.", Balance.RequiredSites);
             if (state.Dread < Balance.FinalDread) return "Reserve 100 Dread for the final rite.";
-            if (Balance.Deadline - state.ElapsedMonths < Balance.FinalMonths) return "Fewer than 12 months remain. The final rite can no longer finish in time.";
+            int months = RiteMonthsFor(state);
+            if (Balance.Deadline - state.ElapsedMonths < months) return F("Fewer than {0} months remain. The final rite can no longer finish in time.", months);
             return "";
         }
         public static CommandResult StartAwakening(GameState state)
@@ -412,8 +541,14 @@ namespace Awakening.Core.Rules
             var next = state.Clone();
             next.Dread -= Balance.FinalDread;
             next.Telemetry.DreadSpent += Balance.FinalDread;
+            int required = RiteMonthsFor(state);
             next.Status = "awakening";
-            Derived.AddLog(next, "The final rite begins. Maintain three supported sites for 12 months.");
+            next.RiteMonthsRequired = required;
+            next.RiteSites = GameData.RegionIds.Where(id => SiteReady(next.Regions[id])).ToList();
+            AddYield(next, "great_procession", Balance.FinalMonths - required);
+            Derived.AddLog(next, required < Balance.FinalMonths
+                ? F("The Great Procession begins: {0} regions walk in the open. Maintain three supported sites for {1} months.", ProcessionRegions(next), required)
+                : F("The final rite begins. Maintain three supported sites for {0} months.", required));
             return Success(next);
         }
         public const string ConcededReason = "The cult lets the stars pass unanswered. Its cells scatter into rumor, and in R'lyeh the dreamer sleeps on.";
@@ -445,11 +580,15 @@ namespace Awakening.Core.Rules
                 foreach (string id in GameData.RegionIds)
                 {
                     var r = next.Regions[id];
-                    Derived.Recruit(r, Derived.RecruitmentPerMonth(next, r));
+                    double recruitable = Derived.Recruitable(r);
+                    double withoutFlock = HasTalent(next, "swelling_flock") ? Math.Min(recruitable, Derived.RecruitmentPerMonth(next, r, "swelling_flock")) : 0.0;
+                    double recruited = Derived.Recruit(r, Derived.RecruitmentPerMonth(next, r));
+                    AddYield(next, "swelling_flock", recruited - withoutFlock);
                     if (r.Population.Followers > 0)
                     {
                         r.Exposure = Derived.ClampPct(Math.Max(EvidenceFloor(r), r.Exposure + (r.Public ? 0.6 : -0.36)));
                         if (r.Public && !HasTalent(next, "open_worship") || r.Site.Invested) next.Awareness = Derived.ClampPct(next.Awareness + 0.075);
+                        else if (r.Public) AddYield(next, "open_worship", 0.075);
                     }
                     r.Madness = Math.Max(0.0, r.Madness - 0.3);
                     if (r.Site.Invested && !r.Site.Dormant && Derived.Supported(r) && r.Site.Progress < Balance.SiteMonths)
@@ -458,10 +597,13 @@ namespace Awakening.Core.Rules
                         if (r.Site.Progress == Balance.SiteMonths) Derived.AddLog(next, "The ritual site in " + GameData.Regions[id].Name + " is prepared.");
                     }
                 }
-                next.Awareness = Derived.ClampPct(next.Awareness + Derived.CultShare(next) * Balance.AwarenessPerCapita
-                    * (HasTalent(next, "faith_among_faiths") ? Balance.FaithAmongFaithsShare : 1.0));
-                if (next.Status == "awakening" && Derived.ReadySites(next) >= Balance.RequiredSites) next.FinalProgress++;
-                if (next.FinalProgress >= Balance.FinalMonths)
+                double sizeAwareness = Derived.CultShare(next) * Balance.AwarenessPerCapita;
+                double faithShare = Derived.OpenWorshipShare(next) * Balance.AwarenessPerCapita;
+                AddYield(next, "open_worship", faithShare);
+                next.Awareness = Derived.ClampPct(next.Awareness + sizeAwareness - faithShare);
+                if (InProcession(next)) next.Awareness = Derived.ClampPct(next.Awareness + Balance.ProcessionAwareness * ProcessionRegions(next));
+                if (next.Status == "awakening" && Derived.ReadySites(next) >= Balance.RequiredSites) next.FinalProgress = Math.Min(next.RiteMonthsRequired, next.FinalProgress + 1);
+                if (next.Status == "awakening" && next.FinalProgress >= next.RiteMonthsRequired)
                 {
                     next.Status = "won"; next.Speed = 0; next.ResultCode = "awakened";
                     next.ResultReason = "Three surviving ritual sites opened the way. Cthulhu awakens.";
@@ -478,7 +620,7 @@ namespace Awakening.Core.Rules
                 if (next.ElapsedMonths >= Balance.Deadline)
                 {
                     next.Status = "lost"; next.Speed = 0; next.ResultCode = "deadline";
-                    next.ResultReason = F("The alignment has passed. {0}/3 sites supported; final rite {1}/12 months.", Derived.ReadySites(next), next.FinalProgress);
+                    next.ResultReason = F("The alignment has passed. {0}/3 sites supported; final rite {1}/{2} months.", Derived.ReadySites(next), next.FinalProgress, RiteMonthsFor(next));
                     Derived.AddLog(next, next.ResultReason);
                     break;
                 }

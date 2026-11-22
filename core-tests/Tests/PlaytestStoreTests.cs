@@ -23,7 +23,7 @@ namespace Awakening.Core.Tests
             string body = (string)Item(stored, "jobs", 0)["body"];
             var state = State(); state.Seed = "godot-stored-fixture"; state.Ruleset = "alignment-3";
             Assert.Equal(stored["signature"], PlaytestCapture.Signature(state));
-            state.Ruleset = "alignment-5";
+            state.Ruleset = "alignment-6";
             Assert.True(c.Restore()); c.Resume(state);
             Assert.NotEqual(stored["active"], c.Data["active"]);
             Assert.Equal("awakening-4", O(c.Active(), "context")["adapter"]);
