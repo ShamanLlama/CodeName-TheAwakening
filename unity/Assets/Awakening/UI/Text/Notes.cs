@@ -50,6 +50,54 @@ namespace Awakening.UI
             ["oceania"] = "Oceania",
         };
 
+        static int RiteMonths(GameState s) => s != null ? GameEngine.RiteMonthsFor(s) : Balance.FinalMonths;
+        static int LatestStartFor(GameState s) => Balance.Deadline - RiteMonths(s);
+        static int LatestSiteStartFor(GameState s) => LatestStartFor(s) - Balance.SiteMonths;
+        static bool IsRiteStartLog(LogEntry e) =>
+            e.Message.StartsWith("The final rite begins.", StringComparison.Ordinal)
+            || e.Message.StartsWith("The Great Procession begins:", StringComparison.Ordinal);
+
+        /// <summary>Human-readable label for a Forecast.Rite blocker reason.</summary>
+        public static string RiteBlockerReason(string reason)
+        {
+            switch (reason)
+            {
+                case "scattered": return "scattered";
+                case "unsupported": return "unsupported";
+                case "dormant": return "dormant (unpaid upkeep)";
+                case "destroyed": return "destroyed";
+                case "unprepared": return "unprepared";
+                default: return reason ?? "";
+            }
+        }
+
+        /// <summary>One-line summary of the regions and reasons halting the final rite.</summary>
+        public static string RiteHaltedSummary(RiteStatus rite, bool compact = false)
+        {
+            if (rite == null || rite.Blockers == null || rite.Blockers.Count == 0) return "";
+            return string.Join(" · ", rite.Blockers.Select(b =>
+            {
+                string name = compact && ShortRegions.TryGetValue(b.Region, out string shortName)
+                    ? shortName
+                    : GameData.Regions[b.Region].Name;
+                string why = compact && b.Reason == "dormant" ? "dormant" : RiteBlockerReason(b.Reason);
+                return $"{name}: {why}";
+            }));
+        }
+
+        /// <summary>True when performing this action would halt an active final rite.</summary>
+        public static bool RiskHaltsRite(ActionPreview preview) =>
+            preview?.Risk != null && preview.Risk.IndexOf("The final rite halts", StringComparison.Ordinal) >= 0;
+
+        /// <summary>Separates a rite-halting warning sentence from the rest of PreviewAction.Risk.</summary>
+        public static (string other, string halt) SplitRiteHaltRisk(string risk)
+        {
+            if (string.IsNullOrEmpty(risk)) return ("", "");
+            int at = risk.IndexOf("The final rite halts", StringComparison.Ordinal);
+            if (at < 0) return (risk, "");
+            return (risk.Substring(0, at).Trim(), risk.Substring(at).Trim());
+        }
+
         /// <summary>Short stamp for Conceal while its global awareness reduction is resting, or "".</summary>
         public static string ConcealGlobalStamp(GameState s)
         {
@@ -63,8 +111,9 @@ namespace Awakening.UI
             if (s == null || s.Status == "placing" || GameEngine.IsOver(s)) return "none";
             if (margin.Started) return "rite";
             if (!margin.Fits) return "doomed";
+            int latestSite = margin.LatestStart - Balance.SiteMonths;
             bool tightMargin = margin.EarliestStart >= 0 && margin.Margin <= 6;
-            bool tightUnfunded = margin.EarliestStart < 0 && Balance.LatestSiteStart - s.ElapsedMonths <= 24;
+            bool tightUnfunded = margin.EarliestStart < 0 && latestSite - s.ElapsedMonths <= 24;
             bool anyStalled = margin.Sites.Any(site => !site.Supported || site.Scattered || s.Regions[site.Region].Site.Dormant);
             if (tightMargin || tightUnfunded || anyStalled || forecast.Urgent) return "tight";
             if (margin.Sites.Count > 0 || s.ElapsedMonths >= 72) return "quiet";
@@ -74,12 +123,13 @@ namespace Awakening.UI
         /// <summary>Why the final rite can no longer fit before the alignment closes.</summary>
         public static string RiteDoomedCause(GameState s, RiteMargin margin)
         {
-            if (s.ElapsedMonths > Balance.LatestRiteStart)
+            int riteMonths = RiteMonths(s);
+            if (s.ElapsedMonths > margin.LatestStart)
             {
                 int left = Math.Max(0, Balance.Deadline - s.ElapsedMonths);
                 if (Derived.ReadySites(s) >= Balance.RequiredSites && s.Dread < Balance.FinalDread)
-                    return $"Only {Format.Months(left)} remain before {Format.Date(Balance.Deadline)}; the final rite needs {Balance.FinalMonths} months and {Balance.FinalDread} Dread.";
-                return $"Only {Format.Months(left)} remain before {Format.Date(Balance.Deadline)}; the final rite needs {Balance.FinalMonths} months and can no longer finish.";
+                    return $"Only {Format.Months(left)} remain before {Format.Date(Balance.Deadline)}; the final rite needs {riteMonths} months and {Balance.FinalDread} Dread.";
+                return $"Only {Format.Months(left)} remain before {Format.Date(Balance.Deadline)}; the final rite needs {riteMonths} months and can no longer finish.";
             }
             if (margin.Sites.Count < Balance.RequiredSites)
                 return $"Only {margin.Sites.Count} of {Balance.RequiredSites} ritual sites are funded; a new site cannot be prepared before the {Format.Date(margin.LatestStart)} cutoff.";
@@ -98,12 +148,14 @@ namespace Awakening.UI
             string head = compact ? "Earliest" : "Earliest rite";
             if (margin.Started)
             {
+                RiteStatus rite = Forecast.Rite(s);
                 int left = Math.Max(0, Balance.Deadline - s.ElapsedMonths);
-                int need = Math.Max(0, Balance.FinalMonths - s.FinalProgress);
+                int need = Math.Max(0, rite.Required - rite.Progress);
                 int slack = left - need;
+                string label = GameEngine.InProcession(s) ? (compact ? "Procession" : "Great Procession") : "Final rite";
                 if (!margin.Fits)
-                    return $"Final rite: {s.FinalProgress}/{Balance.FinalMonths} mo · deadline {fmt(Balance.Deadline)} · {mo(-slack)} short";
-                return $"Final rite: {s.FinalProgress}/{Balance.FinalMonths} mo · deadline {fmt(Balance.Deadline)} · margin {mo(slack)}";
+                    return $"{label}: {rite.Progress}/{rite.Required} mo · deadline {fmt(Balance.Deadline)} · {mo(-slack)} short";
+                return $"{label}: {rite.Progress}/{rite.Required} mo · deadline {fmt(Balance.Deadline)} · margin {mo(slack)}";
             }
             if (margin.EarliestStart >= 0)
             {
@@ -113,11 +165,12 @@ namespace Awakening.UI
                     return $"{head}: {fmt(margin.EarliestStart)} · latest: {fmt(margin.LatestStart)} · margin −{-margin.Margin} mo (needs acceleration)";
                 return $"{head}: {fmt(margin.EarliestStart)} · latest: {fmt(margin.LatestStart)} · margin {mo(margin.Margin)}";
             }
+            int latestSite = margin.LatestStart - Balance.SiteMonths;
             if (!margin.Fits)
                 return $"{head}: none ({margin.Sites.Count}/{Balance.RequiredSites} sites) · latest: {fmt(margin.LatestStart)} · window closed";
-            if (s.ElapsedMonths > Balance.LatestSiteStart)
+            if (s.ElapsedMonths > latestSite)
                 return $"{head}: pending ({margin.Sites.Count}/{Balance.RequiredSites} sites) · latest: {fmt(margin.LatestStart)} · needs acceleration";
-            return $"{head}: pending ({margin.Sites.Count}/{Balance.RequiredSites} sites) · latest: {fmt(margin.LatestStart)} · fund by {fmt(Balance.LatestSiteStart)}";
+            return $"{head}: pending ({margin.Sites.Count}/{Balance.RequiredSites} sites) · latest: {fmt(margin.LatestStart)} · fund by {fmt(latestSite)}";
         }
 
         /// <summary>Compact label for one funded site chip in the rite margin strip.</summary>
@@ -146,8 +199,8 @@ namespace Awakening.UI
         }
 
         /// <summary>Detail text for an unfunded required site slot.</summary>
-        public static string UnfundedSiteDetail(int slotNumber) =>
-            $"Site {slotNumber} of {Balance.RequiredSites} is unfunded. Small regions need fewer followers; safe start by {Format.Date(Balance.LatestSiteStart)}.";
+        public static string UnfundedSiteDetail(int slotNumber, GameState s = null) =>
+            $"Site {slotNumber} of {Balance.RequiredSites} is unfunded. Small regions need fewer followers; safe start by {Format.Date(LatestSiteStartFor(s))}.";
 
         public static readonly Dictionary<string, string> TabDescriptions = new Dictionary<string, string>
         {
@@ -302,7 +355,15 @@ namespace Awakening.UI
         /// <summary>Names the timetable's most pressing problem in a few words.</summary>
         public static string ForecastHeadline(GameState s)
         {
-            if (s.Status == "awakening") return $"Final rite · {s.FinalProgress} of {Balance.FinalMonths} months";
+            if (s.Status == "awakening")
+            {
+                RiteStatus rite = Forecast.Rite(s);
+                if (!rite.Advancing && rite.Progress < rite.Required)
+                    return $"RITE HALTED · {rite.Progress} of {rite.Required} months";
+                return GameEngine.InProcession(s)
+                    ? $"Great Procession · {rite.Progress} of {rite.Required} months"
+                    : $"Final rite · {rite.Progress} of {rite.Required} months";
+            }
             RiteMargin margin = Forecast.Margin(s);
             if (!margin.Fits) return RiteDoomedHeadline;
             var sites = AllRegions(s).Where(r => r.Site.Invested).ToList();
@@ -317,7 +378,8 @@ namespace Awakening.UI
             }
             if (unsupported > 0) return $"{unsupported} site{(unsupported == 1 ? "" : "s")} stopped counting";
             int missing = Balance.RequiredSites - sites.Count;
-            if (Balance.LatestSiteStart - s.ElapsedMonths < 0) return "Too late for new sites without help";
+            int latestSite = margin.LatestStart - Balance.SiteMonths;
+            if (latestSite - s.ElapsedMonths < 0) return "Too late for new sites without help";
             return $"Fund {missing} more site{(missing == 1 ? "" : "s")} soon";
         }
 
@@ -478,7 +540,8 @@ namespace Awakening.UI
                 ("nightmare or eclipse", "NEEDS AN OMEN"), ("eclipse needs", "NEEDS A SITE"),
                 ("prominent-person", "NEEDS A FIGURE"), ("secretly converted", "NO SECRET FIGURE"),
                 ("receive their awakening", "NEEDS A SITE"), ("already public", "ALREADY PUBLIC"),
-                ("already underground", "ALREADY HIDDEN"), ("Nothing to bury", "NO AWARENESS"),
+                ("already underground", "ALREADY HIDDEN"), ("does not turn back underground", "IN PROCESSION"),
+                ("Nothing to bury", "NO AWARENESS"),
                 ("No lost preparation", "NO LOST PREP"), ("already prepared", "SITE READY"),
             };
             foreach (var (text, label) in table)
@@ -490,9 +553,14 @@ namespace Awakening.UI
         public static Ending Ending(GameState s)
         {
             var result = new Ending { Fact = DatedFact(s) };
+            RiteStatus rite = Forecast.Rite(s);
+            int req = rite.Started ? rite.Required : RiteMonths(s);
+            int latestSite = Balance.Deadline - req - Balance.SiteMonths;
             if (s.Status == "won")
             {
-                result.Cause = "Three sites held through the final rite.";
+                result.Cause = s.RiteMonthsRequired < Balance.FinalMonths
+                    ? $"The Great Procession held three sites for {s.RiteMonthsRequired} months."
+                    : "Three sites held through the final rite.";
                 return result;
             }
             var sites = AllRegions(s).Where(r => r.Site.Invested).ToList();
@@ -511,17 +579,17 @@ namespace Awakening.UI
                 result.Checks.Add((ready, GameData.Regions[id].Name, Derived.SiteLabel(r)));
             }
             for (int i = 0; i < Math.Max(0, Balance.RequiredSites - sites.Count); i++) result.Checks.Add((false, "Unfunded site", "Never funded"));
-            bool started = s.FinalProgress > 0;
-            result.Checks.Add((started, "Final rite", $"{s.FinalProgress} of {Balance.FinalMonths} months"));
+            bool started = rite.Started || s.FinalProgress > 0;
+            result.Checks.Add((started, "Final rite", $"{s.FinalProgress} of {req} months"));
             var issues = new List<(string cause, string advice)>();
             if (started)
-                issues.Add(("The rite began but lost a supported site before its 12 months were done.",
+                issues.Add(($"The rite began but lost a supported site before its {req} months were done.",
                     "During the rite the world hunts your sites. Keep Influence to obstruct and Dread to silence the threats against them."));
             if (sites.Count < Balance.RequiredSites)
             {
                 int nextCost = Balance.SiteDreadCosts[Math.Min(sites.Count, Balance.SiteDreadCosts.Length - 1)];
                 issues.Add(($"Only {sites.Count} of 3 ritual sites were funded.",
-                    $"Fund sites earlier. Each needs 24 months, then the rite needs 12; the last safe start is {Format.Date(Balance.LatestSiteStart)}."
+                    $"Fund sites earlier. Each needs 24 months, then the rite needs {req}; the last safe start is {Format.Date(latestSite)}."
                     + (s.Dread < nextCost ? $" Bank Dread by sacrifice: the next site costs {nextCost}." : "")));
             }
             if (sites.Any(r => !Derived.Supported(r)))
@@ -529,11 +597,11 @@ namespace Awakening.UI
                     "Build sites in small regions, where a quarter of the people is easier to hold, and obstruct threats there."));
             if (sites.Any(r => Derived.Supported(r) && r.Site.Progress < Balance.SiteMonths))
                 issues.Add(("The sites were not finished in time.",
-                    $"Start preparation by {Format.Date(Balance.LatestSiteStart)}, or speed it with eclipses and revealed figures."));
+                    $"Start preparation by {Format.Date(latestSite)}, or speed it with eclipses and revealed figures."));
             if (!started && s.Dread < Balance.FinalDread)
                 issues.Add(("The rite needed 100 Dread.", "Bank 100 Dread before September 1924; sacrifice and nightmares give Dread."));
             if (issues.Count == 0)
-                issues.Add(("The sites were ready, but the rite was not begun in time.", "Begin the final rite as soon as the stars are right; it needs 12 months."));
+                issues.Add(("The sites were ready, but the rite was not begun in time.", $"Begin the final rite as soon as the stars are right; it needs {req} months."));
             result.Cause = s.ResultCode == "conceded"
                 ? "The cult let the stars pass unanswered: " + char.ToLowerInvariant(issues[0].cause[0]) + issues[0].cause.Substring(1)
                 : issues[0].cause;
@@ -544,15 +612,21 @@ namespace Awakening.UI
         /// <summary>One dated fact from the run's state or chronicle explaining how it ended.</summary>
         public static string DatedFact(GameState s)
         {
+            RiteStatus rite = Forecast.Rite(s);
+            int req = rite.Started ? rite.Required : RiteMonths(s);
+            int latestStart = Balance.Deadline - req;
+            int latestSite = latestStart - Balance.SiteMonths;
+
             if (s.Status == "won")
             {
                 int slack = Balance.Deadline - s.ElapsedMonths;
-                LogEntry riteStart = s.Log.LastOrDefault(e => e.Message.StartsWith("The final rite begins.", StringComparison.Ordinal));
+                LogEntry riteStart = s.Log.LastOrDefault(IsRiteStartLog);
+                string riteTitle = s.RiteMonthsRequired < Balance.FinalMonths ? "The Great Procession" : "The final rite";
                 if (riteStart != null)
                 {
                     return slack > 0
-                        ? $"The final rite began in {Format.Date(riteStart.Month)} and finished with {Format.Months(slack)} to spare."
-                        : $"The final rite began in {Format.Date(riteStart.Month)} and finished in the final month of the alignment.";
+                        ? $"{riteTitle} began in {Format.Date(riteStart.Month)} and finished with {Format.Months(slack)} to spare."
+                        : $"{riteTitle} began in {Format.Date(riteStart.Month)} and finished in the final month of the alignment.";
                 }
                 return slack > 0
                     ? $"The awakening closed in {Format.Date(s.ElapsedMonths)}, with {Format.Months(slack)} left in the alignment."
@@ -563,12 +637,12 @@ namespace Awakening.UI
             {
                 int remaining = Math.Max(0, Balance.Deadline - s.ElapsedMonths);
                 var fundedSites = AllRegions(s).Where(r => r.Site.Invested).ToList();
-                if (s.ElapsedMonths > Balance.LatestRiteStart)
-                    return $"You let the stars pass in {Format.Date(s.ElapsedMonths)}, past the {Format.Date(Balance.LatestRiteStart)} cutoff, with {Format.Months(remaining)} left in the alignment.";
+                if (s.ElapsedMonths > latestStart)
+                    return $"You let the stars pass in {Format.Date(s.ElapsedMonths)}, past the {Format.Date(latestStart)} cutoff, with {Format.Months(remaining)} left in the alignment.";
                 if (fundedSites.Count < Balance.RequiredSites)
-                    return $"You let the stars pass in {Format.Date(s.ElapsedMonths)} with only {fundedSites.Count} of {Balance.RequiredSites} ritual sites funded and too little time before {Format.Date(Balance.LatestRiteStart)}.";
+                    return $"You let the stars pass in {Format.Date(s.ElapsedMonths)} with only {fundedSites.Count} of {Balance.RequiredSites} ritual sites funded and too little time before {Format.Date(latestStart)}.";
                 int readySites = Derived.ReadySites(s);
-                return $"You let the stars pass in {Format.Date(s.ElapsedMonths)} with {readySites} of {Balance.RequiredSites} sites ready and no path to begin by {Format.Date(Balance.LatestRiteStart)}.";
+                return $"You let the stars pass in {Format.Date(s.ElapsedMonths)} with {readySites} of {Balance.RequiredSites} sites ready and no path to begin by {Format.Date(latestStart)}.";
             }
 
             if (s.Awareness >= 100)
@@ -589,46 +663,46 @@ namespace Awakening.UI
                 return $"Awareness reached 100% in {Format.Date(s.ElapsedMonths)} with {Format.Count(Derived.TotalFollowers(s))} followers across {cells} {(cells == 1 ? "region" : "regions")}.";
             }
 
-            if (s.FinalProgress > 0)
+            if (rite.Started || s.FinalProgress > 0)
             {
-                LogEntry riteStart = s.Log.LastOrDefault(e => e.Message.StartsWith("The final rite begins.", StringComparison.Ordinal));
+                LogEntry riteStart = s.Log.LastOrDefault(IsRiteStartLog);
                 if (riteStart != null)
                 {
                     LogEntry hit = s.Log.LastOrDefault(e => e.Month >= riteStart.Month
                         && (e.Message.Contains("Ritual support is interrupted.") || e.Message.Contains("The cell and any ritual site are destroyed.") || e.Message.Contains("lies dormant")));
                     if (hit != null)
-                        return $"The rite began in {Format.Date(riteStart.Month)}, but lost support in {Format.Date(hit.Month)} ({s.FinalProgress} of {Balance.FinalMonths} months held).";
-                    if (riteStart.Month > Balance.LatestRiteStart)
-                        return $"The rite did not begin until {Format.Date(riteStart.Month)}, past the {Format.Date(Balance.LatestRiteStart)} cutoff.";
-                    return $"The rite began in {Format.Date(riteStart.Month)}, yet only {s.FinalProgress} of {Balance.FinalMonths} months were held before {Format.Date(Balance.Deadline)}.";
+                        return $"The rite began in {Format.Date(riteStart.Month)}, but lost support in {Format.Date(hit.Month)} ({s.FinalProgress} of {req} months held).";
+                    if (riteStart.Month > latestStart)
+                        return $"The rite did not begin until {Format.Date(riteStart.Month)}, past the {Format.Date(latestStart)} cutoff.";
+                    return $"The rite began in {Format.Date(riteStart.Month)}, yet only {s.FinalProgress} of {req} months were held before {Format.Date(Balance.Deadline)}.";
                 }
-                return $"When {Format.Date(s.ElapsedMonths)} closed, the final rite stood at {s.FinalProgress} of {Balance.FinalMonths} months.";
+                return $"When {Format.Date(s.ElapsedMonths)} closed, the final rite stood at {s.FinalProgress} of {req} months.";
             }
 
-            int lateOrders = s.Log.Count(e => e.Month > Balance.LatestRiteStart && e.Message.Contains(" · "));
+            int lateOrders = s.Log.Count(e => e.Month > latestStart && e.Message.Contains(" · "));
             if (lateOrders > 0)
-                return $"When {Format.Date(Balance.LatestRiteStart)} passed you had not begun the rite, though {lateOrders} {(lateOrders == 1 ? "order was" : "orders were")} still given afterward.";
+                return $"When {Format.Date(latestStart)} passed you had not begun the rite, though {lateOrders} {(lateOrders == 1 ? "order was" : "orders were")} still given afterward.";
 
             var funded = AllRegions(s).Where(r => r.Site.Invested).ToList();
             if (funded.Count < Balance.RequiredSites)
             {
                 LogEntry lastSite = s.Log.LastOrDefault(e => e.Message.StartsWith("Prepare a ritual site · ", StringComparison.Ordinal));
                 if (funded.Count == 0)
-                    return $"When {Format.Date(Balance.LatestRiteStart)} passed, no ritual site had been funded and the rite could not begin.";
+                    return $"When {Format.Date(latestStart)} passed, no ritual site had been funded and the rite could not begin.";
                 if (lastSite != null)
-                    return $"Your last ritual site was funded in {Format.Date(lastSite.Month)}; by {Format.Date(Balance.LatestRiteStart)} only {funded.Count} of {Balance.RequiredSites} existed.";
-                return $"By {Format.Date(Balance.LatestRiteStart)} only {funded.Count} of {Balance.RequiredSites} ritual sites were funded, and the rite had not begun.";
+                    return $"Your last ritual site was funded in {Format.Date(lastSite.Month)}; by {Format.Date(latestStart)} only {funded.Count} of {Balance.RequiredSites} existed.";
+                return $"By {Format.Date(latestStart)} only {funded.Count} of {Balance.RequiredSites} ritual sites were funded, and the rite had not begun.";
             }
 
-            LogEntry lateSite = s.Log.LastOrDefault(e => e.Month > Balance.LatestSiteStart && e.Message.StartsWith("Prepare a ritual site · ", StringComparison.Ordinal));
+            LogEntry lateSite = s.Log.LastOrDefault(e => e.Month > latestSite && e.Message.StartsWith("Prepare a ritual site · ", StringComparison.Ordinal));
             if (lateSite != null)
-                return $"A ritual site was funded in {Format.Date(lateSite.Month)}, past the {Format.Date(Balance.LatestSiteStart)} safe date, and the rite never began.";
+                return $"A ritual site was funded in {Format.Date(lateSite.Month)}, past the {Format.Date(latestSite)} safe date, and the rite never began.";
 
             LogEntry siteHit = s.Log.LastOrDefault(e => e.Message.Contains("Ritual loses ") || e.Message.Contains("Ritual support is interrupted."));
             if (siteHit != null)
-                return $"After a strike in {Format.Date(siteHit.Month)}, the cult reached {Format.Date(Balance.LatestRiteStart)} without beginning the rite.";
+                return $"After a strike in {Format.Date(siteHit.Month)}, the cult reached {Format.Date(latestStart)} without beginning the rite.";
 
-            return $"When {Format.Date(Balance.LatestRiteStart)} closed you had not begun the rite, leaving too little time before {Format.Date(Balance.Deadline)}.";
+            return $"When {Format.Date(latestStart)} closed you had not begun the rite, leaving too little time before {Format.Date(Balance.Deadline)}.";
         }
     }
 }

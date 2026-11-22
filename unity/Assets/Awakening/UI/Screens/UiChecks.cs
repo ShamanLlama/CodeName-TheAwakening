@@ -278,14 +278,195 @@ namespace Awakening.UI
             Check(game.State.Talents.Contains("open_worship"), "middle talent recorded");
             Check(screen.Dialogs.Q<Label>("talent-state-martyrs").text.Contains("CLOSED"), "excluded sibling displays CLOSED badge");
             Check(screen.Dialogs.Q<Label>("talent-reason-martyrs").text == "Closed for this run: the cult chose Open worship.", "excluded sibling shows exact exclusion reason");
+            Check(screen.Dialogs.Q<Label>("talent-yield-swelling_flock")?.text == GameEngine.TalentYieldText(game.State, "swelling_flock"), "taken root displays TalentYieldText");
+            Check(screen.Dialogs.Q<Label>("talent-yield-open_worship")?.text == GameEngine.TalentYieldText(game.State, "open_worship"), "taken tier 2 displays TalentYieldText");
+            foreach (string capId in new[] { "great_procession", "world_forgets", "dreams_of_rlyeh" })
+                Check(screen.Dialogs.Q("capstone-rules-" + capId) != null, capId + " capstone displays structured condition/effect/cost");
             game.State.ElapsedMonths = 104;
             screen.Dialogs.Close();
             screen.OpenDialog("talents");
             yield return Layout();
-            var takeCap = screen.Dialogs.Q<Button>("take-faith_among_faiths");
+            var takeCap = screen.Dialogs.Q<Button>("take-great_procession");
             Check(takeCap != null && takeCap.text == "Take · 100 Inf", "capstone unlocks after root and middle with 100 Inf price");
+            ((Action)takeCap.userData)();
+            yield return Layout();
+            Check(game.State.Talents.Contains("great_procession"), "Great Procession capstone recorded");
+            Check(screen.Dialogs.Q<Label>("procession-status")?.text.Contains("0 / 5") == true, "Great Procession shows 0/5 public regions before going public");
             screen.Dialogs.Close();
             Debug.Log("UI_CHECK: settings and talent tree");
+
+            // Capstones: (1) Great Procession 5/5 public -> 8-month rite, (2) world_forgets tree + ledger + confirm + spent,
+            // (3) Martyrs 0 Dread yield, (4) RITE HALTED with Forecast.Rite blockers + scatter halt warning, (5) Dreams of R'lyeh.
+            var procState = GameEngine.PlaceStartingFoothold(GameEngine.CreateGameState("normal", "proc-ui"), "africa").State;
+            procState.ElapsedMonths = Balance.PreparationMonths;
+            procState.Status = "alignment";
+            procState.Influence = 300;
+            procState.Dread = 140;
+            foreach (string tid in new[] { "swelling_flock", "open_worship", "great_procession" }) { procState.Talents.Add(tid); procState.TalentYield[tid] = 0; }
+            foreach (string rid in new[] { "latin_america", "middle_east", "oceania" })
+            {
+                Derived.Recruit(procState.Regions[rid], Derived.SiteRequirement(procState.Regions[rid]) + 60);
+                procState.Regions[rid].Site = new Site { Invested = true, Progress = Balance.SiteMonths };
+            }
+            foreach (string rid in new[] { "africa", "latin_america", "middle_east", "oceania" })
+            {
+                Derived.Recruit(procState.Regions[rid], 80);
+                procState.Regions[rid].Public = true;
+                procState.Regions[rid].Revealed = true;
+            }
+            game.State = procState;
+            game.ShowGame();
+            yield return Layout();
+            screen = (GameScreen)game.CurrentScreen;
+            screen.Dialogs.Close();
+            yield return Layout();
+            screen.OpenDialog("talents");
+            yield return Layout();
+            Check(screen.Dialogs.Q<Label>("procession-status")?.text.Contains("4 / 5") == true, "Great Procession shows 4/5 public regions");
+            screen.Dialogs.Close();
+            Derived.Recruit(game.State.Regions["south_asia"], 120);
+            game.State.Regions["south_asia"].Public = true;
+            game.State.Regions["south_asia"].Revealed = true;
+            screen.Refresh();
+            yield return Layout();
+            Check(screen.Q<Label>("rite-margin-procession")?.text.Contains("5/5") == true, "rite margin strip shows 5/5 Procession readiness");
+            screen.OpenDialog("talents");
+            yield return Layout();
+            Check(screen.Dialogs.Q<Label>("procession-status")?.text.Contains("CONDITION MET NOW") == true, "Great Procession flags condition met at 5 public regions");
+            screen.Dialogs.Close();
+            screen.OpenDialog("alignment");
+            yield return Layout();
+            Check(screen.Dialogs.Q("alignment-procession-check") != null, "Alignment dialog shows Great Procession check");
+            var beginProc = screen.Dialogs.Q<Button>("alignment-begin-rite");
+            Check(beginProc != null && beginProc.text.Contains("Great Procession") && beginProc.text.Contains("8 mo"), "Alignment button reflects 8-month Great Procession");
+            ((Action)beginProc.userData)();
+            yield return Layout();
+            Check(game.State.Status == "awakening" && game.State.RiteMonthsRequired == Balance.ProcessionRiteMonths, "starting Procession fixes 8-month rite");
+            Check(screen.Query<Label>().ToList().Any(l => l.text.Contains("0 / 8")), "active Procession displays Progress / 8");
+
+            // The world forgets: invocable from ledger quick access and tree, confirmation shows InvokeRisk, spent afterwards.
+            var forgetsState = GameEngine.PlaceStartingFoothold(GameEngine.CreateGameState("normal", "forgets-ui"), "africa").State;
+            forgetsState.ElapsedMonths = 160;
+            forgetsState.Influence = 200;
+            forgetsState.Awareness = 70;
+            Derived.Recruit(forgetsState.Regions["africa"], 200);
+            forgetsState.Regions["africa"].Threat = new Threat { Kind = "raid", Severity = 2, DueMonth = 164 };
+            foreach (string tid in new[] { "swelling_flock", "martyrs", "quiet_friends", "sleeper_cells", "world_forgets" })
+            {
+                forgetsState.Talents.Add(tid);
+                forgetsState.TalentYield[tid] = tid == "quiet_friends" ? 60 : 0;
+            }
+            game.State = forgetsState;
+            game.ShowGame();
+            yield return Layout();
+            screen = (GameScreen)game.CurrentScreen;
+            var ledgerInvoke = screen.Q<Button>("ledger-invoke-capstone");
+            Check(ledgerInvoke != null && Kit.IsVisible(ledgerInvoke.parent), "ledger shows quick-access Invoke button when world_forgets is available");
+            ((Action)ledgerInvoke.userData)();
+            yield return Layout();
+            Check(screen.Dialogs.Kind == "invoke" && game.ClockHeld, "ledger Invoke opens confirmation dialog and holds clock");
+            Check(screen.Dialogs.Q<Label>("invoke-risk-text")?.text.Contains(GameEngine.InvokeRisk(game.State, "world_forgets")) == true, "Invoke confirmation displays InvokeRisk");
+            Press(screen.Dialogs, "Cancel");
+            yield return Layout();
+            Check(!screen.Dialogs.IsOpen && !game.State.CapstonesUsed.Contains("world_forgets"), "Cancel leaves world_forgets unspent");
+            screen.OpenDialog("talents");
+            yield return Layout();
+            Check(screen.Dialogs.Q<Label>("talent-yield-martyrs")?.text == "0 Dread so far", "Martyrs displays 0 Dread so far yield");
+            Check(screen.Dialogs.Q<Label>("talent-yield-quiet_friends")?.text == "60 Influence saved so far", "Quiet friends displays non-zero yield");
+            var treeInvoke = screen.Dialogs.Q<Button>("invoke-world_forgets");
+            Check(treeInvoke != null && treeInvoke.enabledSelf, "tree shows enabled Invoke button for world_forgets");
+            ((Action)treeInvoke.userData)();
+            yield return Layout();
+            Check(screen.Dialogs.Kind == "invoke", "tree Invoke opens confirmation dialog");
+            var confirmInvoke = screen.Dialogs.Q<Button>("confirm-invoke");
+            Check(confirmInvoke != null && confirmInvoke.enabledSelf, "confirmation dialog has enabled Invoke stamp");
+            ((Action)confirmInvoke.userData)();
+            yield return Layout();
+            Check(game.State.CapstonesUsed.Contains("world_forgets") && Math.Abs(game.State.Awareness - 45) < 0.01 && game.State.Regions["africa"].Threat == null && game.State.Regions["africa"].Scattered, "confirming world_forgets drops awareness, dissolves threats, scatters cells");
+            Check(!Kit.IsVisible(screen.Q("capstone-quick")), "ledger quick-access hides once world_forgets is spent");
+            screen.OpenDialog("talents");
+            yield return Layout();
+            Check(screen.Dialogs.Q<Label>("talent-state-world_forgets")?.text.Contains("SPENT") == true, "world_forgets displays SPENT state in tree");
+            Check(screen.Dialogs.Q("talent-spent-world_forgets") != null && screen.Dialogs.Q("invoke-world_forgets") == null, "spent world_forgets removes Invoke button");
+            Check(screen.Dialogs.Q<Label>("talent-yield-world_forgets")?.text == "Invoked: −25 world awareness", "spent world_forgets displays invoked yield");
+            screen.Dialogs.Close();
+            Debug.Log("UI_CHECK: capstones, yields, Procession, and world_forgets");
+
+            // Rite halted band (Forecast.Rite blockers) and prominent scatter/sacrifice halt warnings + Dreams of R'lyeh.
+            var riteState = GameEngine.PlaceStartingFoothold(GameEngine.CreateGameState("normal", "rite-dreams-ui"), "africa").State;
+            riteState.ElapsedMonths = Balance.PreparationMonths;
+            riteState.Status = "alignment";
+            riteState.Influence = 260;
+            riteState.Dread = 160;
+            riteState.Awareness = 40;
+            Derived.Recruit(riteState.Regions["africa"], 300);
+            foreach (string rid in new[] { "latin_america", "middle_east", "oceania" })
+            {
+                Derived.Recruit(riteState.Regions[rid], Derived.SiteRequirement(riteState.Regions[rid]) + 60);
+                riteState.Regions[rid].Site = new Site { Invested = true, Progress = Balance.SiteMonths };
+            }
+            foreach (string tid in new[] { "red_altars", "scapegoats", "dreams_of_rlyeh" }) { riteState.Talents.Add(tid); riteState.TalentYield[tid] = 0; }
+            riteState = GameEngine.StartAwakening(riteState).State;
+            riteState.FinalProgress = 2;
+            riteState.Regions["oceania"].Threat = new Threat { Kind = "occult", Severity = 1, DueMonth = riteState.ElapsedMonths + 3 };
+            game.State = riteState;
+            game.ShowGame();
+            yield return Layout();
+            screen = (GameScreen)game.CurrentScreen;
+            Check(screen.Q("threat-scatter-halts-oceania") != null, "threat clipping highlights HALTS RITE on scatter during the final rite");
+            screen.Select("oceania");
+            yield return Layout();
+            Check(screen.Panel.Q("response-rite-halt-scatter") != null, "case file threat card highlights rite-halting scatter warning");
+            screen.Panel.LayoutExplain("scatter");
+            yield return Layout();
+            var scatterWarn = screen.Panel.Q("detail-rite-halt-warning");
+            Check(scatterWarn != null && scatterWarn.Query<Label>().ToList().Any(l => l.text.Contains("The final rite halts while this site hides")), "scatter detail displays prominent rite-halt callout");
+
+            // Dreams of R'lyeh: sacrifice in Africa advances rite +1 mo; sacrifice in thin Oceania halts rite and does not advance.
+            screen.Select("africa");
+            yield return Layout();
+            screen.Panel.LayoutSetGroup("RITES");
+            yield return Layout();
+            var sacRow = screen.Panel.Q<Button>("sacrifice");
+            Check(sacRow != null && sacRow.ClassListContains("aw-dream-ready") && sacRow.Query<Label>().ToList().Any(l => l.text == "+1 RITE MONTH"), "Dreams of R'lyeh highlights sacrifice row with +1 RITE MONTH");
+            screen.Panel.LayoutExplain("sacrifice");
+            yield return Layout();
+            var dreamBanner = screen.Panel.Q("detail-dreams-banner");
+            Check(dreamBanner != null && dreamBanner.Query<Label>().ToList().Any(l => l.text.Contains("ADVANCES RITE +1 MO")), "sacrifice detail shows Dreams of R'lyeh advance banner");
+            game.Act("sacrifice", "africa");
+            yield return Layout();
+            Check(game.State.FinalProgress == 3 && Math.Abs(game.State.Awareness - 42) < 0.01, "Dreams sacrifice advances rite progress and adds +2 awareness");
+            screen.OpenDialog("talents");
+            yield return Layout();
+            Check(screen.Dialogs.Q<Label>("talent-yield-dreams_of_rlyeh")?.text == "1 rite months dreamed forward so far", "Dreams of R'lyeh yield updates after advancing sacrifice");
+            screen.Dialogs.Close();
+
+            // Thin site sacrifice: does not advance dream and highlights rite-halt warning.
+            var thinOc = game.State.Regions["oceania"];
+            Derived.LoseFollowers(thinOc, thinOc.Population.Followers - (Derived.SiteRequirement(thinOc) + 10));
+            screen.Select("oceania");
+            yield return Layout();
+            screen.Panel.LayoutSetGroup("RITES");
+            yield return Layout();
+            screen.Panel.LayoutExplain("sacrifice");
+            yield return Layout();
+            Check(screen.Panel.Q("detail-dreams-banner")?.Query<Label>().ToList().Any(l => l.text.Contains("DOES NOT ADVANCE")) == true, "thin-site sacrifice detail reports Dreams does not advance");
+            Check(screen.Panel.Q("detail-rite-halt-warning")?.Query<Label>().ToList().Any(l => l.text.Contains("The final rite halts until this site again holds")) == true, "thin-site sacrifice detail shows prominent rite-halt warning");
+            screen.Deselect();
+
+            // Halt the rite with scattered, unsupported, dormant, and destroyed blockers.
+            game.State.Regions["latin_america"].Scattered = true;
+            game.State.Regions["latin_america"].ScatteredUntil = game.State.ElapsedMonths + 5;
+            Derived.LoseFollowers(game.State.Regions["middle_east"], game.State.Regions["middle_east"].Population.Followers - (Derived.SiteRequirement(game.State.Regions["middle_east"]) - 10));
+            game.State.Regions["oceania"].Site.Dormant = true;
+            screen.Refresh();
+            yield return Layout();
+            var haltedBox = screen.Q("rite-halted-box");
+            Check(haltedBox != null && Kit.IsVisible(haltedBox), "rite band displays RITE HALTED box when Forecast.Rite is not advancing");
+            string haltedText = screen.Q<Label>("rite-halted-reasons")?.text ?? "";
+            Check(haltedText.Contains("RITE HALTED") && haltedText.Contains("Latin America: scattered") && haltedText.Contains("West Asia: unsupported") && haltedText.Contains("Oceania: dormant"), "rite halted box names all blocking regions and reasons: " + haltedText);
+            Check(screen.Query<Label>().ToList().Any(l => l.text.Contains("RITE HALTED  3 / 12")), "ledger sites caption shows RITE HALTED Progress/Required");
+            Debug.Log("UI_CHECK: rite halted, scatter/sacrifice halt warnings, and Dreams of R'lyeh");
 
             // Mysticism in active file, Bury the record, and Restore the site (highlight only when recoverable).
             var actionState = GameEngine.PlaceStartingFoothold(GameEngine.CreateGameState("normal", "bury-restore-ui"), "africa").State;
@@ -312,7 +493,7 @@ namespace Awakening.UI
             screen.Panel.LayoutExplain("bury");
             yield return Layout();
             var buryTexts = screen.Panel.Query<Label>().ToList().Select(l => l.text).ToList();
-            Check(buryTexts.Any(t => t.Contains("−5 world awareness")) && buryTexts.Any(t => t.Contains("next burial costs 75 Influence")), "Bury detail shows effect and rising cost risk from PreviewAction");
+            Check(buryTexts.Any(t => t.Contains("−5 world awareness")) && buryTexts.Any(t => t.Contains($"next burial costs {Balance.BuryBaseCost + GameEngine.BuryStep(actionState)} Influence")), "Bury detail shows effect and rising cost risk from PreviewAction");
             game.Act("bury", "africa");
             yield return Layout();
             Check(game.State.BuryUses == 1 && Math.Abs(game.State.Awareness - 37) < 0.01, "performing Bury lowers awareness and increments BuryUses");
@@ -408,7 +589,7 @@ namespace Awakening.UI
 
             foreach (string outcome in new[] { "won", "lost" })
             {
-                game.State = Awakening.Core.Dev.Playthrough.Play("early", outcome == "won" ? "resume" : "drowned", Balance.Deadline);
+                game.State = Awakening.Core.Dev.Playthrough.Play("early", outcome == "won" ? "measure-2" : "drowned", Balance.Deadline);
                 Check(game.State.Status == outcome, outcome + " harness seed ends as " + outcome);
                 game.Lab.StartRun(GameController.Capture(GameEngine.CreateGameState("normal", "ending")));
                 game.Lab.EmitEvent("run_finished", new Dictionary<string, object> { ["outcome"] = outcome, ["reason"] = outcome == "won" ? "awakened" : "deadline" }, GameController.Capture(game.State), "ended");
@@ -566,7 +747,7 @@ namespace Awakening.UI
             Press(screen.Dialogs, "New World");
             yield return Layout();
             Check(game.State == null && game.CurrentScreen is StartScreen && !game.ClockHeld, "New World returns to start screen");
-            Debug.Log("UI_CHECKS_PASSED: start, difficulty rules, saved run, onboarding, goals, all sheets, clock, keyboard focus, participation, settings, talent tree, mysticism, bury, restore, cornered threat, abandon, endings, conceal stamp, rite margin, concede, retry");
+            Debug.Log("UI_CHECKS_PASSED: start, difficulty rules, saved run, onboarding, goals, all sheets, clock, keyboard focus, participation, settings, talent tree, capstones, yields, world_forgets, rite halted, dreams, mysticism, bury, restore, cornered threat, abandon, endings, conceal stamp, rite margin, concede, retry");
         }
     }
 }

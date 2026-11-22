@@ -27,17 +27,19 @@ namespace Awakening.UI
         public readonly Dialogs Dialogs;
         public string Selected = "";
 
-        Label _date, _countdown, _influence, _influenceRate, _dread, _followers, _talentsNote, _tickerHead, _ticker;
+        Label _date, _countdown, _influence, _influenceRate, _dread, _followers, _talentsNote, _capstoneSub, _tickerHead, _ticker;
         readonly List<IconButton> _speed = new List<IconButton>();
-        Button _talents, _rite, _resetView, _concede, _bannerToggle;
-        Label _awarenessCaption, _sitesCaption, _bannerHead, _bannerText, _bannerCause, _marginLine;
+        Button _talents, _capstoneInvoke, _rite, _resetView, _concede, _bannerToggle;
+        Label _awarenessCaption, _sitesCaption, _bannerHead, _bannerText, _bannerCause, _riteHaltedText, _marginLine;
         AwarenessGauge _awareness;
         SiteSeals _sites;
         VisualElement _sitesBox, _tickerBox;
+        Stack _capstoneBox;
+        string _invokableId = "";
         Stack _threats;
         ScrollView _threatScroll;
         Stack _toasts;
-        Stack _banner, _bannerHeadRow, _marginBox, _siteDetail, _prompt;
+        Stack _banner, _bannerHeadRow, _riteHaltedBox, _marginBox, _siteDetail, _prompt;
         Flow _marginChips;
         Bar _riteBar;
         bool _bannerExpanded;
@@ -244,7 +246,7 @@ namespace Awakening.UI
             Stack box = Kit.VBox(0);
             box.name = caption.ToLowerInvariant();
             box.style.justifyContent = Justify.Center;
-            box.style.minWidth = Kit.Compact ? 92 : 118;
+            box.style.minWidth = Kit.Compact ? 86 : 118;
             box.tooltip = hint;
             box.Add(Kit.Caption(caption));
             Label value = Kit.Label("0", Kit.Compact ? 26 : 31, color, Fonts.BodyBold);
@@ -269,7 +271,7 @@ namespace Awakening.UI
         void BuildBottom()
         {
             Stack bar = Bar(false);
-            Stack row = Kit.HBox(Kit.Compact ? 14 : 24);
+            Stack row = Kit.HBox(Kit.Compact ? 11 : 22);
             row.style.flexGrow = 1;
             row.style.alignItems = Align.Center;
             bar.Add(row);
@@ -282,7 +284,7 @@ namespace Awakening.UI
             talents.Add(Kit.Caption("Talents"));
             _talents = Kit.Button("", () => OpenDialog("talents"));
             _talents.name = "talents-button";
-            _talents.style.minWidth = Kit.Compact ? 124 : 150;
+            _talents.style.minWidth = Kit.Compact ? 112 : 148;
             _talents.style.fontSize = Kit.Compact ? 16 : 18;
             Fonts.Apply(_talents, Fonts.BodyBold);
             _talents.tooltip = "Open the cult's talent tree.  (T)";
@@ -291,6 +293,26 @@ namespace Awakening.UI
             _talentsNote.name = "talents-note";
             talents.Add(_talentsNote);
             row.Add(talents);
+
+            _capstoneBox = Kit.VBox(2);
+            _capstoneBox.name = "capstone-quick";
+            _capstoneBox.Add(Kit.Caption("Capstone", Palette.Omen));
+            Action openInvoke = () =>
+            {
+                if (_invokableId != "") Dialogs.OpenInvoke(_invokableId);
+            };
+            _capstoneInvoke = Kit.Stamp("INVOKE", openInvoke, Accent.Omen);
+            _capstoneInvoke.name = "ledger-invoke-capstone";
+            _capstoneInvoke.userData = openInvoke;
+            _capstoneInvoke.style.fontSize = Kit.Compact ? 12 : 13;
+            _capstoneInvoke.style.paddingLeft = _capstoneInvoke.style.paddingRight = Kit.Compact ? 6 : 10;
+            _capstoneInvoke.style.minHeight = Kit.Touch ? 34 : 28;
+            _capstoneBox.Add(_capstoneInvoke);
+            _capstoneSub = Kit.Label(Kit.Compact ? "FORGETS" : "WORLD FORGETS", 10, Palette.Omen, Fonts.TypeBold);
+            _capstoneBox.Add(_capstoneSub);
+            Kit.SetVisible(_capstoneBox, false);
+            row.Add(_capstoneBox);
+
             row.Add(Divider());
 
             Stack ticker = Kit.VBox(3);
@@ -415,6 +437,18 @@ namespace Awakening.UI
             _riteBar = new Bar(Balance.FinalMonths, Palette.Cult, 8);
             Kit.SetVisible(_riteBar, false);
             _banner.Add(_riteBar);
+            _riteHaltedBox = Kit.VBox(1);
+            _riteHaltedBox.name = "rite-halted-box";
+            _riteHaltedBox.style.backgroundColor = Palette.Alpha(Palette.Danger, 0.12f);
+            _riteHaltedBox.style.borderLeftWidth = 3;
+            _riteHaltedBox.style.borderLeftColor = Palette.Danger;
+            _riteHaltedBox.style.paddingLeft = _riteHaltedBox.style.paddingRight = 8;
+            _riteHaltedBox.style.paddingTop = _riteHaltedBox.style.paddingBottom = Kit.Compact ? 2 : 4;
+            _riteHaltedText = Kit.Body("", Kit.Compact ? 11 : 13, Palette.Danger, Fonts.BodyBold);
+            _riteHaltedText.name = "rite-halted-reasons";
+            _riteHaltedBox.Add(_riteHaltedText);
+            Kit.SetVisible(_riteHaltedBox, false);
+            _banner.Add(_riteHaltedBox);
             _bannerCause = Kit.Body("", Kit.Compact ? 12 : 14, Palette.Danger, Fonts.BodyBold);
             _bannerCause.name = "rite-doomed-cause";
             Kit.SetVisible(_bannerCause, false);
@@ -658,10 +692,18 @@ namespace Awakening.UI
                 case "awakening": _countdown.text = $"THE STARS ARE RIGHT · {Balance.Deadline - month} MONTHS LEFT"; break;
                 default: _countdown.text = s.Status == "won" ? "CTHULHU AWAKENS" : "THE RUN HAS ENDED"; break;
             }
+            RiteStatus riteStatus = Forecast.Rite(s);
+            bool riteHalted = s.Status == "awakening" && !riteStatus.Advancing && riteStatus.Progress < riteStatus.Required;
             // The deadline brightens as it nears: amber in the last three years, verdigris once aligned.
             bool near = s.Status == "playing" && Balance.PreparationMonths - month <= 36;
-            _countdown.style.color = s.Status == "alignment" || s.Status == "awakening" || s.Status == "won" ? Palette.CultBright : near ? Palette.WarnBright : Palette.LampDim;
-            if (s.Status == "awakening") _countdown.text = $"FINAL RITE {s.FinalProgress} / {Balance.FinalMonths} · {Balance.Deadline - month} MONTHS LEFT";
+            _countdown.style.color = riteHalted ? Palette.DangerBright
+                : s.Status == "alignment" || s.Status == "awakening" || s.Status == "won" ? Palette.CultBright
+                : near ? Palette.WarnBright : Palette.LampDim;
+            if (s.Status == "awakening")
+            {
+                string prefix = riteHalted ? "RITE HALTED" : GameEngine.InProcession(s) ? "PROCESSION" : "FINAL RITE";
+                _countdown.text = $"{prefix} {riteStatus.Progress} / {riteStatus.Required} · {Balance.Deadline - month} MONTHS LEFT";
+            }
             for (int i = 0; i < _speed.Count; i++)
             {
                 _speed[i].Active = s.Speed == i && !placing && !over;
@@ -686,14 +728,19 @@ namespace Awakening.UI
 
             int ready = Derived.ReadySites(s);
             _sites.State = s;
-            _sitesCaption.text = s.Status == "awakening" ? $"FINAL RITE  {s.FinalProgress} / {Balance.FinalMonths}" : $"RITUAL SITES  {ready} / {Balance.RequiredSites}";
+            _sitesCaption.text = s.Status == "awakening"
+                ? (riteHalted ? $"RITE HALTED  {riteStatus.Progress} / {riteStatus.Required}" : $"FINAL RITE  {riteStatus.Progress} / {riteStatus.Required}")
+                : $"RITUAL SITES  {ready} / {Balance.RequiredSites}";
+            _sitesCaption.style.color = riteHalted ? Palette.Danger : Palette.Muted;
             RitualForecast forecast = Forecast.Ritual(s);
-            _sitesBox.tooltip = Format.ForecastCopy(forecast.Message);
+            _sitesBox.tooltip = riteHalted
+                ? "RITE HALTED — " + Notes.RiteHaltedSummary(riteStatus) + "\n" + Format.ForecastCopy(forecast.Message)
+                : Format.ForecastCopy(forecast.Message);
             RefreshRite(s);
             // The alignment decision gets the chronicle's space. Full entries remain in its sheet.
             Kit.SetVisible(_tickerBox, !Kit.Compact && s.Status != "alignment");
 
-            RefreshBanner(s, forecast, placing, over);
+            RefreshBanner(s, forecast, riteStatus, placing, over);
             SetModalOpen(Dialogs != null && Dialogs.IsOpen);
             Kit.SetVisible(_prompt, placing);
             RebuildThreats(s);
@@ -710,7 +757,7 @@ namespace Awakening.UI
             }
         }
 
-        void RefreshBanner(GameState s, RitualForecast forecast, bool placing, bool over)
+        void RefreshBanner(GameState s, RitualForecast forecast, RiteStatus riteStatus, bool placing, bool over)
         {
             RiteMargin margin = Forecast.Margin(s);
             string level = Notes.RiteBandLevel(s, margin, forecast);
@@ -726,12 +773,13 @@ namespace Awakening.UI
             bool doomed = level == "doomed";
             bool quiet = level == "quiet";
             bool canConcede = GameEngine.CanConcede(s);
-            bool riteHealthy = margin.Fits && Derived.ReadySites(s) >= Balance.RequiredSites;
+            bool riteHalted = rite && !riteStatus.Advancing && riteStatus.Progress < riteStatus.Required;
+            bool riteHealthy = margin.Fits && !riteHalted;
 
             Color fill = quiet ? Palette.Paper : Palette.PaperLight;
-            Color edge = doomed ? Palette.Danger : rite ? (riteHealthy ? Palette.Cult : Palette.Danger) : quiet ? Palette.PaperEdge : Palette.Warn;
+            Color edge = doomed || riteHalted ? Palette.Danger : rite ? Palette.Cult : quiet ? Palette.PaperEdge : Palette.Warn;
             int borderWidth = quiet ? 1 : 2;
-            int leftWidth = doomed ? 6 : quiet ? 3 : 5;
+            int leftWidth = doomed || riteHalted ? 6 : quiet ? 3 : 5;
             _banner.style.backgroundColor = fill;
             _banner.style.borderTopColor = _banner.style.borderBottomColor = _banner.style.borderRightColor = _banner.style.borderLeftColor = edge;
             _banner.style.borderTopWidth = _banner.style.borderBottomWidth = _banner.style.borderRightWidth = borderWidth;
@@ -739,19 +787,27 @@ namespace Awakening.UI
 
             Kit.SetVisible(_bannerHeadRow, !quiet || canConcede);
             _bannerHead.text = doomed ? Notes.RiteDoomedHeadline : Notes.ForecastHeadline(s);
-            _bannerHead.style.color = doomed ? Palette.Danger : rite ? (riteHealthy ? Palette.Cult : Palette.Danger) : Palette.Warn;
+            _bannerHead.style.color = doomed || riteHalted ? Palette.Danger : rite ? Palette.Cult : Palette.Warn;
             Kit.SetVisible(_concede, canConcede);
 
             Kit.SetVisible(_riteBar, rite);
-            _riteBar.Value = s.FinalProgress;
+            _riteBar.Max = riteStatus.Required;
+            _riteBar.Value = riteStatus.Progress;
             _riteBar.FillColor = riteHealthy ? Palette.Cult : Palette.Danger;
+
+            Kit.SetVisible(_riteHaltedBox, riteHalted);
+            string haltedSummary = riteHalted ? Notes.RiteHaltedSummary(riteStatus, Kit.Compact) : "";
+            if (riteHalted)
+                _riteHaltedText.text = string.IsNullOrEmpty(haltedSummary)
+                    ? "RITE HALTED — restore three supported sites to resume."
+                    : "RITE HALTED — " + haltedSummary;
 
             Kit.SetVisible(_bannerCause, doomed);
             if (doomed) _bannerCause.text = Notes.RiteDoomedCause(s, margin);
 
             string marginText = Notes.RiteMarginLine(s, margin, Kit.Compact);
             _marginLine.text = marginText;
-            _marginLine.style.color = doomed ? Palette.Danger : (margin.EarliestStart >= 0 && margin.Margin <= 6 && !margin.Started) ? Palette.Warn : Palette.Text;
+            _marginLine.style.color = doomed || riteHalted ? Palette.Danger : (margin.EarliestStart >= 0 && margin.Margin <= 6 && !margin.Started) ? Palette.Warn : Palette.Text;
 
             string forecastCopy = Format.ForecastCopy(forecast.Message);
             bool hasForecastDetail = (forecast.Urgent || rite) && !doomed && !quiet;
@@ -760,10 +816,18 @@ namespace Awakening.UI
             bool showForecastText = hasForecastDetail && (!Kit.Compact || _bannerExpanded);
             Kit.SetVisible(_bannerText, showForecastText);
             _bannerText.text = forecastCopy;
-            _banner.tooltip = doomed ? Notes.RiteDoomedHeadline + " — " + _bannerCause.text : forecastCopy;
+            _banner.tooltip = doomed ? Notes.RiteDoomedHeadline + " — " + _bannerCause.text : riteHalted ? _riteHaltedText.text + "\n" + forecastCopy : forecastCopy;
 
             int dread = (int)Math.Floor(s.Dread);
-            var keyParts = new List<string> { level, margin.Started.ToString(), margin.Fits.ToString(), margin.EarliestStart.ToString(), margin.LatestStart.ToString(), margin.Margin.ToString(), dread.ToString(), _selectedSiteSlot.ToString(), Kit.Compact.ToString(), s.Status };
+            bool hasProcession = GameEngine.HasTalent(s, "great_procession");
+            int procRegions = hasProcession ? GameEngine.ProcessionRegions(s) : 0;
+            var keyParts = new List<string>
+            {
+                level, margin.Started.ToString(), margin.Fits.ToString(), margin.EarliestStart.ToString(), margin.LatestStart.ToString(),
+                margin.Margin.ToString(), dread.ToString(), _selectedSiteSlot.ToString(), Kit.Compact.ToString(), s.Status,
+                riteStatus.Progress.ToString(), riteStatus.Required.ToString(), riteStatus.Advancing.ToString(), haltedSummary,
+                hasProcession.ToString(), procRegions.ToString(),
+            };
             for (int i = 0; i < Balance.RequiredSites; i++)
             {
                 if (i < margin.Sites.Count)
@@ -779,6 +843,7 @@ namespace Awakening.UI
             _marginShown = key;
 
             _marginChips.Clear();
+            var shownRegions = new HashSet<string>();
             for (int slot = 0; slot < Balance.RequiredSites; slot++)
             {
                 int index = slot;
@@ -794,6 +859,7 @@ namespace Awakening.UI
                 if (slot < margin.Sites.Count)
                 {
                     SiteMargin site = margin.Sites[slot];
+                    shownRegions.Add(site.Region);
                     RegionState r = s.Regions[site.Region];
                     chip.text = Notes.SiteChipText(s, site, Kit.Compact);
                     chip.tooltip = Notes.SiteMarginDetail(s, site) + (Kit.Touch ? "" : "\nClick to pin detail.");
@@ -804,10 +870,27 @@ namespace Awakening.UI
                 else
                 {
                     chip.text = Kit.Compact ? $"○ Site {slot + 1}" : $"○ Site {slot + 1} · unfunded";
-                    chip.tooltip = Notes.UnfundedSiteDetail(slot + 1);
+                    chip.tooltip = Notes.UnfundedSiteDetail(slot + 1, s);
                     chip.style.color = Palette.Muted;
                 }
                 _marginChips.Add(chip);
+            }
+            if (riteHalted && riteStatus.Blockers != null)
+            {
+                foreach (RiteBlocker blocker in riteStatus.Blockers)
+                {
+                    if (shownRegions.Contains(blocker.Region)) continue;
+                    string target = blocker.Region;
+                    Action openBlocker = () => Select(target);
+                    var bChip = new Button(openBlocker) { focusable = false, name = "rite-blocker-" + blocker.Region };
+                    bChip.userData = openBlocker;
+                    bChip.AddToClassList("aw-chip");
+                    bChip.text = $"× {GameData.Regions[blocker.Region].Name} · {blocker.Reason}";
+                    bChip.tooltip = $"Halting the final rite ({Notes.RiteBlockerReason(blocker.Reason)}). Click to open case file.";
+                    bChip.style.color = Palette.Danger;
+                    bChip.style.borderTopColor = bChip.style.borderBottomColor = bChip.style.borderLeftColor = bChip.style.borderRightColor = Palette.Alpha(Palette.Danger, 0.7f);
+                    _marginChips.Add(bChip);
+                }
             }
             if (!margin.Started)
             {
@@ -826,6 +909,26 @@ namespace Awakening.UI
                     ? $"Dread reserved: {dread} of {Balance.FinalDread} needed for the final rite."
                     : $"Dread reserved: {dread} of {Balance.FinalDread}. Need {Balance.FinalDread - dread} more before beginning the final rite.";
                 _marginChips.Add(dreadBadge);
+
+                if (hasProcession)
+                {
+                    bool procMet = procRegions >= Balance.ProcessionPublicRegions;
+                    Color procColor = procMet ? Palette.Cult : Palette.Warn;
+                    string procText = procMet
+                        ? $"PROCESSION {procRegions}/{Balance.ProcessionPublicRegions} · {Balance.ProcessionRiteMonths}m"
+                        : $"PROCESSION {procRegions}/{Balance.ProcessionPublicRegions}";
+                    var procBadge = Kit.Label(procText, 12, procColor, Fonts.TypeBold);
+                    procBadge.name = "rite-margin-procession";
+                    procBadge.style.fontSize = 12;
+                    procBadge.pickingMode = PickingMode.Position;
+                    procBadge.style.paddingLeft = procBadge.style.paddingRight = Kit.Compact ? 6 : 7;
+                    procBadge.style.paddingTop = procBadge.style.paddingBottom = Kit.Touch ? 3 : 2;
+                    procBadge.style.borderTopWidth = procBadge.style.borderBottomWidth = procBadge.style.borderLeftWidth = procBadge.style.borderRightWidth = 1;
+                    procBadge.style.borderTopColor = procBadge.style.borderBottomColor = procBadge.style.borderLeftColor = procBadge.style.borderRightColor = Palette.Alpha(procColor, 0.7f);
+                    procBadge.style.backgroundColor = Palette.Alpha(procColor, 0.08f);
+                    procBadge.tooltip = GameEngine.TalentYieldText(s, "great_procession");
+                    _marginChips.Add(procBadge);
+                }
             }
 
             _siteDetail.Clear();
@@ -850,7 +953,7 @@ namespace Awakening.UI
                 }
                 else
                 {
-                    Label detail = Kit.Body(Notes.UnfundedSiteDetail(_selectedSiteSlot + 1), 13, Palette.Muted, Fonts.Italic);
+                    Label detail = Kit.Body(Notes.UnfundedSiteDetail(_selectedSiteSlot + 1, s), 13, Palette.Muted, Fonts.Italic);
                     detail.style.flexGrow = 1;
                     detail.style.flexShrink = 1;
                     _siteDetail.Add(detail);
@@ -861,6 +964,18 @@ namespace Awakening.UI
         /// <summary>The talents button always opens the tree, and flags unbroken seals in the ledger.</summary>
         void RefreshTalents(GameState s, bool placing, bool over)
         {
+            string readyCapstone = !placing && !over
+                ? GameData.InvokableTalentIds.FirstOrDefault(id => GameEngine.HasTalent(s, id) && GameEngine.InvokeReason(s, id) == "") ?? ""
+                : "";
+            _invokableId = readyCapstone;
+            Kit.SetVisible(_capstoneBox, readyCapstone != "");
+            if (readyCapstone != "")
+            {
+                TalentDefinition cap = GameData.Talents[readyCapstone];
+                _capstoneInvoke.tooltip = $"{cap.Name} (0 Influence): −{Balance.WorldForgetsAwareness} world awareness, dissolves all threats.\n{GameEngine.InvokeRisk(s, readyCapstone)}";
+                _capstoneSub.text = Kit.Compact ? "FORGETS" : "WORLD FORGETS";
+            }
+
             _talents.SetEnabled(!placing);
             _talentsNote.text = "";
             int total = GameData.Difficulties[s.Difficulty].TalentSlots;
@@ -927,6 +1042,8 @@ namespace Awakening.UI
             Kit.SetVisible(_rite, s.Status == "alignment");
             string reason = GameEngine.AwakeningReason(s);
             bool ready = string.IsNullOrEmpty(reason);
+            int riteMonths = GameEngine.RiteMonthsFor(s);
+            bool procession = GameEngine.HasTalent(s, "great_procession") && riteMonths < Balance.FinalMonths;
             _rite.EnableInClassList("aw-primary", ready);
             _rite.EnableInClassList("aw-button", !ready);
             if (!ready)
@@ -941,8 +1058,12 @@ namespace Awakening.UI
             }
             else
             {
-                _rite.text = Kit.Compact ? "Begin Rite" : "Begin the Final Rite";
-                _rite.tooltip = "Ready. Spend 100 Dread and hold three sites for 12 months.";
+                _rite.text = procession
+                    ? (Kit.Compact ? $"Procession ({riteMonths}m)" : $"Begin Procession · {riteMonths} mo")
+                    : (Kit.Compact ? "Begin Rite" : "Begin the Final Rite");
+                _rite.tooltip = procession
+                    ? $"The Great Procession ready ({GameEngine.ProcessionRegions(s)} public regions). Spend 100 Dread and hold three sites for {riteMonths} months."
+                    : $"Ready. Spend 100 Dread and hold three sites for {riteMonths} months.";
                 _rite.style.color = StyleKeyword.Null;
             }
         }
@@ -1086,15 +1207,20 @@ namespace Awakening.UI
                 stamp.style.height = Kit.Touch ? 34 : 24;
                 stamp.style.flexShrink = 0;
                 stamp.SetEnabled(opt.Ok);
+                bool haltsRite = opt.Ok && chosen == "scatter" && Notes.RiskHaltsRite(preview);
                 stamp.tooltip = opt.Ok
-                    ? GameData.Actions[chosen].Name + " (" + opt.Cost + "). " + Notes.ResponseNote(r, preview, chosen) + "."
+                    ? GameData.Actions[chosen].Name + " (" + opt.Cost + "). " + (haltsRite ? preview.Risk : Notes.ResponseNote(r, preview, chosen) + ".")
                     : opt.Reason + " (" + opt.Cost + ")";
                 string detail = opt.Ok
-                    ? (chosen == "silence" ? "+" + Js.Num(preview.Awareness) + " awareness" : chosen == "scatter" ? GameEngine.ScatterMonths(s) + " mo hidden" : "rests 12 mo")
+                    ? (haltsRite ? $"HALTS RITE · {GameEngine.ScatterMonths(s)} MO"
+                        : chosen == "silence" ? "+" + Js.Num(preview.Awareness) + " awareness"
+                        : chosen == "scatter" ? GameEngine.ScatterMonths(s) + " mo hidden"
+                        : "rests 12 mo")
                     : Notes.ThreatOptionReason(opt);
-                Color detailColor = !opt.Ok ? Palette.Warn : chosen == "silence" ? Palette.Danger : Palette.Muted;
-                string detailWeight = !opt.Ok ? Fonts.TypeBold : Fonts.Italic;
+                Color detailColor = !opt.Ok ? Palette.Warn : haltsRite || chosen == "silence" ? Palette.Danger : Palette.Muted;
+                string detailWeight = !opt.Ok || haltsRite ? Fonts.TypeBold : Fonts.Italic;
                 Label info = Kit.Body(detail, Kit.Compact ? 11 : 12, detailColor, detailWeight);
+                if (haltsRite) info.name = "threat-scatter-halts-" + id;
                 if (Kit.Compact)
                 {
                     Stack item = Kit.VBox(1);

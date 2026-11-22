@@ -472,6 +472,8 @@ namespace Awakening.UI
 
         public void TakeTalent(string id) => Command(() => Session.TakeTalent(id));
 
+        public void InvokeCapstone(string talentId) => Command(() => Session.InvokeCapstone(talentId));
+
         public void Awaken() => Command(() => Session.Awaken());
 
         public void Concede()
@@ -628,7 +630,10 @@ namespace Awakening.UI
                 if (message.StartsWith(name, StringComparison.Ordinal)) return message.Contains(" passes in ") ? "faded" : "omen";
             if (message.Contains("is prepared")) return "site";
             if (message.Contains("lies dormant") || message.StartsWith("The world senses the coming alignment", StringComparison.Ordinal)) return "threat";
-            if (message.StartsWith("The stars align", StringComparison.Ordinal) || message.StartsWith("The final rite begins", StringComparison.Ordinal)) return "phase";
+            if (message.StartsWith("The stars align", StringComparison.Ordinal)
+                || message.StartsWith("The final rite begins", StringComparison.Ordinal)
+                || message.StartsWith("The Great Procession begins", StringComparison.Ordinal)
+                || message.StartsWith("The world forgets:", StringComparison.Ordinal)) return "phase";
             if (message.StartsWith("Three surviving", StringComparison.Ordinal) || message.StartsWith("The world knows", StringComparison.Ordinal)
                 || message.StartsWith("The alignment has passed", StringComparison.Ordinal) || message.StartsWith("The cult lets the stars pass", StringComparison.Ordinal)) return "end";
             return "info";
@@ -779,10 +784,94 @@ namespace Awakening.UI
                     State.Regions["africa"].Threat = new Threat { Kind = "occult", Severity = 2, DueMonth = 101 };
                     ShowGame();
                     break;
+                case "capstones":
+                    // Show all three branches with taken talents, live yields, Procession condition met, and world_forgets invocable.
+                    State = GameEngine.PlaceStartingFoothold(GameEngine.CreateGameState("easy", "capstones-shot"), "africa").State;
+                    State.ElapsedMonths = 190;
+                    State.Influence = 320;
+                    State.Awareness = 68;
+                    foreach (string rid in new[] { "africa", "latin_america", "middle_east", "oceania", "south_asia" })
+                    {
+                        Derived.Recruit(State.Regions[rid], 140);
+                        State.Regions[rid].Public = true;
+                        State.Regions[rid].Revealed = true;
+                    }
+                    State.Regions["europe"].Threat = new Threat { Kind = "investigation", Severity = 2, DueMonth = 194 };
+                    State.Regions["africa"].Threat = new Threat { Kind = "raid", Severity = 2, DueMonth = 195 };
+                    foreach (string tid in new[] { "swelling_flock", "open_worship", "great_procession", "quiet_friends", "sleeper_cells", "world_forgets" })
+                        State.Talents.Add(tid);
+                    State.TalentYield["swelling_flock"] = 184;
+                    State.TalentYield["open_worship"] = 37;
+                    State.TalentYield["great_procession"] = 0;
+                    State.TalentYield["quiet_friends"] = 120;
+                    State.TalentYield["sleeper_cells"] = 6;
+                    State.TalentYield["world_forgets"] = 0;
+                    ShowGame();
+                    break;
+                case "world-forgets":
+                    State = GameEngine.PlaceStartingFoothold(GameEngine.CreateGameState("normal", "forgets-shot"), "africa").State;
+                    State.ElapsedMonths = 180;
+                    State.Influence = 240;
+                    State.Awareness = 74;
+                    foreach (string rid in new[] { "africa", "latin_america", "oceania" }) Derived.Recruit(State.Regions[rid], 240);
+                    State.Regions["africa"].Threat = new Threat { Kind = "raid", Severity = 2, DueMonth = 183 };
+                    State.Regions["latin_america"].Threat = new Threat { Kind = "occult", Severity = 2, DueMonth = 184 };
+                    foreach (string tid in new[] { "quiet_friends", "sleeper_cells", "world_forgets" })
+                    {
+                        State.Talents.Add(tid);
+                        State.TalentYield[tid] = tid == "quiet_friends" ? 90 : tid == "sleeper_cells" ? 3 : 0;
+                    }
+                    ShowGame();
+                    break;
+                case "rite-halted":
+                    State = GameEngine.PlaceStartingFoothold(GameEngine.CreateGameState("normal", "halted-shot"), "africa").State;
+                    State.ElapsedMonths = Balance.PreparationMonths;
+                    State.Status = "alignment";
+                    State.Influence = 260;
+                    State.Dread = 180;
+                    foreach (string rid in new[] { "latin_america", "middle_east", "oceania" })
+                    {
+                        var r = State.Regions[rid];
+                        Derived.Recruit(r, Derived.SiteRequirement(r) + 60);
+                        r.Site = new Site { Invested = true, Progress = Balance.SiteMonths };
+                    }
+                    State = GameEngine.StartAwakening(State).State;
+                    State.FinalProgress = 4;
+                    State.ElapsedMonths = Balance.PreparationMonths + 5;
+                    State.Regions["latin_america"].Scattered = true;
+                    State.Regions["latin_america"].ScatteredUntil = State.ElapsedMonths + 5;
+                    Derived.LoseFollowers(State.Regions["middle_east"], State.Regions["middle_east"].Population.Followers - (Derived.SiteRequirement(State.Regions["middle_east"]) - 18));
+                    State.Regions["oceania"].Site.Dormant = true;
+                    ShowGame();
+                    break;
+                case "dreams-rite":
+                    State = GameEngine.PlaceStartingFoothold(GameEngine.CreateGameState("normal", "dreams-shot"), "africa").State;
+                    State.ElapsedMonths = Balance.PreparationMonths;
+                    State.Status = "alignment";
+                    State.Influence = 240;
+                    State.Dread = 160;
+                    State.Awareness = 52;
+                    Derived.Recruit(State.Regions["africa"], 340);
+                    foreach (string rid in new[] { "latin_america", "middle_east", "oceania" })
+                    {
+                        var r = State.Regions[rid];
+                        Derived.Recruit(r, Derived.SiteRequirement(r) + 60);
+                        r.Site = new Site { Invested = true, Progress = Balance.SiteMonths };
+                    }
+                    foreach (string tid in new[] { "red_altars", "scapegoats", "dreams_of_rlyeh" })
+                    {
+                        State.Talents.Add(tid);
+                        State.TalentYield[tid] = tid == "red_altars" ? 65 : tid == "scapegoats" ? 4 : 2;
+                    }
+                    State = GameEngine.StartAwakening(State).State;
+                    State.FinalProgress = 3;
+                    State.ElapsedMonths = Balance.PreparationMonths + 2;
+                    ShowGame();
+                    break;
                 default:
                     var months = new Dictionary<string, int> { ["mid"] = 96, ["late"] = 170, ["alignment"] = 200, ["won"] = Balance.Deadline, ["lost"] = Balance.Deadline };
-                    // With alignment-4, "resume" awakens Cthulhu and "drowned" loses at the deadline (month 224).
-                    string seed = scenario == "won" ? "resume" : scenario == "lost" ? "drowned" : "rlyeh";
+                    // With alignment-6, "measure-2" awakens Cthulhu (8-month Procession) and "drowned" loses at the deadline (month 224).
+                    string seed = scenario == "won" ? "measure-2" : scenario == "lost" ? "drowned" : "rlyeh";
                     State = Awakening.Core.Dev.Playthrough.Play("early", seed, months.TryGetValue(scenario, out int m) ? m : 96);
                     ShowGame();
                     break;
@@ -818,6 +907,7 @@ namespace Awakening.UI
                 {
                     // --dialog none shows the screen without the dialog a phase opens by itself.
                     if (dialog == "none") game.Dialogs.Close();
+                    else if (dialog.StartsWith("invoke-", StringComparison.Ordinal)) game.Dialogs.OpenInvoke(dialog.Substring("invoke-".Length));
                     else game.OpenDialog(dialog);
                 }
             }
