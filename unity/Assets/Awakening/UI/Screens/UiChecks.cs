@@ -92,7 +92,12 @@ namespace Awakening.UI
             yield return Layout();
             var start = (StartScreen)game.CurrentScreen;
             Check(start.panel.focusController.focusedElement == Find(start, "Begin"), "Begin receives focus");
+            var ruleLabel = start.Q<Label>("difficulty-rule-text");
+            Check(ruleLabel != null && ruleLabel.text.Contains(GameData.Difficulties["normal"].Rule), "start screen shows Normal difficulty rules");
+            Press(start, "Easy");
+            Check(ruleLabel.text.Contains(GameData.Difficulties["easy"].Rule), "start screen shows Easy difficulty rules");
             Press(start, "Hard");
+            Check(ruleLabel.text.Contains(GameData.Difficulties["hard"].Rule), "start screen shows Hard difficulty rules");
             var seed = start.Q<TextField>();
             seed.value = " keyboard seed ";
             start.HandleKey(KeyCode.Return);
@@ -110,6 +115,14 @@ namespace Awakening.UI
             var promptTexts = screen.Query<Label>().ToList().Select(l => l.text).ToList();
             Check(promptTexts.Any(t => t.Contains("populous regions recruit well; small regions hold sites cheaply")), "placing subtitle explains recruitment vs ritual sites");
             Check(!promptTexts.Any(t => t.Contains("small regions are easier to hold")), "placing subtitle no longer pushes starting in a small region");
+            screen.Select("africa");
+            yield return Layout();
+            Check(screen.Panel.Q<Label>("mysticism-note-profile")?.text == Derived.MysticismNote("africa"), "placing profile shows MysticismNote for Africa");
+            screen.Select("europe");
+            yield return Layout();
+            Check(screen.Panel.Q<Label>("mysticism-note-profile")?.text == Derived.MysticismNote("europe"), "placing profile shows MysticismNote for Europe");
+            screen.Deselect();
+            yield return Layout();
 
             game.Settings.Hints.Clear();
             game.Settings.HideGoals = false;
@@ -176,7 +189,7 @@ namespace Awakening.UI
 
             yield return ButtonStates(screen);
             Debug.Log("UI_CHECK: button hover and press inks");
-            foreach (string kind in new[] { "menu", "doctrine", "chronicle", "guide", "alignment", "playtest" })
+            foreach (string kind in new[] { "menu", "talents", "chronicle", "guide", "alignment", "playtest" })
             {
                 screen.OpenDialog(kind);
                 yield return Layout();
@@ -208,23 +221,147 @@ namespace Awakening.UI
             screen.Dialogs.Close();
             Check(!game.ClockHeld, "one release after switching sheets");
 
-            // alignment-5 minimal port: the dialog lists the three root talents until the tree screen lands (wave 2).
-            game.State.Influence = 100;
-            screen.OpenDialog("doctrine");
+            // Talent tree: (1) no seals open yet, (2) unbroken seal + first-time note, (3) taking root, middle & exclusion.
+            var treeState = GameEngine.PlaceStartingFoothold(GameEngine.CreateGameState("normal", "tree-ui"), "africa").State;
+            treeState.ElapsedMonths = 12;
+            treeState.Influence = 120;
+            game.Settings.Hints = new List<string> { "first_cell", "threat", "omen", "awareness", "sacrifice", "unsupported", Notes.TabsHintId };
+            game.State = treeState;
+            game.ShowGame();
             yield return Layout();
-            string firstRoot = GameData.TalentIds.First(id => GameData.Talents[id].Tier == 1);
-            var choose = screen.Dialogs.Query<Button>().ToList().FirstOrDefault(b => b.text == "Choose · " + GameEngine.TalentCost(game.State) && b.enabledSelf);
-            if (choose != null)
-            {
-                ((Action)choose.userData)();
-                Check(game.State.Talents.Contains(firstRoot) && !screen.Dialogs.IsOpen, "talent choice");
-                screen.OpenDialog("doctrine");
-                Check(screen.Dialogs.Query<Button>().ToList().Any(b => b.text == "Chosen" && !b.enabledSelf), "a talent is permanent");
-            }
-            else Check(GameEngine.TalentReason(game.State, firstRoot).Length != 0, "talent refused only with a reason");
+            screen = (GameScreen)game.CurrentScreen;
+            Check(screen.Q<Label>("talents-note").text == "SEAL IN 12 MO", "ledger shows months until first talent seal");
+            screen.OpenDialog("talents");
+            yield return Layout();
+            Check(screen.Dialogs.Q<Label>("talent-seals-summary").text.Contains("0/5 SEALS OPEN") && screen.Dialogs.Q<Label>("talent-seals-summary").text.Contains("0 UNBROKEN"), "tree header reports 0 open seals");
+            Check(screen.Dialogs.Q<Label>("talent-next-seal").text.Contains(Format.Date(24).ToUpperInvariant()), "tree header reports next seal calendar date");
+            Check(screen.Dialogs.Q<Label>("talent-reason-swelling_flock").text == "The next seal opens in 12 months.", "root node explains waiting for seal");
+            Check(screen.Dialogs.Q<Label>("talent-reason-open_worship").text == "Requires Swelling flock.", "tier 2 node explains root requirement");
+            Check(screen.Dialogs.Q<Button>("take-swelling_flock") == null, "locked root has no Take button");
             screen.Dialogs.Close();
+            yield return Layout();
 
-            Debug.Log("UI_CHECK: settings and doctrine");
+            // First seal opens at month 24: ledger flags unbroken seal and first-time talents note explains tree cannot be completed.
+            game.State.ElapsedMonths = 24;
+            game.State.Influence = 200;
+            screen.Refresh();
+            yield return Layout();
+            yield return Layout();
+            Check(screen.Q<Label>("talents-note").text == "1 SEAL UNBROKEN", "ledger shows unbroken seal notice");
+            Check(screen.Query<Label>().ToList().Any(l => l.text.Contains("cannot be completed")), "first-time talents note explains tree cannot be completed in one run");
+            Check(game.HintSeen("talents"), "talents note marks talents hint seen");
+            screen.HandleKey(KeyCode.N, false);
+            yield return Layout();
+            screen.OpenDialog("talents");
+            yield return Layout();
+            Check(screen.Dialogs.Q<Label>("talent-seals-summary").text.Contains("1/5 SEALS OPEN") && screen.Dialogs.Q<Label>("talent-seals-summary").text.Contains("1 UNBROKEN"), "tree header shows 1 unbroken seal");
+            var takeRoot = screen.Dialogs.Q<Button>("take-swelling_flock");
+            Check(takeRoot != null && takeRoot.text == "Take · 40 Inf", "available root shows Take button with live price");
+            ((Action)takeRoot.userData)();
+            yield return Layout();
+            Check(game.State.Talents.Contains("swelling_flock") && screen.Dialogs.IsOpen, "taking a talent records it and refreshes tree in place");
+            Check(screen.Dialogs.Q<Label>("talent-state-swelling_flock").text.Contains("TAKEN"), "taken talent displays TAKEN state");
+            Check(screen.Q<Label>("talents-note").text == "SEAL IN 40 MO", "ledger updates to next seal after spending seal");
+            screen.Dialogs.Close();
+            yield return Layout();
+
+            // Second seal at month 64: taking Open worship closes Martyrs with its exact reason; third seal unlocks capstone.
+            game.State.ElapsedMonths = 64;
+            game.State.Influence = 300;
+            screen.Refresh();
+            screen.OpenDialog("talents");
+            yield return Layout();
+            var takeMid = screen.Dialogs.Q<Button>("take-open_worship");
+            Check(takeMid != null && takeMid.text == "Take · 70 Inf", "tier 2 middle becomes available at 70 Influence");
+            ((Action)takeMid.userData)();
+            yield return Layout();
+            Check(game.State.Talents.Contains("open_worship"), "middle talent recorded");
+            Check(screen.Dialogs.Q<Label>("talent-state-martyrs").text.Contains("CLOSED"), "excluded sibling displays CLOSED badge");
+            Check(screen.Dialogs.Q<Label>("talent-reason-martyrs").text == "Closed for this run: the cult chose Open worship.", "excluded sibling shows exact exclusion reason");
+            game.State.ElapsedMonths = 104;
+            screen.Dialogs.Close();
+            screen.OpenDialog("talents");
+            yield return Layout();
+            var takeCap = screen.Dialogs.Q<Button>("take-faith_among_faiths");
+            Check(takeCap != null && takeCap.text == "Take · 100 Inf", "capstone unlocks after root and middle with 100 Inf price");
+            screen.Dialogs.Close();
+            Debug.Log("UI_CHECK: settings and talent tree");
+
+            // Mysticism in active file, Bury the record, and Restore the site (highlight only when recoverable).
+            var actionState = GameEngine.PlaceStartingFoothold(GameEngine.CreateGameState("normal", "bury-restore-ui"), "africa").State;
+            actionState.ElapsedMonths = 90;
+            actionState.Influence = 300;
+            actionState.Awareness = 42;
+            Derived.Recruit(actionState.Regions["africa"], 340);
+            Derived.Recruit(actionState.Regions["europe"], 100);
+            actionState.Regions["africa"].Site = new Site { Invested = true, Progress = 14, Recoverable = 0 };
+            game.State = actionState;
+            game.ShowGame();
+            yield return Layout();
+            screen = (GameScreen)game.CurrentScreen;
+            screen.Select("africa");
+            yield return Layout();
+            Check(screen.Panel.Q<Label>("mysticism-note")?.text == Derived.MysticismNote("africa"), "active file displays Derived.MysticismNote for Africa");
+            screen.Select("europe");
+            yield return Layout();
+            Check(screen.Panel.Q<Label>("mysticism-note")?.text == Derived.MysticismNote("europe"), "active file displays Derived.MysticismNote for Europe");
+            screen.Select("africa");
+            yield return Layout();
+            var buryRow = screen.Panel.Q<Button>("bury");
+            Check(buryRow != null && buryRow.Query<Label>().ToList().Any(l => l.text == "50 INF") && buryRow.Query<Label>().ToList().Any(l => l.text == "−5 AWARENESS"), "CULT tab shows Bury the record with price and awareness effect");
+            screen.Panel.LayoutExplain("bury");
+            yield return Layout();
+            var buryTexts = screen.Panel.Query<Label>().ToList().Select(l => l.text).ToList();
+            Check(buryTexts.Any(t => t.Contains("−5 world awareness")) && buryTexts.Any(t => t.Contains("next burial costs 75 Influence")), "Bury detail shows effect and rising cost risk from PreviewAction");
+            game.Act("bury", "africa");
+            yield return Layout();
+            Check(game.State.BuryUses == 1 && Math.Abs(game.State.Awareness - 37) < 0.01, "performing Bury lowers awareness and increments BuryUses");
+
+            screen.Panel.LayoutSetGroup("RITES");
+            yield return Layout();
+            var restoreRow = screen.Panel.Q<Button>("restore");
+            Check(restoreRow != null && !restoreRow.ClassListContains("aw-restore-ready") && restoreRow.Query<Label>().ToList().Any(l => l.text == "NO LOST PREP"), "Restore row is muted when no recoverable months exist");
+            Check(screen.Panel.Q<Button>("site-restore-stamp") == null, "site card omits restore stamp when Recoverable is 0");
+            game.State.Regions["africa"].Site.Recoverable = 6;
+            screen.Refresh();
+            yield return Layout();
+            restoreRow = screen.Panel.Q<Button>("restore");
+            Check(restoreRow.ClassListContains("aw-restore-ready") && restoreRow.Query<Label>().ToList().Any(l => l.text == "90 INF") && restoreRow.Query<Label>().ToList().Any(l => l.text == "+3 MO LOST"), "Restore row highlights with cost and months when Recoverable > 0");
+            Check(screen.Panel.Q<Button>("site-restore-stamp") != null, "site card shows direct restore stamp when Recoverable > 0");
+            screen.Panel.LayoutExplain("restore");
+            yield return Layout();
+            var restoreTexts = screen.Panel.Query<Label>().ToList().Select(l => l.text).ToList();
+            Check(restoreTexts.Any(t => t.Contains("+3 preparation months recovered.")) && restoreTexts.Any(t => t.Contains("+10 Exposure.")), "Restore detail shows effect and risk from PreviewAction");
+            game.Act("restore", "africa");
+            yield return Layout();
+            Check(game.State.Regions["africa"].Site.Progress == 17 && game.State.Regions["africa"].Site.Recoverable == 0 && !screen.Panel.Q<Button>("restore").ClassListContains("aw-restore-ready"), "performing Restore recovers months and clears highlight");
+            screen.Deselect();
+            Debug.Log("UI_CHECK: mysticism, bury, and restore");
+
+            // Cornered threat: Threats.Options reasons + Threats.Cornered mark in both clipping and case file.
+            var corneredState = GameEngine.PlaceStartingFoothold(GameEngine.CreateGameState("normal", "cornered-ui"), "africa").State;
+            corneredState.ElapsedMonths = 80;
+            corneredState.Influence = 200;
+            corneredState.Dread = 18;
+            Derived.Recruit(corneredState.Regions["africa"], 300);
+            corneredState.Regions["africa"].Cooldowns["counter"] = 89;
+            corneredState.Regions["africa"].Threat = new Threat { Kind = "occult", Severity = 2, DueMonth = 85 };
+            Check(Threats.Cornered(corneredState, "africa"), "staged threat is cornered");
+            game.State = corneredState;
+            game.ShowGame();
+            yield return Layout();
+            screen = (GameScreen)game.CurrentScreen;
+            var clipping = screen.Q("threat-card-africa");
+            Check(clipping != null && clipping.Q("threat-cornered-africa") != null, "threat clipping shows CORNERED mark");
+            var clipTexts = clipping.Query<Label>().ToList().Select(l => l.text).ToList();
+            Check(clipTexts.Any(t => t.Contains("counter rests 9 more months")) && clipTexts.Any(t => t.Contains("need 40 Dread")), "threat clipping shows Threats.Options reasons on appearance");
+            screen.Select("africa");
+            yield return Layout();
+            Check(screen.Panel.Q("panel-threat-cornered") != null, "case file threat card shows CORNERED mark");
+            var fileThreatTexts = screen.Panel.Query<Label>().ToList().Select(l => l.text).ToList();
+            Check(fileThreatTexts.Any(t => t.Contains("counter rests 9 more months")) && fileThreatTexts.Any(t => t.Contains("need 40 Dread")), "case file threat card shows Threats.Options reasons");
+            screen.Deselect();
+            Debug.Log("UI_CHECK: cornered threat and options");
             // A fresh configured round: Escape cancels without answering; Tab stays in the sheet.
             game.Lab.Configure(GameController.ShotLabOptions());
             game.State = null;
@@ -377,7 +514,7 @@ namespace Awakening.UI
             Debug.Log("UI_CHECK: rite margin strip and site details");
 
             // Doomed warning, concede button, confirmation dialog, and conceded ending with DatedFact.
-            game.State = Awakening.Core.Dev.Playthrough.Play("early", "drowned", 200);
+            game.State = GameController.DoomedState(200);
             Check(!Forecast.Margin(game.State).Fits && GameEngine.CanConcede(game.State), "doomed harness state cannot fit and can concede");
             game.ShowGame();
             yield return Layout();
@@ -405,7 +542,7 @@ namespace Awakening.UI
             var endLabels = screen.Dialogs.Query<Label>().ToList().Select(l => l.text).ToList();
             Check(endLabels.Any(t => t.Contains("The Stars Passed Unanswered")), "conceded ending shows its own title");
             Check(endLabels.Any(t => t.Contains(concededEnding.Fact)), "conceded ending renders its dated fact");
-            var postCutoff = GameEngine.Concede(Awakening.Core.Dev.Playthrough.Play("early", "drowned", 213));
+            var postCutoff = GameEngine.Concede(GameController.DoomedState(213));
             Check(postCutoff.ResultCode == "conceded" && Notes.DatedFact(postCutoff).Contains(Format.Date(213)), "post-cutoff conceded run derives a dated fact");
             Debug.Log("UI_CHECK: doomed warning, concede confirmation, and conceded ending");
 
@@ -429,7 +566,7 @@ namespace Awakening.UI
             Press(screen.Dialogs, "New World");
             yield return Layout();
             Check(game.State == null && game.CurrentScreen is StartScreen && !game.ClockHeld, "New World returns to start screen");
-            Debug.Log("UI_CHECKS_PASSED: start, saved run, onboarding, goals, all sheets, clock, keyboard focus, participation, settings, doctrine, abandon, endings, conceal stamp, rite margin, concede, retry");
+            Debug.Log("UI_CHECKS_PASSED: start, difficulty rules, saved run, onboarding, goals, all sheets, clock, keyboard focus, participation, settings, talent tree, mysticism, bury, restore, cornered threat, abandon, endings, conceal stamp, rite margin, concede, retry");
         }
     }
 }

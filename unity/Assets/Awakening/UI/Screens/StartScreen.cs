@@ -14,6 +14,8 @@ namespace Awakening.UI
         readonly Stack _form;
         readonly TextField _seed;
         readonly Button _begin, _resume;
+        readonly Stack _ruleBox;
+        readonly Label _ruleTitle, _ruleBody;
         readonly Dictionary<string, Button> _difficulties = new Dictionary<string, Button>();
         string _difficulty = "normal";
         VisualElement _ask;
@@ -86,11 +88,23 @@ namespace Awakening.UI
             {
                 var button = SheetUI.Button(GameData.Difficulties[id].Name, () => Pick(id), height: 42);
                 button.style.fontSize = 20;
+                button.tooltip = GameData.Difficulties[id].Rule;
                 SheetUI.Equal(button);
                 _difficulties[id] = button;
                 levels.Add(button);
             }
             _form.Add(levels);
+            _ruleBox = Kit.Panel(Palette.PaperLight, Palette.PaperEdge, new Vector4(12, 8, 12, 9), 0.06f, 4);
+            _ruleBox.name = "difficulty-rule";
+            _ruleBox.style.borderLeftWidth = 3;
+            _ruleTitle = SheetUI.Caption("");
+            _ruleTitle.style.whiteSpace = WhiteSpace.Normal;
+            _ruleTitle.style.height = StyleKeyword.Auto;
+            _ruleBody = SheetUI.Body("", Kit.Compact ? 13 : 14, Palette.Text);
+            _ruleBody.name = "difficulty-rule-text";
+            _ruleBox.Add(_ruleTitle);
+            _ruleBox.Add(_ruleBody);
+            _form.Add(_ruleBox);
             _seed = SheetUI.Field("World seed (optional)", 40, 17);
             _seed.RegisterCallback<KeyDownEvent>(e =>
             {
@@ -156,6 +170,15 @@ namespace Awakening.UI
         {
             _difficulty = id;
             foreach (var entry in _difficulties) entry.Value.EnableInClassList("aw-on", entry.Key == id);
+            DifficultyDefinition def = GameData.Difficulties[id];
+            Color accent = id == "hard" ? Palette.Danger : id == "easy" ? Palette.Cult : Palette.Warn;
+            _ruleBox.style.borderLeftColor = accent;
+            string pace = id == "easy" ? "FASTER GROWTH · LIGHTER PRESSURE"
+                : id == "hard" ? "SLOWER GROWTH · HEAVIER PRESSURE"
+                : "STANDARD GROWTH AND PRESSURE";
+            _ruleTitle.text = $"{def.Name.ToUpperInvariant()} · {pace}";
+            _ruleTitle.style.color = accent;
+            SheetUI.SetBodyText(_ruleBody, def.Rule);
         }
 
         void FocusForm() { if (_ask == null) (_resume ?? _begin).Focus(); }

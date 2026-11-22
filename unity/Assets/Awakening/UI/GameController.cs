@@ -256,7 +256,7 @@ namespace Awakening.UI
         static readonly KeyCode[] WatchedKeys =
         {
             KeyCode.Space, KeyCode.Alpha1, KeyCode.Alpha2, KeyCode.Keypad1, KeyCode.Keypad2, KeyCode.Escape, KeyCode.Tab, KeyCode.C,
-            KeyCode.D, KeyCode.H, KeyCode.R, KeyCode.N, KeyCode.UpArrow, KeyCode.DownArrow, KeyCode.LeftArrow, KeyCode.RightArrow,
+            KeyCode.D, KeyCode.T, KeyCode.H, KeyCode.R, KeyCode.N, KeyCode.UpArrow, KeyCode.DownArrow, KeyCode.LeftArrow, KeyCode.RightArrow,
             KeyCode.Return, KeyCode.KeypadEnter,
         };
 
@@ -646,6 +646,19 @@ namespace Awakening.UI
             return (parsed.ContainsKey("shot") || parsed.ContainsKey("layout-check")) && (Debug.isDebugBuild || Application.isEditor) ? parsed : new Dictionary<string, string>();
         }
 
+        internal static GameState DoomedState(int month = 200)
+        {
+            var s = Awakening.Core.Dev.Playthrough.Play("early", "drowned", month);
+            if (s.Status == "awakening") { s.Status = "alignment"; s.FinalProgress = 0; }
+            if (!GameEngine.CanConcede(s))
+            {
+                var funded = GameData.RegionIds.Select(id => s.Regions[id]).Where(r => r.Site.Invested).ToList();
+                for (int i = 2; i < funded.Count; i++) funded[i].Site = new Site();
+                foreach (var r in s.Regions.Values) { r.Opportunity = null; if (r.Figure != null) r.Figure.Revealed = true; }
+            }
+            return s;
+        }
+
         internal static Dictionary<string, object> ShotLabOptions() => new Dictionary<string, object>
         {
             ["enabled"] = true, ["endpoint"] = "https://playtest.example.invalid/api/playtests/v1/batches/",
@@ -669,7 +682,7 @@ namespace Awakening.UI
 #endif
             string scenario = _shot.TryGetValue("scenario", out string s) ? s : "start";
             TutorialComplete = scenario != "guide";
-            Settings.Hints = _shot.ContainsKey("hints") ? new List<string>() : new List<string> { "first_cell", "spread", "threat", "omen", "sites", "doctrine", "awareness", "unsupported", "sacrifice", Notes.TabsHintId };
+            Settings.Hints = _shot.ContainsKey("hints") ? new List<string>() : new List<string> { "first_cell", "spread", "threat", "omen", "sites", "doctrine", "talents", "awareness", "unsupported", "sacrifice", Notes.TabsHintId };
             switch (scenario)
             {
                 case "start":
@@ -718,11 +731,52 @@ namespace Awakening.UI
                     break;
                 case "doomed":
                     // Alignment opens with the final rite no longer able to fit (CanConcede is true).
-                    State = Awakening.Core.Dev.Playthrough.Play("early", "drowned", 200);
+                    State = DoomedState(200);
                     ShowGame();
                     break;
                 case "conceded":
-                    State = GameEngine.Concede(Awakening.Core.Dev.Playthrough.Play("early", "drowned", 200));
+                    State = GameEngine.Concede(DoomedState(200));
+                    ShowGame();
+                    break;
+                case "talents-empty":
+                    State = GameEngine.PlaceStartingFoothold(GameEngine.CreateGameState("normal", "seals"), "africa").State;
+                    State.ElapsedMonths = 12;
+                    State.Influence = 60;
+                    ShowGame();
+                    break;
+                case "talents-seal":
+                    State = GameEngine.PlaceStartingFoothold(GameEngine.CreateGameState("normal", "seals"), "africa").State;
+                    State.ElapsedMonths = 28;
+                    State.Influence = 120;
+                    ShowGame();
+                    break;
+                case "talents-branch":
+                    State = GameEngine.PlaceStartingFoothold(GameEngine.CreateGameState("normal", "seals"), "africa").State;
+                    State.ElapsedMonths = 108;
+                    State.Influence = 260;
+                    State = GameEngine.TakeTalent(State, "swelling_flock").State;
+                    State = GameEngine.TakeTalent(State, "open_worship").State;
+                    ShowGame();
+                    break;
+                case "restore":
+                    State = GameEngine.PlaceStartingFoothold(GameEngine.CreateGameState("normal", "restore-shot"), "africa").State;
+                    State.ElapsedMonths = 96;
+                    State.Influence = 220;
+                    State.Awareness = 46;
+                    Derived.Recruit(State.Regions["africa"], 360);
+                    State.Regions["africa"].Exposure = 45;
+                    State.Regions["africa"].Site = new Site { Invested = true, Progress = 14, Recoverable = 6 };
+                    ShowGame();
+                    break;
+                case "cornered":
+                    State = GameEngine.PlaceStartingFoothold(GameEngine.CreateGameState("normal", "cornered-shot"), "africa").State;
+                    State.ElapsedMonths = 96;
+                    State.Influence = 160;
+                    State.Dread = 18;
+                    Derived.Recruit(State.Regions["africa"], 340);
+                    State.Regions["africa"].Site = new Site { Invested = true, Progress = 16 };
+                    State.Regions["africa"].Cooldowns["counter"] = 105;
+                    State.Regions["africa"].Threat = new Threat { Kind = "occult", Severity = 2, DueMonth = 101 };
                     ShowGame();
                     break;
                 default:

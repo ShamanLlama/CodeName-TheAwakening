@@ -151,7 +151,7 @@ namespace Awakening.UI
 
         public static readonly Dictionary<string, string> TabDescriptions = new Dictionary<string, string>
         {
-            ["CULT"] = "Grow cells, conceal evidence, and answer threats.",
+            ["CULT"] = "Grow cells, conceal or bury evidence, and answer threats.",
             ["RITES"] = "Sacrifice for Dread, manifestations, and ritual sites.",
             ["OMENS"] = "Passing nightmares, eclipses, and prominent figures.",
         };
@@ -162,9 +162,9 @@ namespace Awakening.UI
             ["first_cell"] = ("Your first cell", ""),
             ["threat"] = ("A threat is coming", "The clipping on the left counts down to a strike. Obstruct it with Influence, scatter the cell for a few months, silence the witnesses with Dread, or accept the losses."),
             ["omen"] = ("An omen appeared", "The violet eye marks a short-lived opportunity. Open that region to use it before it fades."),
-            ["doctrine"] = ("You can afford a doctrine", "One permanent bonus for this run, from the Doctrine button in the ledger."),
+            ["talents"] = ("A talent seal has opened", ""),
             ["sacrifice"] = ("Ritual sites take two years", "Sacrifice followers in the Rites tab for Dread, then Prepare a site in a region you hold firmly."),
-            ["awareness"] = ("The world is noticing", "World awareness slows you and ends the run at 100%. Conceal the evidence lowers it."),
+            ["awareness"] = ("The world is noticing", "World awareness slows you and ends the run at 100%. Conceal the evidence or Bury the record to lower it."),
             ["unsupported"] = ("A site stopped counting", "A struck seal stalls: its region needs more followers, its flock is scattered, or its upkeep went unpaid. Open the region to see which."),
         };
 
@@ -177,6 +177,12 @@ namespace Awakening.UI
                 int gather = GameData.Actions["recruit"].Influence;
                 int expand = GameData.Actions["expand"].Influence;
                 return ("Your first cell", $"You have {influence} Influence. Gathering followers costs {gather}; opening a neighbouring cell costs {expand}. Every action works while paused.");
+            }
+            if (id == "talents")
+            {
+                int total = GameData.Difficulties[s.Difficulty].TalentSlots;
+                int cost = GameEngine.TalentCost(s);
+                return ("A talent seal has opened", $"Only {total} seals open in this run — the tree cannot be completed, and each middle pair closes the other. Open Talents in the ledger; the first costs {cost} Influence.");
             }
             return Hints[id];
         }
@@ -269,9 +275,9 @@ namespace Awakening.UI
                 ["unsupported"] = regions.Any(r => r.Site.Invested && IsStalled(r)),
                 ["awareness"] = s.Awareness >= 30,
                 ["sacrifice"] = s.ElapsedMonths >= 24 && !regions.Any(r => r.Site.Invested),
-                ["doctrine"] = s.Talents.Count == 0 && GameEngine.TalentSlotsUnused(s) > 0 && s.Influence >= GameEngine.TalentCost(s),
+                ["talents"] = s.Talents.Count == 0 && GameEngine.TalentSlotsUnused(s) > 0,
             };
-            foreach (string id in new[] { "first_cell", "threat", "unsupported", "awareness", "sacrifice", "omen", "doctrine" })
+            foreach (string id in new[] { "first_cell", "threat", "unsupported", "awareness", "sacrifice", "omen", "talents" })
                 if (checks[id] && !seen(id)) return id;
             return "";
         }
@@ -319,14 +325,40 @@ namespace Awakening.UI
         public static readonly string[] Responses = { "counter", "scatter", "silence" };
 
         /// <summary>The stamp for one answer: the verb and what it is paid in.</summary>
-        public static string ResponseStamp(ActionPreview preview, string id)
+        public static string ResponseStamp(GameState s, ActionPreview preview, string id)
         {
             switch (id)
             {
                 case "counter": return $"OBSTRUCT · {preview.Influence} INF";
-                case "scatter": return $"SCATTER · {Balance.ScatterMonths} MO";
+                case "scatter": return $"SCATTER · {GameEngine.ScatterMonths(s)} MO";
                 default: return $"SILENCE · {preview.Dread} DREAD";
             }
+        }
+
+        /// <summary>Short plain explanation of why a ThreatOption cannot be used now.</summary>
+        public static string ThreatOptionReason(ThreatOption opt)
+        {
+            string reason = opt?.Reason ?? "";
+            if (reason.Length == 0) return "";
+            if (reason.StartsWith("Available in ", StringComparison.Ordinal))
+            {
+                string months = Between(reason, "Available in ", " months.", " month.");
+                string verb = opt.Response == "counter" ? "counter" : opt.Response == "scatter" ? "scatter" : "silence";
+                string unit = months == "1" ? "month" : "months";
+                return $"{verb} rests {months} more {unit}";
+            }
+            if (reason.StartsWith("Need ", StringComparison.Ordinal))
+                return "need " + Between(reason, "Need ", ".");
+            return reason.TrimEnd('.');
+        }
+
+        /// <summary>Banner text when Threats.Cornered is true: neither obstruction nor silencing is available.</summary>
+        public static string ThreatCorneredLabel(GameState s, string regionId, bool compact = false)
+        {
+            var options = Threats.Options(s, regionId);
+            bool canScatter = options.Count > 1 && options[1].Ok;
+            if (compact) return canScatter ? "CORNERED · SCATTER OR ENDURE" : "CORNERED · NO ANSWER READY";
+            return canScatter ? "CORNERED · ONLY SCATTER OR ENDURE" : "CORNERED · NO ANSWER READY";
         }
 
         /// <summary>What that answer costs besides its price, in a few words.</summary>
@@ -406,6 +438,13 @@ namespace Awakening.UI
                     case "recruit":
                         if (Derived.Recruitable(r) < 1) found = ("NO RECRUITS LEFT", "No recruits available. Use a manifestation to change disbelief.");
                         break;
+                    case "bury":
+                        if (s.Awareness <= 0) found = ("NO AWARENESS", "Nothing to bury: the world has not noticed you.");
+                        break;
+                    case "restore":
+                        if (!r.Site.Invested || r.Site.Recoverable <= 0) found = ("NO LOST PREP", "No lost preparation to restore here.");
+                        else if (GameEngine.RestoreMonths(s, regionId) <= 0) found = ("SITE READY", "This site is already prepared.");
+                        break;
                 }
             }
             if (found.Item1 == "") found = (ShortReason(preview), preview.Reason ?? "");
@@ -439,7 +478,8 @@ namespace Awakening.UI
                 ("nightmare or eclipse", "NEEDS AN OMEN"), ("eclipse needs", "NEEDS A SITE"),
                 ("prominent-person", "NEEDS A FIGURE"), ("secretly converted", "NO SECRET FIGURE"),
                 ("receive their awakening", "NEEDS A SITE"), ("already public", "ALREADY PUBLIC"),
-                ("already underground", "ALREADY HIDDEN"),
+                ("already underground", "ALREADY HIDDEN"), ("Nothing to bury", "NO AWARENESS"),
+                ("No lost preparation", "NO LOST PREP"), ("already prepared", "SITE READY"),
             };
             foreach (var (text, label) in table)
                 if (reason.Contains(text)) return label;
@@ -459,7 +499,7 @@ namespace Awakening.UI
             if (s.Awareness >= 100)
             {
                 result.Cause = "World awareness reached 100%. The world found the cult before the stars were right.";
-                result.Advice.Add("Conceal the evidence before awareness passes half; it costs more as awareness rises.");
+                result.Advice.Add("Conceal the evidence or Bury the record before awareness passes half; both grow dearer as awareness or burials climb.");
                 result.Advice.Add("Public worship, sites and a very large cult all raise awareness. Grow only as large as the rite needs.");
                 return result;
             }

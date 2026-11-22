@@ -18,8 +18,8 @@ namespace Awakening.UI
     {
         public static readonly (string name, string[] actions)[] Groups =
         {
-            ("CULT", new[] { "recruit", "expand", "reveal", "hide", "conceal", "counter", "scatter", "silence" }),
-            ("RITES", new[] { "sacrifice", "manifest", "prepare" }),
+            ("CULT", new[] { "recruit", "expand", "reveal", "hide", "conceal", "bury", "counter", "scatter", "silence" }),
+            ("RITES", new[] { "sacrifice", "manifest", "prepare", "restore" }),
             ("OMENS", new[] { "exploit", "convert", "reveal_figure" }),
         };
 
@@ -42,6 +42,7 @@ namespace Awakening.UI
         readonly Stack _tabGuide;
         readonly Stack _actions;
         readonly Stack _detail;
+        readonly Stack _mysticism;
         readonly Dictionary<string, (Button button, Label title, Label cost, Label aware)> _rows = new Dictionary<string, (Button, Label, Label, Label)>();
         string _detailId = "";
         string _detailShown = "";
@@ -143,6 +144,8 @@ namespace Awakening.UI
             Kit.SetVisible(_tabGuide, false);
             _actions = Kit.VBox(0);
             _detail = Kit.VBox(6);
+            _mysticism = Kit.VBox(4);
+            _mysticism.name = "mysticism-panel";
 
             // Actions and their explanation come first; statistics follow. On short screens the
             // cards (threat, omen, figure, site) also wait below the actions, so a larger interface
@@ -156,6 +159,7 @@ namespace Awakening.UI
             _body.Add(_tabGuide);
             _body.Add(_actions);
             _body.Add(_detail);
+            _body.Add(_mysticism);
             if (Kit.Compact)
             {
                 _body.Add(_cards);
@@ -351,12 +355,14 @@ namespace Awakening.UI
             Kit.SetVisible(_tabs, !placing);
             Kit.SetVisible(_actions, !placing);
             Kit.SetVisible(_detail, !placing);
+            Kit.SetVisible(_mysticism, !placing);
             if (placing)
             {
                 Kit.SetVisible(_tabGuide, false);
                 FillProfile(s);
                 return;
             }
+            FillMysticism();
             if (!over && !_tabGuideOpen && !_game.HintSeen(Notes.TabsHintId))
             {
                 _tabGuideOpen = true;
@@ -377,19 +383,31 @@ namespace Awakening.UI
                 bool hidden = id == "reveal" && r.Public || id == "hide" && !r.Public || id == "expand" && r.Population.Followers > 0
                     || Notes.Responses.Contains(id) && r.Threat == null;
                 Kit.SetVisible(row.button, !hidden);
+                int restoreMonths = id == "restore" ? GameEngine.RestoreMonths(s, Region) : 0;
+                bool restoreHighlight = id == "restore" && r.Site.Invested && r.Site.Recoverable > 0 && restoreMonths > 0;
+                row.button.EnableInClassList("aw-restore-ready", restoreHighlight);
+                row.button.style.borderLeftWidth = restoreHighlight ? 3 : 0;
+                row.button.style.borderLeftColor = restoreHighlight ? Palette.Cult : Color.clear;
+                row.button.style.backgroundColor = restoreHighlight ? (StyleColor)Palette.CultWash : StyleKeyword.Null;
                 var blocked = Notes.Blocker(s, id, Region, preview);
                 row.button.tooltip = blocked.longText;
                 // Available: ink and price. Unavailable: muted italic, and the reason in place of the price.
                 row.title.text = GameData.Actions[id].Name;
                 Fonts.Apply(row.title, preview.Ok ? Fonts.Body : Fonts.Italic);
-                row.title.style.color = preview.Ok ? Palette.Text : Palette.Muted;
+                row.title.style.color = restoreHighlight ? Palette.Cult : preview.Ok ? Palette.Text : Palette.Muted;
                 row.cost.text = preview.Ok ? CostText(preview) : blocked.shortText;
                 string concealStamp = id == "conceal" ? Notes.ConcealGlobalStamp(s) : "";
                 bool showAware = preview.Ok && preview.Awareness > 0;
-                row.aware.text = showAware ? AwarenessText(preview) : concealStamp;
-                row.aware.style.color = showAware ? Palette.Danger : Palette.Warn;
+                bool showBuryGain = id == "bury" && preview.Ok;
+                string subText = showAware ? AwarenessText(preview)
+                    : concealStamp != "" ? concealStamp
+                    : showBuryGain ? $"−{GameEngine.BuryAwareness(s)} AWARENESS"
+                    : restoreHighlight ? $"+{restoreMonths} MO LOST"
+                    : "";
+                row.aware.text = subText;
+                row.aware.style.color = showAware ? Palette.Danger : (showBuryGain || restoreHighlight) ? Palette.Cult : Palette.Warn;
                 row.aware.style.fontSize = !showAware && concealStamp != "" ? (Kit.Compact ? 12 : 11) : (Kit.Compact ? 14 : 12);
-                Kit.SetVisible(row.aware, showAware || concealStamp != "");
+                Kit.SetVisible(row.aware, subText != "");
                 row.cost.style.color = !preview.Ok ? Palette.Warn : preview.Dread > 0 ? Palette.Omen : Palette.Text;
             }
             RefreshDetail();
@@ -458,6 +476,7 @@ namespace Awakening.UI
             if (r.Threat != null)
             {
                 Threat threat = r.Threat;
+                bool cornered = Threats.Cornered(s, Region);
                 Stack box = Card(Palette.Danger);
                 Stack head = Kit.HBox(8);
                 Label title = Kit.Body(GameData.ThreatNames[threat.Kind], 21, Palette.Danger, Fonts.DisplaySc);
@@ -466,8 +485,22 @@ namespace Awakening.UI
                 head.Add(title);
                 head.Add(Kit.Label(Format.Months(threat.DueMonth - s.ElapsedMonths), 15, Palette.Danger, Fonts.TypeBold));
                 box.Add(head);
+                if (cornered)
+                {
+                    Label badge = Kit.Body(Notes.ThreatCorneredLabel(s, Region), 12, Palette.Danger, Fonts.TypeBold);
+                    badge.name = "panel-threat-cornered";
+                    badge.style.backgroundColor = Palette.Alpha(Palette.Danger, 0.10f);
+                    badge.style.borderTopWidth = badge.style.borderBottomWidth = badge.style.borderLeftWidth = badge.style.borderRightWidth = 1;
+                    badge.style.borderTopColor = badge.style.borderBottomColor = badge.style.borderLeftColor = badge.style.borderRightColor = Palette.Alpha(Palette.Danger, 0.65f);
+                    badge.style.paddingLeft = badge.style.paddingRight = 7;
+                    badge.style.paddingTop = badge.style.paddingBottom = 3;
+                    badge.tooltip = "Neither obstruction nor silencing is available now. Only scattering the flock or enduring the strike remains.";
+                    box.Add(badge);
+                }
                 box.Add(Kit.Body("If ignored: " + Threats.Describe(s, r), 15, Palette.Text, Fonts.Italic));
-                foreach (string id in Notes.Responses) box.Add(Response(s, r, id));
+                foreach (ThreatOption opt in Threats.Options(s, Region)) box.Add(Response(s, r, opt));
+                if (GameEngine.HasTalent(s, "offerings"))
+                    box.Add(Kit.Body("Offerings to the deep: a sacrifice in Rites also ends this threat.", 13, Palette.Omen, Fonts.Italic));
             }
             if (r.Opportunity != null)
             {
@@ -523,24 +556,70 @@ namespace Awakening.UI
                     box.Add(Kit.Body($"Stalled. Needs {Format.Count(Derived.SiteRequirement(r))} followers here.", 15, Palette.Danger, Fonts.Italic));
                 else if (state == "ready")
                     box.Add(Kit.Body("Ready for the final rite.", 15, Palette.Cult, Fonts.Italic));
+                int recoverable = GameEngine.RestoreMonths(s, Region);
+                if (r.Site.Recoverable > 0 && recoverable > 0)
+                {
+                    ActionPreview restorePreview = GameEngine.PreviewAction(s, "restore", Region);
+                    box.Add(Kit.Body($"{Format.Months(r.Site.Recoverable)} lost to occultists; {Format.Months(recoverable)} can be restored.", 14, Palette.Warn, Fonts.Italic));
+                    Button restoreBtn = Kit.Stamp($"RESTORE · +{recoverable} MO · {restorePreview.Influence} INF", null, Accent.Cult);
+                    restoreBtn.name = "site-restore-stamp";
+                    Tap(restoreBtn, () => _game.Act("restore", Region));
+                    restoreBtn.SetEnabled(restorePreview.Ok);
+                    restoreBtn.tooltip = restorePreview.Ok
+                        ? restorePreview.Effect + (string.IsNullOrEmpty(restorePreview.Risk) ? "" : "\n" + restorePreview.Risk)
+                        : restorePreview.Reason;
+                    box.Add(WithReason(restoreBtn, restorePreview.Ok ? "" : Notes.Blocker(s, "restore", Region, restorePreview).shortText));
+                }
             }
         }
 
-        /// <summary>One answer to this region's threat: its stamp, and under it what it costs besides the price, or why it cannot be used now.</summary>
-        VisualElement Response(GameState s, RegionState r, string id)
+        /// <summary>One answer to this region's threat from Threats.Options: its stamp, cost, and why it cannot be used now.</summary>
+        VisualElement Response(GameState s, RegionState r, ThreatOption opt)
         {
-            ActionPreview preview = GameEngine.PreviewAction(s, id, Region);
-            Button stamp = Kit.Stamp(Notes.ResponseStamp(preview, id), null, Accent.Danger);
-            Tap(stamp, () => _game.Act(id, Region));
-            stamp.SetEnabled(preview.Ok);
-            stamp.tooltip = !preview.Ok ? preview.Reason : preview.Effect + "\n" + preview.Risk;
+            ActionPreview preview = GameEngine.PreviewAction(s, opt.Response, Region);
+            Button stamp = Kit.Stamp(Notes.ResponseStamp(s, preview, opt.Response), null, Accent.Danger);
+            Tap(stamp, () => _game.Act(opt.Response, Region));
+            stamp.SetEnabled(opt.Ok);
+            stamp.tooltip = !opt.Ok ? opt.Reason + " (" + opt.Cost + ")" : opt.Cost + "\n" + preview.Effect + "\n" + preview.Risk;
             stamp.style.alignSelf = Align.FlexStart;
             if (Kit.Touch) stamp.style.minHeight = 40;
             Stack column = Kit.VBox(2);
             column.Add(stamp);
-            if (preview.Ok) column.Add(Kit.Body(Notes.ResponseNote(r, preview, id), 13, Palette.Muted, Fonts.Italic));
-            else column.Add(Kit.Label(Notes.Blocker(s, id, Region, preview).shortText, 12, Palette.Warn, Fonts.TypeBold));
+            if (opt.Ok)
+            {
+                string detail = opt.Response == "silence"
+                    ? opt.Cost + " · +" + Js.Num(Balance.SilenceExposure) + " Exposure"
+                    : opt.Cost + " · " + Notes.ResponseNote(r, preview, opt.Response);
+                column.Add(Kit.Body(detail, 13, opt.Response == "silence" ? Palette.Danger : Palette.Muted, Fonts.Italic));
+            }
+            else
+            {
+                column.Add(Kit.Body(Notes.ThreatOptionReason(opt) + " · " + opt.Cost, 12, Palette.Warn, Fonts.TypeBold));
+            }
             return column;
+        }
+
+        void FillMysticism()
+        {
+            _mysticism.Clear();
+            RegionDefinition def = GameData.Regions[Region];
+            _mysticism.Add(Kit.Rule(Palette.Alpha(Palette.Text, 0.25f), false));
+            Stack row = Kit.HBox(8);
+            row.tooltip = "Openness to the impossible. Shapes awareness and conversions from Impossible manifestation.";
+            Label label = Kit.Caption("Mysticism");
+            label.style.width = 88;
+            row.Add(label);
+            var bar = new Bar(100, Palette.Omen) { Value = def.Mysticism };
+            bar.style.flexGrow = 1;
+            row.Add(bar);
+            Label val = Kit.Label(def.Mysticism.ToString(), 12, Palette.Omen, Fonts.TypeBold);
+            val.style.width = 26;
+            val.style.unityTextAlign = TextAnchor.MiddleRight;
+            row.Add(val);
+            _mysticism.Add(row);
+            Label note = Kit.Body(Derived.MysticismNote(Region), 13, Palette.Muted, Fonts.Italic);
+            note.name = "mysticism-note";
+            _mysticism.Add(note);
         }
 
         /// <summary>A stamp, with the short reason it is unavailable underneath.</summary>
@@ -572,10 +651,16 @@ namespace Awakening.UI
                 Label label = Kit.Caption(fact.name);
                 label.style.width = 100;
                 row.Add(label);
-                var bar = new Bar(100, Palette.Muted) { Value = (float)fact.value };
+                var bar = new Bar(100, fact.name == "Mysticism" ? Palette.Omen : Palette.Muted) { Value = (float)fact.value };
                 bar.style.flexGrow = 1;
                 row.Add(bar);
                 _profile.Add(row);
+                if (fact.name == "Mysticism")
+                {
+                    Label mNote = Kit.Body(Derived.MysticismNote(Region), 14, Palette.Muted, Fonts.Italic);
+                    mNote.name = "mysticism-note-profile";
+                    _profile.Add(mNote);
+                }
             }
             var borders = def.Adjacent.Select(other => GameData.Regions[other].Name);
             _profile.Add(Kit.Body("Spreads to " + string.Join(", ", borders) + ".", 16, Palette.Muted, Fonts.Italic));
@@ -688,8 +773,10 @@ namespace Awakening.UI
             // The clock refreshes the file every month; rebuilding an unchanged explanation would
             // swallow a tap that lands between frames.
             int worldConcealCd = _detailId == "conceal" && _game.State != null ? GameEngine.ConcealWorldCooldown(_game.State) : 0;
+            int recoverableMonths = _detailId == "restore" && _game.State != null ? GameEngine.RestoreMonths(_game.State, Region) : 0;
+            int buryUses = _detailId == "bury" && _game.State != null ? _game.State.BuryUses : 0;
             string shown = preview == null ? "" : string.Join("|", _detailId, Region, preview.Ok, preview.Reason, preview.Influence, preview.Dread,
-                preview.Followers, preview.Awareness, preview.Effect, preview.Risk, worldConcealCd);
+                preview.Followers, preview.Awareness, preview.Effect, preview.Risk, worldConcealCd, recoverableMonths, buryUses);
             if (shown == _detailShown && _detail.childCount > 0) return;
             _detailShown = shown;
             _detail.Clear();
@@ -717,8 +804,11 @@ namespace Awakening.UI
             if (price != "") _detail.Add(Kit.Label("COST  " + price, 13, preview.Dread > 0 ? Palette.Omen : Palette.Text, Fonts.TypeBold));
             // World awareness is a price too; it gets its own line so a long price never widens the file.
             if (preview.Awareness > 0) _detail.Add(Kit.Label(AwarenessText(preview).Replace("AWARENESS", "WORLD AWARENESS"), 13, Palette.Danger, Fonts.TypeBold));
+            if (_detailId == "bury" && preview.Ok) _detail.Add(Kit.Label($"−{GameEngine.BuryAwareness(_game.State)} WORLD AWARENESS", 13, Palette.Cult, Fonts.TypeBold));
+            if (_detailId == "restore" && recoverableMonths > 0) _detail.Add(Kit.Label($"+{recoverableMonths} PREPARATION MONTHS", 13, Palette.Cult, Fonts.TypeBold));
             if (_detailId == "conceal" && worldConcealCd > 0) _detail.Add(Kit.Label(Notes.ConcealGlobalStamp(_game.State), 13, Palette.Warn, Fonts.TypeBold));
-            _detail.Add(Kit.Body(preview.Effect, 15, Palette.Text));
+            string effectText = _detailId == "restore" && recoverableMonths == 0 ? GameData.Actions["restore"].Description : preview.Effect;
+            _detail.Add(Kit.Body(effectText, 15, Palette.Text));
             if (!string.IsNullOrEmpty(preview.Risk)) _detail.Add(Kit.Body(preview.Risk, 15, Palette.Danger, Fonts.Italic));
             if (!preview.Ok) _detail.Add(Kit.Body(Notes.Blocker(_game.State, _detailId, Region, preview).longText, 15, Palette.Warn, Fonts.BodyBold));
             if (Kit.Touch)

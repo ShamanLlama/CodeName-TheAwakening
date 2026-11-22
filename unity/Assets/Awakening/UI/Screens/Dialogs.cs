@@ -15,12 +15,20 @@ namespace Awakening.UI
         readonly ScrollView _scroll;
         readonly VisualElement _backdrop;
         bool _confirmAbandon;
+        string _talentBranch = GameData.BranchIds[0];
         float _width;
         IVisualElementScheduledItem _entrance;
         public string Kind { get; private set; } = "";
         public bool IsOpen => Kind != "";
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         internal VisualElement LayoutBox => _box;
+        internal void LayoutSelectTalentBranch(string branchId)
+        {
+            if (Kind != "talents") return;
+            _talentBranch = branchId;
+            BuildTalents();
+            Fit();
+        }
 #endif
 
         public Dialogs(GameController game, GameScreen screen)
@@ -58,7 +66,11 @@ namespace Awakening.UI
             switch (kind)
             {
                 case "menu": Menu(); break;
-                case "doctrine": Doctrine(); break;
+                case "talents":
+                case "doctrine":
+                    Kind = "talents";
+                    Talents();
+                    break;
                 case "chronicle": Chronicle(); break;
                 case "guide": Guide(); break;
                 case "alignment": Alignment(); break;
@@ -156,7 +168,7 @@ namespace Awakening.UI
                 ("Grow", "Cells recruit and earn Influence. Spread to neighbouring regions."),
                 ("Sacrifice", "Followers become Dread, which pays for the rites."),
                 ("Build three sites", "Each takes 24 months and needs a quarter of its region as followers."),
-                ("Stay hidden", "Answer each threat: obstruct it, scatter the cell or silence the witnesses. Conceal evidence. At 100% world awareness the run is lost."),
+                ("Stay hidden", "Answer each threat: obstruct it, scatter the cell or silence the witnesses. Conceal evidence or bury the record. At 100% world awareness the run is lost."),
                 ("Awaken", "From September 1924, spend 100 Dread and hold three sites for 12 months."),
             };
             for (int i = 0; i < steps.Length; i++)
@@ -284,7 +296,7 @@ namespace Awakening.UI
 
         static VisualElement Keys()
         {
-            string[,] keys = { { "Space", "pause" }, { "1  2", "speed" }, { "Tab", "next region" }, { "Up Down", "pick action" }, { "Enter", "act" }, { "Left Right", "file tab" }, { "C", "chronicle" }, { "D", "doctrine" }, { "R", "whole world" }, { "N", "close note" }, { "Wheel", "zoom" }, { "Esc", "menu" } };
+            string[,] keys = { { "Space", "pause" }, { "1  2", "speed" }, { "Tab", "next region" }, { "Up Down", "pick action" }, { "Enter", "act" }, { "Left Right", "file tab" }, { "C", "chronicle" }, { "T", "talents" }, { "R", "whole world" }, { "N", "close note" }, { "Wheel", "zoom" }, { "Esc", "menu" } };
             var grid = Kit.VBox(3);
             // Godot's six-column grid uses the widest item in each column.
             float[] widths = { 54, 87, 40, 62, 77, 87 };
@@ -305,40 +317,316 @@ namespace Awakening.UI
             return grid;
         }
 
-        void Doctrine()
+        void Talents()
+        {
+            _width = Kit.Compact ? 920 : 1220;
+            BuildTalents();
+        }
+
+        void BuildTalents()
         {
             var s = _game.State;
-            _width = 860;
-            // alignment-5 minimal port: the three root talents stand in for the doctrines until the tree screen lands (wave 2).
-            Title("Take a Talent");
+            _content.Clear();
+            DifficultyDefinition diff = GameData.Difficulties[s.Difficulty];
+            int total = diff.TalentSlots;
+            int open = GameEngine.TalentSlotsOpen(s);
+            int unused = GameEngine.TalentSlotsUnused(s);
+            int taken = s.Talents.Count;
+            int nextMonth = GameEngine.NextTalentSlotMonth(s);
             int cost = GameEngine.TalentCost(s);
-            int missing = cost - (int)Math.Floor(s.Influence);
-            _content.Add(SheetUI.Body($"The next talent costs {cost} Influence. Talents are permanent.", 17, Palette.Muted, Fonts.Italic));
-            if (missing > 0) _content.Add(SheetUI.Body($"You have {Math.Floor(s.Influence)} Influence; {missing} more to choose.", 16, Palette.Warn, Fonts.BodyBold));
-            var row = Kit.HBox(Kit.Compact ? 8 : 12);
-            row.style.alignItems = Align.Stretch;
-            _content.Add(row);
-            foreach (string id in GameData.TalentIds.Where(t => GameData.Talents[t].Tier == 1))
+
+            var headerRow = Kit.HBox(12);
+            headerRow.style.alignItems = Align.Center;
+            var heading = SheetUI.Label("Talents of the Cult", Kit.Compact ? 28 : 36, Palette.Text, Fonts.Display);
+            heading.style.flexGrow = 1;
+            heading.style.flexShrink = 1;
+            headerRow.Add(heading);
+            headerRow.Add(new IconButton("close", "Close  (Esc)", Close, true));
+            var titleBlock = Kit.VBox(4);
+            titleBlock.Add(headerRow);
+            titleBlock.Add(Kit.Rule(Palette.Alpha(Palette.Text, .6f)));
+            _content.Add(titleBlock);
+
+            // Seals header: pips for every seal in this difficulty, open/unused counts, next seal date and cost.
+            var sealsBar = Kit.Panel(Palette.PaperLight, unused > 0 ? Palette.Cult : Palette.PaperEdge, Kit.Compact ? new Vector4(12, 8, 12, 9) : new Vector4(14, 10, 14, 10), 0.08f, 4);
+            sealsBar.name = "talent-seals-bar";
+            sealsBar.style.borderLeftWidth = 4;
+            sealsBar.style.borderLeftColor = unused > 0 ? Palette.Cult : Palette.PaperEdge;
+
+            var topLine = new Flow(12, 4);
+            topLine.style.alignItems = Align.Center;
+            var pips = Kit.HBox(5);
+            pips.style.alignItems = Align.Center;
+            pips.name = "talent-seal-pips";
+            for (int i = 0; i < total; i++)
             {
-                var def = GameData.Talents[id];
-                bool chosen = GameEngine.HasTalent(s, id);
-                var card = Kit.Panel(Palette.PaperLight, chosen ? Palette.Cult : Palette.PaperEdge, new Vector4(18, 16, 18, 16));
-                if (chosen) card.style.borderLeftWidth = card.style.borderRightWidth = card.style.borderTopWidth = card.style.borderBottomWidth = 2;
-                SheetUI.Equal(card);
-                card.style.minHeight = Kit.Compact ? 180 : 210;
-                var box = Kit.VBox(10);
-                box.style.flexGrow = 1;
-                card.Add(box);
-                box.Add(SheetUI.Label(def.Name, Kit.Compact ? 24 : 26, chosen ? Palette.Cult : Palette.Text, Fonts.DisplaySc));
-                var text = SheetUI.Body(def.Description, 16, Palette.Muted);
-                text.style.flexGrow = 1;
-                box.Add(text);
-                var pick = SheetUI.Button(chosen ? "Chosen" : $"Choose · {cost}", () => { _game.TakeTalent(id); Close(); }, true, 0);
-                pick.SetEnabled(GameEngine.TalentReason(s, id).Length == 0);
-                box.Add(pick);
-                row.Add(card);
+                int sealMonth = diff.TalentSlotMonths[i];
+                bool spent = i < taken;
+                bool ready = !spent && i < open;
+                var pip = SheetUI.Label(spent ? "◆" : ready ? "◈" : "○", 15, spent ? Palette.Cult : ready ? Palette.Warn : Palette.Faint, Fonts.BodyBold);
+                pip.pickingMode = PickingMode.Position;
+                pip.tooltip = spent
+                    ? $"Seal {i + 1} ({Format.Date(sealMonth)}): spent on {GameData.Talents[s.Talents[i]].Name}."
+                    : ready
+                        ? $"Seal {i + 1} ({Format.Date(sealMonth)}): unbroken and ready to spend."
+                        : $"Seal {i + 1}: opens in {Format.Date(sealMonth)} (in {Format.Months(sealMonth - s.ElapsedMonths)}).";
+                pips.Add(pip);
             }
+            topLine.Add(pips);
+
+            string unusedText = unused == 1 ? "1 UNBROKEN" : $"{unused} UNBROKEN";
+            var summary = Kit.Label($"{open}/{total} SEALS OPEN  ·  {unusedText}", 12, unused > 0 ? Palette.Cult : Palette.Text, Fonts.TypeBold);
+            summary.name = "talent-seals-summary";
+            topLine.Add(summary);
+
+            string timingText = nextMonth >= 0
+                ? $"·  NEXT SEAL {Format.Date(nextMonth).ToUpperInvariant()} (IN {nextMonth - s.ElapsedMonths} MO)"
+                : taken >= total ? "·  EVERY SEAL SPENT" : "·  ALL SEALS OPEN";
+            var timing = Kit.Label(timingText, 12, Palette.Muted, Fonts.TypeBold);
+            timing.name = "talent-next-seal";
+            topLine.Add(timing);
+            sealsBar.Add(topLine);
+
+            string subLine = taken < total
+                ? $"Next talent costs {cost} Influence (you have {Format.Count(s.Influence)}). Only {total} seals open on {diff.Name} — the tree cannot be completed in one run, and no choice is undone."
+                : $"All {total} seals of this run are spent. Chosen talents are permanent.";
+            bool shortOnInf = taken < total && unused > 0 && s.Influence < cost;
+            sealsBar.Add(SheetUI.Body(subLine, Kit.Compact ? 13 : 14, shortOnInf ? Palette.Warn : Palette.Muted, Fonts.Italic));
+            _content.Add(sealsBar);
+
+            if (Kit.Compact)
+            {
+                var tabs = Kit.HBox(4);
+                tabs.name = "talent-branch-tabs";
+                tabs.style.alignItems = Align.Stretch;
+                foreach (string branchId in GameData.BranchIds)
+                {
+                    string id = branchId;
+                    int branchTaken = GameData.TalentIds.Count(tid => GameData.Talents[tid].Branch == id && GameEngine.HasTalent(s, tid));
+                    Action pickBranch = () =>
+                    {
+                        _talentBranch = id;
+                        BuildTalents();
+                        schedule.Execute(() => { Fit(); SheetUI.FocusFirst(_content); });
+                    };
+                    var tab = new Button(pickBranch)
+                    {
+                        text = $"{GameData.Branches[id].Name} ({branchTaken}/3)",
+                        focusable = true,
+                        name = "talent-tab-" + id,
+                        userData = pickBranch,
+                    };
+                    tab.AddToClassList("aw-tab");
+                    tab.EnableInClassList("aw-on", _talentBranch == id);
+                    tab.style.fontSize = 16;
+                    tabs.Add(tab);
+                }
+                _content.Add(tabs);
+                _content.Add(BuildBranch(s, _talentBranch, cost, wide: true));
+            }
+            else
+            {
+                var cols = Kit.HBox(12);
+                cols.name = "talent-branches";
+                cols.style.alignItems = Align.Stretch;
+                foreach (string branchId in GameData.BranchIds)
+                {
+                    var col = BuildBranch(s, branchId, cost, wide: false);
+                    SheetUI.Equal(col);
+                    cols.Add(col);
+                }
+                _content.Add(cols);
+            }
+
             Buttons(Secondary("Close", Close));
+        }
+
+        VisualElement BuildBranch(GameState s, string branchId, int cost, bool wide)
+        {
+            BranchDefinition branch = GameData.Branches[branchId];
+            var nodes = GameData.TalentIds.Select(id => GameData.Talents[id]).Where(t => t.Branch == branchId).ToList();
+            TalentDefinition root = nodes[0], midA = nodes[1], midB = nodes[2], cap = nodes[3];
+            int branchTaken = nodes.Count(n => GameEngine.HasTalent(s, n.Id));
+            bool rootTaken = GameEngine.HasTalent(s, root.Id);
+            bool aTaken = GameEngine.HasTalent(s, midA.Id);
+            bool bTaken = GameEngine.HasTalent(s, midB.Id);
+
+            var panel = Kit.Panel(Palette.Paper, Palette.PaperEdge, new Vector4(10, 10, 10, 10), 0.06f, 6);
+            panel.name = "talent-branch-" + branchId;
+            panel.style.borderTopWidth = 2;
+            panel.style.borderTopColor = branchTaken > 0 ? Palette.Cult : Palette.PaperEdge;
+
+            var head = Kit.HBox(8);
+            var nameLabel = Kit.Label(branch.Name, Kit.Compact ? 20 : 21, branchTaken > 0 ? Palette.Cult : Palette.Text, Fonts.DisplaySc);
+            nameLabel.style.flexGrow = 1;
+            nameLabel.style.flexShrink = 1;
+            head.Add(nameLabel);
+            head.Add(Kit.Label($"{branchTaken} / 3", 12, branchTaken > 0 ? Palette.Cult : Palette.Muted, Fonts.TypeBold));
+            panel.Add(head);
+            panel.Add(Kit.Body(branch.Description, 13, Palette.Muted, Fonts.Italic));
+
+            panel.Add(BuildTalentNode(s, root, cost));
+
+            var forkRow = Kit.VBox(2);
+            forkRow.style.alignItems = Align.Center;
+            forkRow.Add(new TreeConnector(fork: true, wide: wide, rootTaken, aTaken, bTaken));
+            string forkCaption = aTaken || bTaken ? "TIER II · ONE CHOSEN, THE OTHER CLOSED" : "TIER II · CHOOSE ONE (CLOSES THE OTHER)";
+            var forkLabel = Kit.Body(forkCaption, 10, aTaken || bTaken ? Palette.Muted : Palette.Warn, Fonts.TypeBold);
+            forkLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
+            forkRow.Add(forkLabel);
+            panel.Add(forkRow);
+
+            if (wide)
+            {
+                var pair = Kit.HBox(8);
+                pair.style.alignItems = Align.Stretch;
+                var cardA = BuildTalentNode(s, midA, cost);
+                var cardB = BuildTalentNode(s, midB, cost);
+                SheetUI.Equal(cardA);
+                SheetUI.Equal(cardB);
+                pair.Add(cardA);
+                pair.Add(cardB);
+                panel.Add(pair);
+            }
+            else
+            {
+                var pair = Kit.VBox(5);
+                pair.style.borderLeftWidth = 2;
+                pair.style.borderLeftColor = Palette.Alpha(rootTaken ? Palette.Cult : Palette.PaperEdge, 0.55f);
+                pair.style.paddingLeft = 6;
+                pair.Add(BuildTalentNode(s, midA, cost));
+                var orLabel = Kit.Label("— OR —", 10, Palette.Faint, Fonts.TypeBold);
+                orLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
+                pair.Add(orLabel);
+                pair.Add(BuildTalentNode(s, midB, cost));
+                panel.Add(pair);
+            }
+
+            panel.Add(new TreeConnector(fork: false, wide: wide, aTaken || bTaken, aTaken, bTaken));
+            panel.Add(BuildTalentNode(s, cap, cost));
+            return panel;
+        }
+
+        VisualElement BuildTalentNode(GameState s, TalentDefinition t, int cost)
+        {
+            bool taken = GameEngine.HasTalent(s, t.Id);
+            bool excluded = !taken && t.Excludes != null && GameEngine.HasTalent(s, t.Excludes);
+            string reason = GameEngine.TalentReason(s, t.Id);
+            bool available = reason.Length == 0;
+            bool shortInf = !taken && !excluded && !available && reason.StartsWith("Need ", StringComparison.Ordinal);
+            bool sealLocked = !taken && !excluded && !available && (reason.StartsWith("The next seal", StringComparison.Ordinal) || reason.StartsWith("Every seal", StringComparison.Ordinal));
+
+            Color fill = taken || available ? Palette.PaperLight : excluded ? Palette.PaperShade : Palette.Paper;
+            Color edge = taken || available ? Palette.Cult : excluded ? Palette.Alpha(Palette.Danger, 0.5f) : Palette.PaperEdge;
+            Color leftBar = taken || available ? Palette.Cult : excluded ? Palette.Danger : shortInf ? Palette.Warn : Palette.PaperEdge;
+
+            var card = Kit.Panel(fill, edge, new Vector4(10, 8, 10, 8), 0.05f, 4);
+            card.name = "talent-node-" + t.Id;
+            card.style.borderLeftWidth = taken ? 4 : 3;
+            card.style.borderLeftColor = leftBar;
+            if (taken) card.style.borderTopWidth = card.style.borderBottomWidth = card.style.borderRightWidth = 2;
+
+            var head = Kit.HBox(6);
+            string tierName = t.Tier == 1 ? "TIER I · ROOT" : t.Tier == 2 ? "TIER II · FORK" : "TIER III · CAPSTONE";
+            var tierLabel = Kit.Label(tierName, 10, Palette.Faint, Fonts.TypeBold);
+            tierLabel.style.flexGrow = 1;
+            tierLabel.style.flexShrink = 1;
+            head.Add(tierLabel);
+
+            string badgeText = taken ? "◆ TAKEN"
+                : available ? $"READY · {cost} INF"
+                : excluded ? "× CLOSED"
+                : shortInf ? $"NEED {cost} INF"
+                : sealLocked ? "SEALED"
+                : "LOCKED";
+            Color badgeColor = taken || available ? Palette.Cult : excluded ? Palette.Danger : shortInf ? Palette.Warn : Palette.Muted;
+            var badge = Kit.Label(badgeText, 10, badgeColor, Fonts.TypeBold);
+            badge.name = "talent-state-" + t.Id;
+            badge.style.flexShrink = 0;
+            head.Add(badge);
+            card.Add(head);
+
+            var title = Kit.Body(t.Name, Kit.Compact ? 16 : 17, taken ? Palette.Cult : excluded ? Palette.Muted : Palette.Text, excluded ? Fonts.Italic : Fonts.DisplaySc);
+            card.Add(title);
+
+            var desc = Kit.Body(t.Description, 13, excluded ? Palette.Faint : Palette.Muted);
+            desc.style.flexGrow = 1;
+            card.Add(desc);
+
+            if (available)
+            {
+                string talentId = t.Id;
+                var pick = SheetUI.Button($"Take · {cost} Inf", () =>
+                {
+                    _game.TakeTalent(talentId);
+                    BuildTalents();
+                    schedule.Execute(() => { Fit(); SheetUI.FocusFirst(_content); });
+                }, primary: true, height: Kit.Touch ? 38 : 30);
+                pick.name = "take-" + t.Id;
+                pick.style.fontSize = Kit.Compact ? 15 : 16;
+                pick.style.paddingTop = pick.style.paddingBottom = 4;
+                card.Add(pick);
+            }
+            else if (!taken)
+            {
+                var why = Kit.Body(reason, 12, excluded ? Palette.Danger : shortInf ? Palette.Warn : Palette.Muted, excluded ? Fonts.BodyBold : Fonts.Italic);
+                why.name = "talent-reason-" + t.Id;
+                card.Add(why);
+            }
+            return card;
+        }
+
+        /// <summary>Ink stem connecting tiers in the talent tree: forks into Tier II and converges into Tier III.</summary>
+        sealed class TreeConnector : VisualElement
+        {
+            readonly bool _fork, _wide, _active, _leftActive, _rightActive;
+
+            public TreeConnector(bool fork, bool wide, bool active, bool leftActive, bool rightActive)
+            {
+                _fork = fork;
+                _wide = wide;
+                _active = active;
+                _leftActive = leftActive;
+                _rightActive = rightActive;
+                pickingMode = PickingMode.Ignore;
+                style.height = 12;
+                style.width = Length.Percent(100);
+                style.flexShrink = 0;
+                generateVisualContent += Draw;
+            }
+
+            void Draw(MeshGenerationContext context)
+            {
+                Painter2D p = context.painter2D;
+                Rect r = contentRect;
+                float cx = r.width * 0.5f;
+                float midY = r.height * 0.5f;
+                Color dim = Palette.Alpha(Palette.PaperEdge, 0.7f);
+                Color lit = Palette.Cult;
+                if (!_wide)
+                {
+                    Draw2D.Line(p, new Vector2(cx, 0), new Vector2(cx, r.height), _active ? lit : dim, _active ? 2f : 1.25f);
+                    return;
+                }
+                float lx = r.width * 0.25f;
+                float rx = r.width * 0.75f;
+                if (_fork)
+                {
+                    Draw2D.Line(p, new Vector2(cx, 0), new Vector2(cx, midY), _active ? lit : dim, _active ? 2f : 1.25f);
+                    Draw2D.Line(p, new Vector2(lx, midY), new Vector2(cx, midY), _leftActive ? lit : dim, _leftActive ? 2f : 1.25f);
+                    Draw2D.Line(p, new Vector2(cx, midY), new Vector2(rx, midY), _rightActive ? lit : dim, _rightActive ? 2f : 1.25f);
+                    Draw2D.Line(p, new Vector2(lx, midY), new Vector2(lx, r.height), _leftActive ? lit : dim, _leftActive ? 2f : 1.25f);
+                    Draw2D.Line(p, new Vector2(rx, midY), new Vector2(rx, r.height), _rightActive ? lit : dim, _rightActive ? 2f : 1.25f);
+                }
+                else
+                {
+                    Draw2D.Line(p, new Vector2(lx, 0), new Vector2(lx, midY), _leftActive ? lit : dim, _leftActive ? 2f : 1.25f);
+                    Draw2D.Line(p, new Vector2(rx, 0), new Vector2(rx, midY), _rightActive ? lit : dim, _rightActive ? 2f : 1.25f);
+                    Draw2D.Line(p, new Vector2(lx, midY), new Vector2(cx, midY), _leftActive ? lit : dim, _leftActive ? 2f : 1.25f);
+                    Draw2D.Line(p, new Vector2(cx, midY), new Vector2(rx, midY), _rightActive ? lit : dim, _rightActive ? 2f : 1.25f);
+                    Draw2D.Line(p, new Vector2(cx, midY), new Vector2(cx, r.height), _active ? lit : dim, _active ? 2f : 1.25f);
+                }
+            }
         }
 
         void Chronicle()
