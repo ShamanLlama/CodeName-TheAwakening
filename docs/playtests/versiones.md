@@ -16,7 +16,7 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
 
 | Versión | Fecha | Commit | Ruleset | Adaptador | Ronda GTC | Estado |
 | --- | --- | --- | --- | --- | --- | --- |
-| 0.8.0 | 2026-11-22 | `a72528e` | `alignment-6` | `awakening-5` | «0.8.0 playtest por invitación · remates que cambian la partida», abierta del 2026-11-22 al 2026-12-06 (UTC) | En itch.io (Restricted con contraseña) |
+| 0.8.0 | 2026-11-22 | `a72528e`; exportada desde `ee5509c` | `alignment-6` | `awakening-5` | «0.8.0 playtest por invitación · remates que cambian la partida», abierta del 2026-11-22 al 2026-12-06 (UTC) | En itch.io (Restricted con contraseña) |
 | 0.7.0 | 2026-11-22 | `9a3055e`; exportada desde `f253981` | `alignment-5` | `awakening-4` | «0.7.0 playtest por invitación · árbol de talentos y awareness gestionable», cerrada el 2026-11-22 (UTC) con 1 partida | Reemplazada por 0.8.0 |
 | 0.6.0 | 2026-11-21 | `675e2a7`; exportada desde `68b0249` | `alignment-4` | `awakening-3` | «0.6.0 playtest por invitación · ocultar con plazo y margen del rito», cerrada el 2026-11-22 (UTC) con 1 partida | Reemplazada por 0.7.0 |
 | 0.5.2 | 2026-11-18 | `880e836` | `alignment-3` | `awakening-2` | «0.5.2 playtest por invitación · interfaz legible», cerrada el 2026-11-21 (UTC) sin partidas | Reemplazada por 0.6.0 |
