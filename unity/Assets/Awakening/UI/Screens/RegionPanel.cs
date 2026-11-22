@@ -43,7 +43,7 @@ namespace Awakening.UI
         readonly Stack _actions;
         readonly Stack _detail;
         readonly Stack _mysticism;
-        readonly Dictionary<string, (Button button, Label title, Label cost, Label aware)> _rows = new Dictionary<string, (Button, Label, Label, Label)>();
+        readonly Dictionary<string, (Button button, Label title, Label cost, Label aware, Label note)> _rows = new Dictionary<string, (Button, Label, Label, Label, Label)>();
         string _detailId = "";
         string _detailShown = "";
         bool _tabGuideOpen;
@@ -307,8 +307,11 @@ namespace Awakening.UI
                 cost.style.unityTextAlign = TextAnchor.MiddleRight;
                 Label aware = Kit.Label("", 12, Palette.Danger, Fonts.TypeBold);
                 aware.style.unityTextAlign = TextAnchor.MiddleRight;
+                Label note = Kit.Label("", 11, Palette.Omen, Fonts.TypeBold);
+                note.style.unityTextAlign = TextAnchor.MiddleRight;
                 price.Add(cost);
                 price.Add(aware);
+                price.Add(note);
                 button.Add(title);
                 button.Add(price);
                 if (!Kit.Touch)
@@ -318,7 +321,7 @@ namespace Awakening.UI
                         RefreshDetail();
                     });
                 _actions.Add(button);
-                _rows[id] = (button, title, cost, aware);
+                _rows[id] = (button, title, cost, aware, note);
             }
         }
 
@@ -385,16 +388,42 @@ namespace Awakening.UI
                 Kit.SetVisible(row.button, !hidden);
                 int restoreMonths = id == "restore" ? GameEngine.RestoreMonths(s, Region) : 0;
                 bool restoreHighlight = id == "restore" && r.Site.Invested && r.Site.Recoverable > 0 && restoreMonths > 0;
+                bool haltsRite = preview.Ok && Notes.RiskHaltsRite(preview);
+                bool dreamsActive = id == "sacrifice" && s.Status == "awakening" && GameEngine.HasTalent(s, "dreams_of_rlyeh") && s.FinalProgress < s.RiteMonthsRequired;
+                bool dreamAdvances = dreamsActive && preview.Ok && GameEngine.DreamAdvances(s, Region);
                 row.button.EnableInClassList("aw-restore-ready", restoreHighlight);
-                row.button.style.borderLeftWidth = restoreHighlight ? 3 : 0;
-                row.button.style.borderLeftColor = restoreHighlight ? Palette.Cult : Color.clear;
-                row.button.style.backgroundColor = restoreHighlight ? (StyleColor)Palette.CultWash : StyleKeyword.Null;
+                row.button.EnableInClassList("aw-dream-ready", dreamAdvances);
+                row.button.EnableInClassList("aw-halts-rite", haltsRite);
+                if (haltsRite)
+                {
+                    row.button.style.borderLeftWidth = 3;
+                    row.button.style.borderLeftColor = Palette.Danger;
+                    row.button.style.backgroundColor = (StyleColor)Palette.Alpha(Palette.Danger, 0.08f);
+                }
+                else if (dreamAdvances)
+                {
+                    row.button.style.borderLeftWidth = 3;
+                    row.button.style.borderLeftColor = Palette.Omen;
+                    row.button.style.backgroundColor = (StyleColor)Palette.Alpha(Palette.Omen, 0.10f);
+                }
+                else if (restoreHighlight)
+                {
+                    row.button.style.borderLeftWidth = 3;
+                    row.button.style.borderLeftColor = Palette.Cult;
+                    row.button.style.backgroundColor = (StyleColor)Palette.CultWash;
+                }
+                else
+                {
+                    row.button.style.borderLeftWidth = 0;
+                    row.button.style.borderLeftColor = Color.clear;
+                    row.button.style.backgroundColor = StyleKeyword.Null;
+                }
                 var blocked = Notes.Blocker(s, id, Region, preview);
                 row.button.tooltip = blocked.longText;
                 // Available: ink and price. Unavailable: muted italic, and the reason in place of the price.
                 row.title.text = GameData.Actions[id].Name;
                 Fonts.Apply(row.title, preview.Ok ? Fonts.Body : Fonts.Italic);
-                row.title.style.color = restoreHighlight ? Palette.Cult : preview.Ok ? Palette.Text : Palette.Muted;
+                row.title.style.color = haltsRite ? Palette.Danger : dreamAdvances ? Palette.Omen : restoreHighlight ? Palette.Cult : preview.Ok ? Palette.Text : Palette.Muted;
                 row.cost.text = preview.Ok ? CostText(preview) : blocked.shortText;
                 string concealStamp = id == "conceal" ? Notes.ConcealGlobalStamp(s) : "";
                 bool showAware = preview.Ok && preview.Awareness > 0;
@@ -408,6 +437,14 @@ namespace Awakening.UI
                 row.aware.style.color = showAware ? Palette.Danger : (showBuryGain || restoreHighlight) ? Palette.Cult : Palette.Warn;
                 row.aware.style.fontSize = !showAware && concealStamp != "" ? (Kit.Compact ? 12 : 11) : (Kit.Compact ? 14 : 12);
                 Kit.SetVisible(row.aware, subText != "");
+                string noteText = haltsRite ? "HALTS FINAL RITE"
+                    : dreamAdvances ? "+1 RITE MONTH"
+                    : dreamsActive && preview.Ok ? "NO RITE ADVANCE"
+                    : "";
+                row.note.text = noteText;
+                row.note.style.color = haltsRite ? Palette.Danger : dreamAdvances ? Palette.Omen : Palette.Warn;
+                row.note.style.fontSize = Kit.Compact ? 12 : 11;
+                Kit.SetVisible(row.note, noteText != "");
                 row.cost.style.color = !preview.Ok ? Palette.Warn : preview.Dread > 0 ? Palette.Omen : Palette.Text;
             }
             RefreshDetail();
@@ -499,8 +536,6 @@ namespace Awakening.UI
                 }
                 box.Add(Kit.Body("If ignored: " + Threats.Describe(s, r), 15, Palette.Text, Fonts.Italic));
                 foreach (ThreatOption opt in Threats.Options(s, Region)) box.Add(Response(s, r, opt));
-                if (GameEngine.HasTalent(s, "offerings"))
-                    box.Add(Kit.Body("Offerings to the deep: a sacrifice in Rites also ends this threat.", 13, Palette.Omen, Fonts.Italic));
             }
             if (r.Opportunity != null)
             {
@@ -556,6 +591,12 @@ namespace Awakening.UI
                     box.Add(Kit.Body($"Stalled. Needs {Format.Count(Derived.SiteRequirement(r))} followers here.", 15, Palette.Danger, Fonts.Italic));
                 else if (state == "ready")
                     box.Add(Kit.Body("Ready for the final rite.", 15, Palette.Cult, Fonts.Italic));
+                if (s.Status == "awakening")
+                {
+                    RiteStatus riteStatus = Forecast.Rite(s);
+                    if (!riteStatus.Advancing && riteStatus.Blockers.Any(b => b.Region == Region))
+                        box.Add(Kit.Body("HALTING THE FINAL RITE.", 13, Palette.Danger, Fonts.TypeBold));
+                }
                 int recoverable = GameEngine.RestoreMonths(s, Region);
                 if (r.Site.Recoverable > 0 && recoverable > 0)
                 {
@@ -591,6 +632,19 @@ namespace Awakening.UI
                     ? opt.Cost + " · +" + Js.Num(Balance.SilenceExposure) + " Exposure"
                     : opt.Cost + " · " + Notes.ResponseNote(r, preview, opt.Response);
                 column.Add(Kit.Body(detail, 13, opt.Response == "silence" ? Palette.Danger : Palette.Muted, Fonts.Italic));
+                if (Notes.RiskHaltsRite(preview))
+                {
+                    var (_, halt) = Notes.SplitRiteHaltRisk(preview.Risk);
+                    var warn = Kit.VBox(1);
+                    warn.name = "response-rite-halt-" + opt.Response;
+                    warn.style.backgroundColor = Palette.Alpha(Palette.Danger, 0.12f);
+                    warn.style.borderLeftWidth = 3;
+                    warn.style.borderLeftColor = Palette.Danger;
+                    warn.style.paddingLeft = warn.style.paddingRight = 7;
+                    warn.style.paddingTop = warn.style.paddingBottom = 3;
+                    warn.Add(Kit.Body(halt, 13, Palette.Danger, Fonts.BodyBold));
+                    column.Add(warn);
+                }
             }
             else
             {
@@ -775,8 +829,11 @@ namespace Awakening.UI
             int worldConcealCd = _detailId == "conceal" && _game.State != null ? GameEngine.ConcealWorldCooldown(_game.State) : 0;
             int recoverableMonths = _detailId == "restore" && _game.State != null ? GameEngine.RestoreMonths(_game.State, Region) : 0;
             int buryUses = _detailId == "bury" && _game.State != null ? _game.State.BuryUses : 0;
+            bool hasDreams = _detailId == "sacrifice" && _game.State != null && GameEngine.HasTalent(_game.State, "dreams_of_rlyeh");
+            bool dreamAdvances = hasDreams && GameEngine.DreamAdvances(_game.State, Region);
             string shown = preview == null ? "" : string.Join("|", _detailId, Region, preview.Ok, preview.Reason, preview.Influence, preview.Dread,
-                preview.Followers, preview.Awareness, preview.Effect, preview.Risk, worldConcealCd, recoverableMonths, buryUses);
+                preview.Followers, preview.Awareness, preview.Effect, preview.Risk, worldConcealCd, recoverableMonths, buryUses,
+                _game.State.Status, _game.State.FinalProgress, _game.State.RiteMonthsRequired, hasDreams, dreamAdvances);
             if (shown == _detailShown && _detail.childCount > 0) return;
             _detailShown = shown;
             _detail.Clear();
@@ -807,9 +864,50 @@ namespace Awakening.UI
             if (_detailId == "bury" && preview.Ok) _detail.Add(Kit.Label($"−{GameEngine.BuryAwareness(_game.State)} WORLD AWARENESS", 13, Palette.Cult, Fonts.TypeBold));
             if (_detailId == "restore" && recoverableMonths > 0) _detail.Add(Kit.Label($"+{recoverableMonths} PREPARATION MONTHS", 13, Palette.Cult, Fonts.TypeBold));
             if (_detailId == "conceal" && worldConcealCd > 0) _detail.Add(Kit.Label(Notes.ConcealGlobalStamp(_game.State), 13, Palette.Warn, Fonts.TypeBold));
+            if (hasDreams && _game.State.Status == "awakening" && _game.State.FinalProgress < _game.State.RiteMonthsRequired)
+            {
+                Color accent = dreamAdvances ? Palette.Omen : Palette.Warn;
+                var dreamBox = Kit.VBox(2);
+                dreamBox.name = "detail-dreams-banner";
+                dreamBox.style.backgroundColor = Palette.Alpha(accent, 0.11f);
+                dreamBox.style.borderTopWidth = dreamBox.style.borderBottomWidth = dreamBox.style.borderRightWidth = 1;
+                dreamBox.style.borderLeftWidth = 4;
+                dreamBox.style.borderTopColor = dreamBox.style.borderBottomColor = dreamBox.style.borderRightColor = dreamBox.style.borderLeftColor = accent;
+                dreamBox.style.paddingLeft = dreamBox.style.paddingRight = 9;
+                dreamBox.style.paddingTop = dreamBox.style.paddingBottom = 6;
+                dreamBox.Add(Kit.Label(dreamAdvances ? "DREAMS OF R'LYEH · ADVANCES RITE +1 MO" : "DREAMS OF R'LYEH · DOES NOT ADVANCE", 12, accent, Fonts.TypeBold));
+                dreamBox.Add(Kit.Body(
+                    dreamAdvances
+                        ? $"Carries the final rite to {_game.State.FinalProgress + 1}/{_game.State.RiteMonthsRequired} months (+{Js.Num(Balance.DreamsAwareness)} world awareness)."
+                        : "Three supported sites must stand after this sacrifice for the dream to carry the rite.",
+                    14, Palette.Text, dreamAdvances ? Fonts.BodyBold : Fonts.Italic));
+                _detail.Add(dreamBox);
+            }
             string effectText = _detailId == "restore" && recoverableMonths == 0 ? GameData.Actions["restore"].Description : preview.Effect;
             _detail.Add(Kit.Body(effectText, 15, Palette.Text));
-            if (!string.IsNullOrEmpty(preview.Risk)) _detail.Add(Kit.Body(preview.Risk, 15, Palette.Danger, Fonts.Italic));
+            if (!string.IsNullOrEmpty(preview.Risk))
+            {
+                if (Notes.RiskHaltsRite(preview))
+                {
+                    var (otherRisk, haltRisk) = Notes.SplitRiteHaltRisk(preview.Risk);
+                    if (!string.IsNullOrEmpty(otherRisk)) _detail.Add(Kit.Body(otherRisk, 15, Palette.Danger, Fonts.Italic));
+                    var haltBox = Kit.VBox(2);
+                    haltBox.name = "detail-rite-halt-warning";
+                    haltBox.style.backgroundColor = Palette.Alpha(Palette.Danger, 0.13f);
+                    haltBox.style.borderTopWidth = haltBox.style.borderBottomWidth = haltBox.style.borderRightWidth = 1;
+                    haltBox.style.borderLeftWidth = 4;
+                    haltBox.style.borderTopColor = haltBox.style.borderBottomColor = haltBox.style.borderRightColor = haltBox.style.borderLeftColor = Palette.Danger;
+                    haltBox.style.paddingLeft = haltBox.style.paddingRight = 9;
+                    haltBox.style.paddingTop = haltBox.style.paddingBottom = 6;
+                    haltBox.Add(Kit.Label("HALTS THE FINAL RITE", 12, Palette.Danger, Fonts.TypeBold));
+                    haltBox.Add(Kit.Body(haltRisk, 15, Palette.Danger, Fonts.BodyBold));
+                    _detail.Add(haltBox);
+                }
+                else
+                {
+                    _detail.Add(Kit.Body(preview.Risk, 15, Palette.Danger, Fonts.Italic));
+                }
+            }
             if (!preview.Ok) _detail.Add(Kit.Body(Notes.Blocker(_game.State, _detailId, Region, preview).longText, 15, Palette.Warn, Fonts.BodyBold));
             if (Kit.Touch)
             {

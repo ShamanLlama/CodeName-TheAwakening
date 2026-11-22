@@ -16,6 +16,7 @@ namespace Awakening.UI
         readonly VisualElement _backdrop;
         bool _confirmAbandon;
         string _talentBranch = GameData.BranchIds[0];
+        string _invokeTalentId = GameData.InvokableTalentIds[0];
         float _width;
         IVisualElementScheduledItem _entrance;
         public string Kind { get; private set; } = "";
@@ -55,6 +56,12 @@ namespace Awakening.UI
             Kit.SetVisible(this, false);
         }
 
+        public void OpenInvoke(string talentId)
+        {
+            _invokeTalentId = GameEngine.IsInvokable(talentId) ? talentId : GameData.InvokableTalentIds[0];
+            Open("invoke");
+        }
+
         public void Open(string kind)
         {
             if (IsOpen) Close();
@@ -71,6 +78,7 @@ namespace Awakening.UI
                     Kind = "talents";
                     Talents();
                     break;
+                case "invoke": InvokeConfirm(); break;
                 case "chronicle": Chronicle(); break;
                 case "guide": Guide(); break;
                 case "alignment": Alignment(); break;
@@ -507,51 +515,167 @@ namespace Awakening.UI
             return panel;
         }
 
+        static (string condition, string effect, string cost) CapstoneFacts(string id)
+        {
+            switch (id)
+            {
+                case "great_procession":
+                    return (
+                        $"≥{Balance.ProcessionPublicRegions} public regions when the final rite begins",
+                        $"Final rite takes {Balance.ProcessionRiteMonths} months instead of {Balance.FinalMonths}",
+                        $"+{Js.Num(Balance.ProcessionAwareness)} awareness/mo per public region; cannot hide"
+                    );
+                case "world_forgets":
+                    return (
+                        "Invoke once per run · free (0 Influence)",
+                        $"−{Balance.WorldForgetsAwareness} world awareness; all active threats dissolve",
+                        $"All cells scatter {Balance.WorldForgetsScatterMonths} mo (active rite halts)"
+                    );
+                case "dreams_of_rlyeh":
+                    return (
+                        "Sacrifice during final rite with 3 supported sites left",
+                        "+1 month final rite progress per sacrifice",
+                        $"+{Js.Num(Balance.DreamsAwareness)} world awareness per advancing sacrifice"
+                    );
+                default:
+                    return ("", "", "");
+            }
+        }
+
         VisualElement BuildTalentNode(GameState s, TalentDefinition t, int cost)
         {
+            bool capstone = t.Tier == 3;
+            bool invokable = GameEngine.IsInvokable(t.Id);
             bool taken = GameEngine.HasTalent(s, t.Id);
+            bool spent = invokable && s.CapstonesUsed != null && s.CapstonesUsed.Contains(t.Id);
+            string invokeReason = invokable && taken ? GameEngine.InvokeReason(s, t.Id) : "";
+            bool canInvoke = invokable && taken && !spent && invokeReason.Length == 0;
             bool excluded = !taken && t.Excludes != null && GameEngine.HasTalent(s, t.Excludes);
             string reason = GameEngine.TalentReason(s, t.Id);
             bool available = reason.Length == 0;
             bool shortInf = !taken && !excluded && !available && reason.StartsWith("Need ", StringComparison.Ordinal);
             bool sealLocked = !taken && !excluded && !available && (reason.StartsWith("The next seal", StringComparison.Ordinal) || reason.StartsWith("Every seal", StringComparison.Ordinal));
 
-            Color fill = taken || available ? Palette.PaperLight : excluded ? Palette.PaperShade : Palette.Paper;
-            Color edge = taken || available ? Palette.Cult : excluded ? Palette.Alpha(Palette.Danger, 0.5f) : Palette.PaperEdge;
-            Color leftBar = taken || available ? Palette.Cult : excluded ? Palette.Danger : shortInf ? Palette.Warn : Palette.PaperEdge;
+            Color fill = capstone
+                ? (spent ? Palette.PaperShade : Palette.PaperLight)
+                : (taken || available ? Palette.PaperLight : excluded ? Palette.PaperShade : Palette.Paper);
+            Color edge = capstone
+                ? (spent ? Palette.PaperEdge : canInvoke ? Palette.Omen : taken || available ? Palette.Cult : Palette.Omen)
+                : (taken || available ? Palette.Cult : excluded ? Palette.Alpha(Palette.Danger, 0.5f) : Palette.PaperEdge);
+            Color leftBar = capstone
+                ? (spent ? Palette.Muted : canInvoke ? Palette.Omen : taken || available ? Palette.Cult : shortInf ? Palette.Warn : Palette.Omen)
+                : (taken || available ? Palette.Cult : excluded ? Palette.Danger : shortInf ? Palette.Warn : Palette.PaperEdge);
 
-            var card = Kit.Panel(fill, edge, new Vector4(10, 8, 10, 8), 0.05f, 4);
+            var card = Kit.Panel(fill, edge, capstone ? new Vector4(11, 9, 11, 9) : new Vector4(10, 8, 10, 8), capstone ? 0.08f : 0.05f, 4);
             card.name = "talent-node-" + t.Id;
-            card.style.borderLeftWidth = taken ? 4 : 3;
+            card.style.borderLeftWidth = capstone ? 5 : taken ? 4 : 3;
             card.style.borderLeftColor = leftBar;
-            if (taken) card.style.borderTopWidth = card.style.borderBottomWidth = card.style.borderRightWidth = 2;
+            if (taken || capstone) card.style.borderTopWidth = card.style.borderBottomWidth = card.style.borderRightWidth = 2;
 
             var head = Kit.HBox(6);
-            string tierName = t.Tier == 1 ? "TIER I · ROOT" : t.Tier == 2 ? "TIER II · FORK" : "TIER III · CAPSTONE";
-            var tierLabel = Kit.Label(tierName, 10, Palette.Faint, Fonts.TypeBold);
+            string tierName = capstone ? "★ TIER III · CAPSTONE" : t.Tier == 1 ? "TIER I · ROOT" : "TIER II · FORK";
+            Color tierColor = capstone ? (spent ? Palette.Muted : taken || available ? Palette.Cult : Palette.Omen) : Palette.Faint;
+            var tierLabel = Kit.Label(tierName, 10, tierColor, Fonts.TypeBold);
             tierLabel.style.flexGrow = 1;
             tierLabel.style.flexShrink = 1;
             head.Add(tierLabel);
 
-            string badgeText = taken ? "◆ TAKEN"
+            string badgeText = spent ? "× SPENT"
+                : canInvoke ? "◈ READY TO INVOKE"
+                : taken ? "◆ TAKEN"
                 : available ? $"READY · {cost} INF"
                 : excluded ? "× CLOSED"
                 : shortInf ? $"NEED {cost} INF"
                 : sealLocked ? "SEALED"
                 : "LOCKED";
-            Color badgeColor = taken || available ? Palette.Cult : excluded ? Palette.Danger : shortInf ? Palette.Warn : Palette.Muted;
+            Color badgeColor = spent ? Palette.Muted
+                : canInvoke ? Palette.Omen
+                : taken || available ? Palette.Cult
+                : excluded ? Palette.Danger
+                : shortInf ? Palette.Warn
+                : Palette.Muted;
             var badge = Kit.Label(badgeText, 10, badgeColor, Fonts.TypeBold);
             badge.name = "talent-state-" + t.Id;
             badge.style.flexShrink = 0;
             head.Add(badge);
             card.Add(head);
 
-            var title = Kit.Body(t.Name, Kit.Compact ? 16 : 17, taken ? Palette.Cult : excluded ? Palette.Muted : Palette.Text, excluded ? Fonts.Italic : Fonts.DisplaySc);
+            var title = Kit.Body(t.Name, capstone ? (Kit.Compact ? 17 : 19) : (Kit.Compact ? 16 : 17),
+                spent ? Palette.Muted : taken ? Palette.Cult : capstone ? Palette.Omen : excluded ? Palette.Muted : Palette.Text,
+                excluded || spent ? Fonts.Italic : Fonts.DisplaySc);
             card.Add(title);
 
-            var desc = Kit.Body(t.Description, 13, excluded ? Palette.Faint : Palette.Muted);
+            var desc = Kit.Body(t.Description, 13, excluded || spent ? Palette.Faint : Palette.Muted);
             desc.style.flexGrow = 1;
             card.Add(desc);
+
+            if (capstone)
+            {
+                var (cond, eff, price) = CapstoneFacts(t.Id);
+                if (cond != "")
+                {
+                    Color accent = spent ? Palette.PaperEdge : taken ? Palette.Cult : Palette.Omen;
+                    var facts = Kit.VBox(2);
+                    facts.name = "capstone-rules-" + t.Id;
+                    facts.style.backgroundColor = Palette.Alpha(accent, 0.08f);
+                    facts.style.borderLeftWidth = 2;
+                    facts.style.borderLeftColor = accent;
+                    facts.style.paddingLeft = facts.style.paddingRight = 7;
+                    facts.style.paddingTop = facts.style.paddingBottom = 4;
+                    void FactRow(string tag, string text, Color valueColor)
+                    {
+                        var r = Kit.HBox(6);
+                        r.style.alignItems = Align.FlexStart;
+                        var k = Kit.Label(tag, 10, accent, Fonts.TypeBold);
+                        k.style.minWidth = 44;
+                        k.style.flexShrink = 0;
+                        var v = Kit.Body(text, 12, valueColor);
+                        v.style.flexGrow = 1;
+                        v.style.flexShrink = 1;
+                        r.Add(k);
+                        r.Add(v);
+                        facts.Add(r);
+                    }
+                    FactRow("WHEN", cond, spent ? Palette.Muted : Palette.Text);
+                    FactRow("EFFECT", eff, spent ? Palette.Muted : Palette.Cult);
+                    FactRow("COST", price, spent ? Palette.Muted : Palette.Danger);
+                    card.Add(facts);
+                }
+
+                if (t.Id == "great_procession" && !GameEngine.IsOver(s))
+                {
+                    int pub = GameEngine.ProcessionRegions(s);
+                    int req = Balance.ProcessionPublicRegions;
+                    bool inRite = s.Status == "awakening";
+                    bool met = inRite ? GameEngine.InProcession(s) : pub >= req;
+                    string statusText = inRite
+                        ? (met ? $"◆ PROCESSION ACTIVE · {s.RiteMonthsRequired}-MONTH RITE" : $"STANDARD RITE · {s.RiteMonthsRequired} MONTHS")
+                        : met
+                            ? $"◆ CONDITION MET NOW · {pub}/{req} PUBLIC ({Balance.ProcessionRiteMonths}-MO RITE)"
+                            : $"PUBLIC NOW: {pub} / {req} REGIONS (NEEDS {req - pub} MORE)";
+                    var procStatus = Kit.Body(statusText, 11, met ? Palette.Cult : taken ? Palette.Warn : Palette.Muted, Fonts.TypeBold);
+                    procStatus.name = "procession-status";
+                    card.Add(procStatus);
+                }
+            }
+
+            if (taken)
+            {
+                string yieldText = GameEngine.TalentYieldText(s, t.Id);
+                if (!string.IsNullOrEmpty(yieldText))
+                {
+                    var yieldBox = Kit.VBox(0);
+                    yieldBox.style.backgroundColor = spent ? Palette.Alpha(Palette.PaperEdge, 0.16f) : Palette.CultWash;
+                    yieldBox.style.borderLeftWidth = 2;
+                    yieldBox.style.borderLeftColor = spent ? Palette.Muted : Palette.Cult;
+                    yieldBox.style.paddingLeft = yieldBox.style.paddingRight = 7;
+                    yieldBox.style.paddingTop = yieldBox.style.paddingBottom = 3;
+                    var yieldLabel = Kit.Body(yieldText, 11, spent ? Palette.Muted : Palette.Cult, Fonts.TypeBold);
+                    yieldLabel.name = "talent-yield-" + t.Id;
+                    yieldBox.Add(yieldLabel);
+                    card.Add(yieldBox);
+                }
+            }
 
             if (available)
             {
@@ -567,6 +691,35 @@ namespace Awakening.UI
                 pick.style.paddingTop = pick.style.paddingBottom = 4;
                 card.Add(pick);
             }
+            else if (taken && invokable)
+            {
+                if (spent)
+                {
+                    var spentNote = Kit.Body("Spent — already invoked this run.", 12, Palette.Muted, Fonts.Italic);
+                    spentNote.name = "talent-spent-" + t.Id;
+                    card.Add(spentNote);
+                }
+                else
+                {
+                    string talentId = t.Id;
+                    Action openConfirm = () => OpenInvoke(talentId);
+                    Button invokeBtn = Kit.Stamp("INVOKE", openConfirm, Accent.Omen);
+                    invokeBtn.name = "invoke-" + t.Id;
+                    invokeBtn.userData = openConfirm;
+                    invokeBtn.focusable = true;
+                    invokeBtn.style.minHeight = Kit.Touch ? 38 : 30;
+                    invokeBtn.style.fontSize = Kit.Compact ? 14 : 13;
+                    invokeBtn.SetEnabled(canInvoke);
+                    invokeBtn.tooltip = canInvoke ? GameEngine.InvokeRisk(s, talentId) : invokeReason;
+                    card.Add(invokeBtn);
+                    if (!canInvoke && !string.IsNullOrEmpty(invokeReason))
+                    {
+                        var why = Kit.Body(invokeReason, 12, Palette.Warn, Fonts.Italic);
+                        why.name = "invoke-reason-" + t.Id;
+                        card.Add(why);
+                    }
+                }
+            }
             else if (!taken)
             {
                 var why = Kit.Body(reason, 12, excluded ? Palette.Danger : shortInf ? Palette.Warn : Palette.Muted, excluded ? Fonts.BodyBold : Fonts.Italic);
@@ -574,6 +727,59 @@ namespace Awakening.UI
                 card.Add(why);
             }
             return card;
+        }
+
+        void InvokeConfirm()
+        {
+            var s = _game.State;
+            string talentId = _invokeTalentId;
+            TalentDefinition t = GameData.Talents[talentId];
+            string reason = GameEngine.InvokeReason(s, talentId);
+            string risk = GameEngine.InvokeRisk(s, talentId);
+            _width = 580;
+            Title(t.Name, Palette.Omen);
+            _content.Add(SheetUI.Caption("ONE-TIME CAPSTONE  ·  FREE (0 INFLUENCE)", Palette.Omen));
+
+            int beforeAware = (int)Math.Floor(s.Awareness);
+            int drop = (int)Math.Floor(Math.Min(Balance.WorldForgetsAwareness, s.Awareness));
+            int afterAware = (int)Math.Floor(Math.Max(0.0, s.Awareness - Balance.WorldForgetsAwareness));
+            int activeThreats = GameData.RegionIds.Count(id => s.Regions[id].Threat != null);
+
+            var effectBox = Kit.Panel(Palette.PaperLight, Palette.Cult, new Vector4(12, 9, 12, 10), 0.06f, 3);
+            effectBox.style.borderLeftWidth = 4;
+            effectBox.Add(SheetUI.Caption("EFFECT NOW", Palette.Cult));
+            effectBox.Add(SheetUI.Body(
+                $"Removes {drop} world awareness ({beforeAware}% → {afterAware}%) and dissolves {activeThreats} active {(activeThreats == 1 ? "threat" : "threats")}.",
+                16, Palette.Text, Fonts.BodyBold));
+            _content.Add(effectBox);
+
+            var riskBox = Kit.Panel(Palette.PaperLight, Palette.Danger, new Vector4(12, 9, 12, 10), 0.06f, 3);
+            riskBox.name = "invoke-risk-box";
+            riskBox.style.backgroundColor = Palette.Alpha(Palette.Danger, 0.10f);
+            riskBox.style.borderLeftWidth = 4;
+            riskBox.Add(SheetUI.Caption("PRICE OF INVOKING", Palette.Danger));
+            var riskLabel = SheetUI.Body(risk, 16, Palette.Danger, Fonts.BodyBold);
+            riskLabel.name = "invoke-risk-text";
+            riskBox.Add(riskLabel);
+            _content.Add(riskBox);
+
+            if (!string.IsNullOrEmpty(reason))
+                _content.Add(SheetUI.Body(reason, 15, Palette.Warn, Fonts.BodyBold));
+
+            Action confirmAction = () =>
+            {
+                Close();
+                _game.InvokeCapstone(talentId);
+            };
+            Button confirm = Kit.Stamp("INVOKE · " + t.Name.ToUpperInvariant(), confirmAction, Accent.Danger);
+            confirm.name = "confirm-invoke";
+            confirm.userData = confirmAction;
+            confirm.focusable = true;
+            confirm.style.height = StyleKeyword.Auto;
+            confirm.style.minHeight = 46;
+            confirm.style.paddingLeft = confirm.style.paddingRight = 16;
+            confirm.SetEnabled(reason == "");
+            Buttons(Secondary("Cancel", Close), confirm);
         }
 
         /// <summary>Ink stem connecting tiers in the talent tree: forks into Tier II and converges into Tier III.</summary>
@@ -670,9 +876,14 @@ namespace Awakening.UI
         void Alignment()
         {
             var s = _game.State;
+            int riteMonths = GameEngine.RiteMonthsFor(s);
+            bool hasProcession = GameEngine.HasTalent(s, "great_procession");
+            bool processionReady = hasProcession && riteMonths < Balance.FinalMonths;
             _width = 620;
             Title("The Stars Are Right", Palette.Cult);
-            _content.Add(SheetUI.Body($"{Balance.Deadline - s.ElapsedMonths} months remain to complete the awakening; the alignment closes in {Format.Date(Balance.Deadline)}. Time is paused.", 17, Palette.Text, Fonts.Italic));
+            string intro = $"{Balance.Deadline - s.ElapsedMonths} months remain to complete the awakening; the alignment closes in {Format.Date(Balance.Deadline)}. "
+                + (processionReady ? $"Beginning now launches The Great Procession ({riteMonths} months). Time is paused." : "Time is paused.");
+            _content.Add(SheetUI.Body(intro, 17, Palette.Text, Fonts.Italic));
             var checks = Kit.VBox(8);
             _content.Add(checks);
             int sites = 0;
@@ -685,6 +896,16 @@ namespace Awakening.UI
             }
             for (int i = sites; i < Balance.RequiredSites; i++) checks.Add(Check(false, "Unfunded site", "Fund a site in a small region"));
             checks.Add(Check(s.Dread >= Balance.FinalDread, "Dread", $"{Format.Count(s.Dread)} / {Balance.FinalDread}"));
+            if (hasProcession)
+            {
+                int pub = GameEngine.ProcessionRegions(s);
+                var procRow = Check(processionReady, "Great Procession",
+                    processionReady
+                        ? $"{pub} public regions — rite needs {riteMonths} months (+{Js.Num(Balance.ProcessionAwareness)} awareness/mo each, no hiding)"
+                        : $"{pub} of {Balance.ProcessionPublicRegions} public regions — rite needs {riteMonths} months");
+                procRow.name = "alignment-procession-check";
+                checks.Add(procRow);
+            }
             string reason = GameEngine.AwakeningReason(s);
             bool canConcede = GameEngine.CanConcede(s);
             if (canConcede)
@@ -696,12 +917,14 @@ namespace Awakening.UI
             {
                 _content.Add(SheetUI.Body(reason, 16, Palette.Warn, Fonts.BodyBold));
             }
-            var begin = Primary("Begin the Final Rite · 100 Dread", () =>
+            string beginText = processionReady ? $"Begin the Great Procession · {riteMonths} mo · 100 Dread" : "Begin the Final Rite · 100 Dread";
+            var begin = Primary(beginText, () =>
             {
                 Close();
                 _game.Awaken();
                 if (_game.State.Status == "awakening") _game.SetSpeed(1);
             });
+            begin.name = "alignment-begin-rite";
             begin.SetEnabled(reason == "");
             if (canConcede)
             {

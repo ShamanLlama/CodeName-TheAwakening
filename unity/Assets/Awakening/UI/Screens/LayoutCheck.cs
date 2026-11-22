@@ -118,6 +118,13 @@ namespace Awakening.UI
                     restoreSet = true;
                 }
             }
+            if (game.State.Status == "alignment" && !GameEngine.HasTalent(game.State, "world_forgets"))
+            {
+                // Exercise the fullest ledger (including capstone quick-access + Final Rite button) across every profile.
+                game.State.Talents.Add("world_forgets");
+                game.State.TalentYield["world_forgets"] = 0;
+                if (game.State.Awareness <= 0) game.State.Awareness = 40;
+            }
             game.Settings.Hints = new List<string>();
             screen.Map.ZoomAt(screen.Map.contentRect.size * .5f, 1.6f);
             screen.ExpandLayoutTimetable();
@@ -217,6 +224,8 @@ namespace Awakening.UI
                     && game.State.Regions.Values.Count(region => region.Threat != null) >= 2)
                     yield return ThreatRecovery(screen);
                 var kinds = new List<string> { "menu", "talents", "chronicle", "guide" };
+                if (GameData.InvokableTalentIds.Any(id => GameEngine.HasTalent(game.State, id) && GameEngine.InvokeReason(game.State, id) == ""))
+                    kinds.Add("invoke");
                 if (game.State.Status == "alignment") kinds.Add("alignment");
                 if (GameEngine.CanConcede(game.State)) kinds.Add("concede");
                 if (GameEngine.IsOver(game.State)) kinds.Add("end");
