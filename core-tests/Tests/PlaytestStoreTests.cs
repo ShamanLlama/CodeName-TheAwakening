@@ -21,15 +21,38 @@ namespace Awakening.Core.Tests
             Assert.Equal(JsonWriter.Write(stored), JsonWriter.Write(c.Snapshot()));
             Assert.NotSame(stored, c.Data);
             string body = (string)Item(stored, "jobs", 0)["body"];
-            var state = State(); state.Seed = "godot-stored-fixture";
+            var state = State(); state.Seed = "godot-stored-fixture"; state.Ruleset = "alignment-3";
             Assert.Equal(stored["signature"], PlaytestCapture.Signature(state));
+            state.Ruleset = "alignment-5";
             Assert.True(c.Restore()); c.Resume(state);
             Assert.NotEqual(stored["active"], c.Data["active"]);
-            Assert.Equal("awakening-3", O(c.Active(), "context")["adapter"]);
+            Assert.Equal("awakening-4", O(c.Active(), "context")["adapter"]);
             Assert.Equal("partial", O(c.Active(), "context")["coverage"]);
             Assert.Equal(body, Item(c.Data, "jobs", 0)["body"]);
             Assert.Equal(0, N(O(c.Active(), "clock"), "elapsed_ms"));
         }
+        [Fact]
+        public void PreviousAdapterQueueRetainsItsDoctrineAndImmutableBody()
+        {
+            var r = new Rig(); r.Start();
+            r.State.Status = "playing";
+            r.Capture.EmitEvent("doctrine_selected", M("doctrine", "terror", "spent", M("influence", 50, "dread", 0, "followers", 0)), r.State);
+            O(r.Capture.Active(), "context")["adapter"] = "awakening-3";
+            var job = r.Capture.SealBatch();
+            var body = Body(job);
+            O(Item(body, "events", 0), "data")["ruleset"] = "alignment-4";
+            job["body"] = JsonWriter.Write(body);
+            string original = (string)job["body"];
+            var restored = new PlaytestCapture(() => r.Unix);
+            restored.Configure(Configuration(), Saved(r.Capture, r.State));
+            Assert.False(restored.Corrupt);
+            restored.Accept(); restored.Resume(r.State);
+            Assert.Equal(original, Item(restored.Data, "jobs", 0)["body"]);
+            Assert.Equal("awakening-4", O(restored.Active(), "context")["adapter"]);
+            Assert.Equal("capture_started", O(Item(restored.Data, "staging", 0), "event")["type"]);
+            Assert.True(PlaytestCapture.ValidStore(restored.Snapshot(r.State)));
+        }
+
         [Fact]
         public void StoreValidationRejectsMalformedRecordsWithoutThrowingOrReplacingRawData()
         {
@@ -60,7 +83,7 @@ namespace Awakening.Core.Tests
                 s => Run(s)["endpoint"] = "http://example.invalid/api/playtests/v1/batches/",
                 s => O(Run(s), "context")["run_id"] = PlaytestCapture.Identifier(),
                 s => O(Run(s), "context")["schema_version"] = "2.0",
-                s => O(Run(s), "context")["adapter"] = "awakening-4",
+                s => O(Run(s), "context")["adapter"] = "awakening-99",
                 s => O(Run(s), "context")["participation_version"] = "other",
                 s => O(Run(s), "context")["coverage"] = "unknown",
                 s => O(Run(s), "context")["tester_id"] = false,

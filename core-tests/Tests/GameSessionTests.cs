@@ -197,7 +197,7 @@ namespace Awakening.Core.Tests
             Assert.All(jobs, job =>
             {
                 var body = Body(job);
-                Assert.Equal("awakening-3", body["adapter"]);
+                Assert.Equal("awakening-4", body["adapter"]);
                 Assert.All(A(body, "events"), e => Assert.True(PlaytestCapture.ValidEvent(e)));
             });
             string output = Environment.GetEnvironmentVariable("AWAKENING_PLAYTEST_BATCH_OUTPUT");
@@ -222,6 +222,8 @@ namespace Awakening.Core.Tests
             Assert.Equal("africa", spawn["region"]); Assert.Equal("occult", spawn["kind"]);
             Assert.Equal(g.State.Regions["africa"].Threat.DueMonth, N(spawn, "due_month"));
             var expected = new[] { "counter", "scatter", "silence" }.Where(a => GameEngine.PreviewAction(g.State, a, "africa").Ok).ToList();
+            Assert.Equal(expected, A(spawn, "legal_responses").Cast<string>());
+            Assert.Equal(Threats.Cornered(g.State, "africa"), spawn["cornered"]);
             g.Act(response, "africa");
             var resolved = O(Assert.Single(r.Events, e => Equals(e["type"], "threat_resolved")), "data");
             Assert.Equal(response, resolved["response"]);
@@ -271,6 +273,9 @@ namespace Awakening.Core.Tests
             var snapshots = r.Events.Where(e => Equals(e["type"], "month_snapshot")).ToList();
             Assert.Equal(new[] { 12, 24, 36, 48 }, snapshots.Select(e => (int)N(e, "game_month")));
             Assert.Equal(g.State.Awareness, N(O(snapshots.Last(), "data"), "awareness"));
+            Assert.Equal(g.State.Talents.Count, N(O(snapshots.Last(), "data"), "talents"));
+            Assert.Equal(GameEngine.TalentSlotsUnused(g.State), N(O(snapshots.Last(), "data"), "unused_slots"));
+            Assert.Equal(g.State.BuryUses, N(O(snapshots.Last(), "data"), "bury_uses"));
             Assert.Equal(Derived.TotalFollowers(g.State), N(O(snapshots.Last(), "data"), "followers"));
             var spawns = r.Events.Where(e => Equals(e["type"], "threat_spawned")).ToList();
             var resolutions = r.Events.Where(e => Equals(e["type"], "threat_resolved")).ToList();
