@@ -16,7 +16,8 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
 
 | Versión | Fecha | Commit | Ruleset | Adaptador | Ronda GTC | Estado |
 | --- | --- | --- | --- | --- | --- | --- |
-| 0.8.0 | 2026-11-22 | `a72528e`; exportada desde `ee5509c` | `alignment-6` | `awakening-5` | «0.8.0 playtest por invitación · remates que cambian la partida», abierta del 2026-11-22 al 2026-12-06 (UTC) | En itch.io (Restricted con contraseña) |
+| 0.9.0 | 2026-11-23 | `c66ca8e`; exportada desde `73c0599` | `alignment-7` | `awakening-6` | «0.9.0 playtest por invitación · Madness como recurso», abierta del 2026-11-23 al 2026-12-07 (UTC) | En itch.io (Restricted con contraseña) |
+| 0.8.0 | 2026-11-22 | `a72528e`; exportada desde `ee5509c` | `alignment-6` | `awakening-5` | «0.8.0 playtest por invitación · remates que cambian la partida», cerrada el 2026-11-23 (UTC) con 2 partidas | Reemplazada por 0.9.0 |
 | 0.7.0 | 2026-11-22 | `9a3055e`; exportada desde `f253981` | `alignment-5` | `awakening-4` | «0.7.0 playtest por invitación · árbol de talentos y awareness gestionable», cerrada el 2026-11-22 (UTC) con 1 partida | Reemplazada por 0.8.0 |
 | 0.6.0 | 2026-11-21 | `675e2a7`; exportada desde `68b0249` | `alignment-4` | `awakening-3` | «0.6.0 playtest por invitación · ocultar con plazo y margen del rito», cerrada el 2026-11-22 (UTC) con 1 partida | Reemplazada por 0.7.0 |
 | 0.5.2 | 2026-11-18 | `880e836` | `alignment-3` | `awakening-2` | «0.5.2 playtest por invitación · interfaz legible», cerrada el 2026-11-21 (UTC) sin partidas | Reemplazada por 0.6.0 |
@@ -97,6 +98,15 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
   - Si el respiro evita las dispersiones encadenadas sobre los sitios.
   - Si Easy se siente fácil y si alcanza la Influence para talentos.
 - **Límites:** sin jugadores externos ni teléfono físico todavía; las capturas son del ejecutable de desarrollo Linux.
+- **GTC (2026-11-23 UTC):**
+  - Primero se desplegó GTC `7a4ad57`, con el contrato `awakening-6`, el resumen del Lab y la migración `0013`.
+  - Después se creó la build «The Awakening 0.9.0 · alignment-7 · Unity» (`73c0599`, adaptador `awakening-6`).
+  - La ronda se abrió en pausa. Un lote real `awakening-6` respondió `503 collection_paused`, así que el contrato pasó la validación. La build se probó en el host y la ronda se habilitó; cierra el 2026-12-07.
+  - La ronda 0.8.0 se cerró con 2 partidas, las que motivaron esta versión.
+- **Publicación:**
+  - Upload `20767533` en itch.io, único archivo jugable: `the-awakening-0.9.0-pilot.zip`, 9,0 MB, exportado desde un checkout limpio de `73c0599`.
+  - Los archivos alojados son idénticos al export. La build arranca sin errores y no envía nada antes de que el jugador responda.
+  - La página pasa a «Novedad de 0.9.0 / New in 0.9.0».
 
 ### 0.8.0 — remates que cambian la partida, rito detenido visible y Normal más exigente
 
