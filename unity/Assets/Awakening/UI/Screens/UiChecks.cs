@@ -225,7 +225,7 @@ namespace Awakening.UI
             var treeState = GameEngine.PlaceStartingFoothold(GameEngine.CreateGameState("normal", "tree-ui"), "africa").State;
             treeState.ElapsedMonths = 12;
             treeState.Influence = 120;
-            game.Settings.Hints = new List<string> { "first_cell", "threat", "omen", "awareness", "sacrifice", "unsupported", Notes.TabsHintId };
+            game.Settings.Hints = new List<string> { "first_cell", "threat", "omen", "awareness", "sacrifice", "unsupported", "madness", Notes.TabsHintId };
             game.State = treeState;
             game.ShowGame();
             yield return Layout();
@@ -272,7 +272,8 @@ namespace Awakening.UI
             screen.OpenDialog("talents");
             yield return Layout();
             var takeMid = screen.Dialogs.Q<Button>("take-open_worship");
-            Check(takeMid != null && takeMid.text == "Take · 70 Inf", "tier 2 middle becomes available at 70 Influence");
+            int midCost = GameEngine.TalentCost(game.State);
+            Check(takeMid != null && takeMid.text == $"Take · {midCost} Inf", $"tier 2 middle becomes available at {midCost} Influence");
             ((Action)takeMid.userData)();
             yield return Layout();
             Check(game.State.Talents.Contains("open_worship"), "middle talent recorded");
@@ -287,7 +288,8 @@ namespace Awakening.UI
             screen.OpenDialog("talents");
             yield return Layout();
             var takeCap = screen.Dialogs.Q<Button>("take-great_procession");
-            Check(takeCap != null && takeCap.text == "Take · 100 Inf", "capstone unlocks after root and middle with 100 Inf price");
+            int capCost = GameEngine.TalentCost(game.State);
+            Check(takeCap != null && takeCap.text == $"Take · {capCost} Inf", $"capstone unlocks after root and middle with {capCost} Inf price");
             ((Action)takeCap.userData)();
             yield return Layout();
             Check(game.State.Talents.Contains("great_procession"), "Great Procession capstone recorded");
@@ -306,7 +308,7 @@ namespace Awakening.UI
             foreach (string rid in new[] { "latin_america", "middle_east", "oceania" })
             {
                 Derived.Recruit(procState.Regions[rid], Derived.SiteRequirement(procState.Regions[rid]) + 60);
-                procState.Regions[rid].Site = new Site { Invested = true, Progress = Balance.SiteMonths };
+                procState.Regions[rid].Site = new Site { Invested = true, Progress = GameEngine.SiteMonths(procState) };
             }
             foreach (string rid in new[] { "africa", "latin_america", "middle_east", "oceania" })
             {
@@ -403,7 +405,7 @@ namespace Awakening.UI
             foreach (string rid in new[] { "latin_america", "middle_east", "oceania" })
             {
                 Derived.Recruit(riteState.Regions[rid], Derived.SiteRequirement(riteState.Regions[rid]) + 60);
-                riteState.Regions[rid].Site = new Site { Invested = true, Progress = Balance.SiteMonths };
+                riteState.Regions[rid].Site = new Site { Invested = true, Progress = GameEngine.SiteMonths(riteState) };
             }
             foreach (string tid in new[] { "red_altars", "scapegoats", "dreams_of_rlyeh" }) { riteState.Talents.Add(tid); riteState.TalentYield[tid] = 0; }
             riteState = GameEngine.StartAwakening(riteState).State;
@@ -438,8 +440,19 @@ namespace Awakening.UI
             Check(game.State.FinalProgress == 3 && Math.Abs(game.State.Awareness - 42) < 0.01, "Dreams sacrifice advances rite progress and adds +2 awareness");
             screen.OpenDialog("talents");
             yield return Layout();
-            Check(screen.Dialogs.Q<Label>("talent-yield-dreams_of_rlyeh")?.text == "1 rite months dreamed forward so far", "Dreams of R'lyeh yield updates after advancing sacrifice");
+            Check(screen.Dialogs.Q<Label>("talent-yield-dreams_of_rlyeh")?.text == "+10 Madness spread · 1 rite months dreamed forward so far", "Dreams of R'lyeh yield updates after advancing sacrifice: " + screen.Dialogs.Q<Label>("talent-yield-dreams_of_rlyeh")?.text);
             screen.Dialogs.Close();
+
+            // Dreams of R'lyeh at 30+ Madness advances the rite by 2 months.
+            game.State.Regions["africa"].Madness = 40;
+            game.State.Regions["africa"].Cooldowns.Remove("sacrifice");
+            screen.Refresh();
+            yield return Layout();
+            sacRow = screen.Panel.Q<Button>("sacrifice");
+            Check(sacRow != null && sacRow.Query<Label>().ToList().Any(l => l.text == "+2 RITE MONTHS"), "Dreams of R'lyeh shows +2 RITE MONTHS when Madness >= 30");
+            screen.Panel.LayoutExplain("sacrifice");
+            yield return Layout();
+            Check(screen.Panel.Q("detail-dreams-banner")?.Query<Label>().ToList().Any(l => l.text.Contains("ADVANCES RITE +2 MO")) == true, "sacrifice detail shows +2 MO Dreams advance at 30+ Madness");
 
             // Thin site sacrifice: does not advance dream and highlights rite-halt warning.
             var thinOc = game.State.Regions["oceania"];
@@ -543,6 +556,59 @@ namespace Awakening.UI
             Check(fileThreatTexts.Any(t => t.Contains("counter rests 9 more months")) && fileThreatTexts.Any(t => t.Contains("need 40 Dread")), "case file threat card shows Threats.Options reasons");
             screen.Deselect();
             Debug.Log("UI_CHECK: cornered threat and options");
+
+            // Madness UI (ledger Dread/mo, region panel MadnessText + quickened site + action previews), threat grace, and Easy 20-month sites.
+            var madState = GameEngine.PlaceStartingFoothold(GameEngine.CreateGameState("easy", "madness-ui"), "africa").State;
+            madState.ElapsedMonths = 96;
+            madState.Influence = 220;
+            madState.Dread = 80;
+            Derived.Recruit(madState.Regions["africa"], 340);
+            madState.Regions["africa"].Madness = 60;
+            madState.Regions["africa"].Site = new Site { Invested = true, Progress = 12 };
+            madState.Regions["africa"].ThreatGraceUntil = madState.ElapsedMonths + Balance.ThreatGraceMonths;
+            Derived.Recruit(madState.Regions["europe"], 140);
+            madState.Regions["europe"].Madness = 20;
+            game.State = madState;
+            game.ShowGame();
+            yield return Layout();
+            screen = (GameScreen)game.CurrentScreen;
+            Check(screen.Q<Label>("dread-madness-rate")?.text == "+4/mo from Madness", "ledger shows total Madness Dread per month: " + screen.Q<Label>("dread-madness-rate")?.text);
+            screen.Select("africa");
+            yield return Layout();
+            Check(screen.Panel.Q<Label>("stat-madness-value")?.text == "60%", "region panel shows Madness percentage");
+            string expectedMadText = GameEngine.MadnessText(game.State, "africa");
+            Check(screen.Panel.Q<Label>("madness-text")?.text.Contains(expectedMadText) == true, "region panel shows MadnessText: " + screen.Panel.Q<Label>("madness-text")?.text);
+            Check(screen.Panel.Q<Label>("region-threat-grace")?.text == $"Quiet for {Format.Months(Balance.ThreatGraceMonths)}", "region panel shows threat grace when ThreatGraceLeft > 0");
+            Check(screen.Panel.Q<Label>("site-progress-label")?.text == "12 / 20 MO", "Easy site card uses 20 site months: " + screen.Panel.Q<Label>("site-progress-label")?.text);
+            Check(screen.Panel.Q<Label>("site-madness-quickened") != null, "preparing site with Madness displays quickened note");
+            screen.Panel.LayoutSetGroup("RITES");
+            yield return Layout();
+            Check(screen.Panel.Q<Button>("manifest")?.Query<Label>().ToList().Any(l => l.text == "+20 MADNESS") == true, "manifest row shows +20 MADNESS");
+            Check(screen.Panel.Q<Button>("sacrifice")?.Query<Label>().ToList().Any(l => l.text == "+10 MADNESS") == true, "sacrifice row shows +10 MADNESS");
+            screen.Panel.LayoutExplain("manifest");
+            yield return Layout();
+            Check(screen.Panel.Query<Label>().ToList().Any(l => l.text.Contains("Madness here +20")), "manifest detail mentions Madness gain");
+            screen.Panel.LayoutExplain("sacrifice");
+            yield return Layout();
+            Check(screen.Panel.Query<Label>().ToList().Any(l => l.text.Contains("Madness here +10")), "sacrifice detail mentions Madness gain");
+            game.State.Regions["africa"].Site.Progress = 20;
+            game.State.Regions["africa"].ThreatGraceUntil = 0;
+            screen.Refresh();
+            yield return Layout();
+            Check(!Kit.IsVisible(screen.Panel.Q("region-threat-grace")), "threat grace hides when ThreatGraceLeft == 0");
+            Check(screen.Panel.Query<Label>().ToList().Any(l => l.text == "Ready for the final rite."), "Easy site at 20 months reads as ready");
+            screen.OpenDialog("guide");
+            yield return Layout();
+            var guideTexts = screen.Dialogs.Query<Label>().ToList().Select(l => l.text).ToList();
+            Check(guideTexts.Any(t => t.Contains("20 months")) && !guideTexts.Any(t => t.Contains("24 months")), "Easy guide displays 20 months, not 24");
+            screen.Dialogs.Close();
+            var easyLoss = madState.Clone();
+            easyLoss.Status = "lost";
+            easyLoss.ElapsedMonths = Balance.Deadline;
+            var easyEnding = Notes.Ending(easyLoss);
+            Check(easyEnding.Advice.Any(a => a.Contains("20 months")) && !easyEnding.Advice.Any(a => a.Contains("24 months")), "Easy ending advice uses 20 months");
+            screen.Deselect();
+            Debug.Log("UI_CHECK: madness, threat grace, and Easy site months");
             // A fresh configured round: Escape cancels without answering; Tab stays in the sheet.
             game.Lab.Configure(GameController.ShotLabOptions());
             game.State = null;

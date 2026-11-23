@@ -101,6 +101,9 @@ namespace Awakening.UI
             if (GameEngine.IsOver(game.State)) yield break;
             bool corneredSet = false;
             bool restoreSet = false;
+            bool madnessHighSet = false;
+            bool madnessLowSet = false;
+            bool graceSet = false;
             foreach (string id in GameData.RegionIds)
             {
                 var region = game.State.Regions[id];
@@ -111,6 +114,12 @@ namespace Awakening.UI
                     region.Cooldowns["counter"] = game.State.ElapsedMonths + 8;
                     region.Cooldowns["silence"] = game.State.ElapsedMonths + 8;
                     corneredSet = true;
+                }
+                if (region.Population.Followers > 0)
+                {
+                    if (!madnessHighSet) { region.Madness = 60; madnessHighSet = true; }
+                    else if (!madnessLowSet) { region.Madness = 30; madnessLowSet = true; }
+                    if (!graceSet) { region.ThreatGraceUntil = game.State.ElapsedMonths + Balance.ThreatGraceMonths; graceSet = true; }
                 }
                 if (!restoreSet && region.Site.Invested && region.Site.Progress <= 20)
                 {

@@ -27,7 +27,7 @@ namespace Awakening.UI
         public readonly Dialogs Dialogs;
         public string Selected = "";
 
-        Label _date, _countdown, _influence, _influenceRate, _dread, _followers, _talentsNote, _capstoneSub, _tickerHead, _ticker;
+        Label _date, _countdown, _influence, _influenceRate, _dread, _dreadRate, _followers, _talentsNote, _capstoneSub, _tickerHead, _ticker;
         readonly List<IconButton> _speed = new List<IconButton>();
         Button _talents, _capstoneInvoke, _rite, _resetView, _concede, _bannerToggle;
         Label _awarenessCaption, _sitesCaption, _bannerHead, _bannerText, _bannerCause, _riteHaltedText, _marginLine;
@@ -277,7 +277,9 @@ namespace Awakening.UI
             bar.Add(row);
             (_influence, _influenceRate) = Readout(row, "Influence", Palette.Text,
                 $"Earned each month by your followers, minus {Js.Num(Balance.SiteUpkeep)} per funded site.\nSpent on every cult action. Keep a reserve for the alignment.");
-            _dread = Readout(row, "Dread", Palette.Omen, "Power for the rites. Gained only by sacrifice and omens.\nSites cost 60, 100 and 160. The final rite costs 100.").value;
+            (_dread, _dreadRate) = Readout(row, "Dread", Palette.Omen,
+                $"Power for the rites. Gained by sacrifice, regional Madness (Madness/{Js.Num(Balance.MadnessDreadDivisor)}/month), and omens.\nSites cost 60, 100 and 160. The final rite costs 100.");
+            _dreadRate.name = "dread-madness-rate";
             _followers = Readout(row, "Followers", Palette.Cult, "Living members of the cult, in every region.").value;
             Stack talents = Kit.VBox(3);
             talents.name = "talents";
@@ -716,6 +718,20 @@ namespace Awakening.UI
             _influenceRate.text = Kit.Compact ? Format.Rate(net) + " NET / MO" : Format.Rate(net) + " / MONTH" + (upkeep > 0 ? " · SITES −" + Js.Num(upkeep) : "");
             _influenceRate.style.color = net < 0 ? Palette.Danger : Palette.Muted;
             _dread.text = Format.Count(s.Dread);
+            double madDread = Js.RoundHalfUp(GameEngine.MadnessDreadTotal(s) * 10) / 10;
+            if (madDread > 0)
+            {
+                string rateNum = Js.Num(madDread);
+                _dreadRate.text = Kit.Compact ? $"+{rateNum}/MO MAD" : $"+{rateNum}/mo from Madness";
+                _dreadRate.style.color = Palette.Omen;
+                _dread.parent.tooltip = $"Power for the rites. Regional Madness currently yields +{rateNum} Dread/month.\nAlso gained by sacrifice and omens. Sites cost 60, 100 and 160. The final rite costs 100.";
+            }
+            else
+            {
+                _dreadRate.text = "";
+                _dreadRate.style.color = Palette.Muted;
+                _dread.parent.tooltip = $"Power for the rites. Gained by sacrifice, regional Madness (Madness/{Js.Num(Balance.MadnessDreadDivisor)}/month), and omens.\nSites cost 60, 100 and 160. The final rite costs 100.";
+            }
             _followers.text = Format.Count(Derived.TotalFollowers(s));
             RefreshTalents(s, placing, over);
             if (Kit.Compact && _invokableId != "" && _talentsNote.text == "")
@@ -839,7 +855,7 @@ namespace Awakening.UI
                 {
                     SiteMargin sm = margin.Sites[i];
                     RegionState r = s.Regions[sm.Region];
-                    keyParts.Add($"{sm.Region}:{sm.MonthsLeft}:{sm.Followers}/{sm.Required}:{sm.Supported}:{sm.Scattered}:{r.Site.Dormant}:{(sm.Scattered ? r.ScatteredUntil - s.ElapsedMonths : 0)}");
+                    keyParts.Add($"{sm.Region}:{sm.MonthsLeft}:{sm.Followers}/{sm.Required}:{sm.Supported}:{sm.Scattered}:{r.Site.Dormant}:{(sm.Scattered ? r.ScatteredUntil - s.ElapsedMonths : 0)}:{GameEngine.MadnessQuickens(s, sm.Region)}:{(int)Math.Round(r.Madness, MidpointRounding.AwayFromZero)}:{GameEngine.ThreatGraceLeft(s, sm.Region)}");
                 }
                 else keyParts.Add("empty");
             }
@@ -1219,9 +1235,9 @@ namespace Awakening.UI
                     : opt.Reason + " (" + opt.Cost + ")";
                 string detail = opt.Ok
                     ? (haltsRite ? $"HALTS RITE · {GameEngine.ScatterMonths(s)} MO"
-                        : chosen == "silence" ? "+" + Js.Num(preview.Awareness) + " awareness"
+                        : chosen == "silence" ? (Kit.Compact ? $"+{Js.Num(preview.Awareness)} aware · quiet {Balance.ThreatGraceMonths}m" : $"+{Js.Num(preview.Awareness)} awareness · quiet {Balance.ThreatGraceMonths} mo")
                         : chosen == "scatter" ? GameEngine.ScatterMonths(s) + " mo hidden"
-                        : "rests 12 mo")
+                        : (Kit.Compact ? $"rests 12m · quiet {Balance.ThreatGraceMonths}m" : $"rests 12 mo · quiet {Balance.ThreatGraceMonths} mo"))
                     : Notes.ThreatOptionReason(opt);
                 Color detailColor = !opt.Ok ? Palette.Warn : haltsRite || chosen == "silence" ? Palette.Danger : Palette.Muted;
                 string detailWeight = !opt.Ok || haltsRite ? Fonts.TypeBold : Fonts.Italic;

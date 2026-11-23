@@ -687,7 +687,7 @@ namespace Awakening.UI
 #endif
             string scenario = _shot.TryGetValue("scenario", out string s) ? s : "start";
             TutorialComplete = scenario != "guide";
-            Settings.Hints = _shot.ContainsKey("hints") ? new List<string>() : new List<string> { "first_cell", "spread", "threat", "omen", "sites", "doctrine", "talents", "awareness", "unsupported", "sacrifice", Notes.TabsHintId };
+            Settings.Hints = _shot.ContainsKey("hints") ? new List<string>() : new List<string> { "first_cell", "spread", "threat", "omen", "sites", "doctrine", "talents", "awareness", "unsupported", "sacrifice", "madness", Notes.TabsHintId };
             switch (scenario)
             {
                 case "start":
@@ -833,7 +833,7 @@ namespace Awakening.UI
                     {
                         var r = State.Regions[rid];
                         Derived.Recruit(r, Derived.SiteRequirement(r) + 60);
-                        r.Site = new Site { Invested = true, Progress = Balance.SiteMonths };
+                        r.Site = new Site { Invested = true, Progress = GameEngine.SiteMonths(State) };
                     }
                     State = GameEngine.StartAwakening(State).State;
                     State.FinalProgress = 4;
@@ -852,20 +852,48 @@ namespace Awakening.UI
                     State.Dread = 160;
                     State.Awareness = 52;
                     Derived.Recruit(State.Regions["africa"], 340);
+                    State.Regions["africa"].Madness = 45;
                     foreach (string rid in new[] { "latin_america", "middle_east", "oceania" })
                     {
                         var r = State.Regions[rid];
                         Derived.Recruit(r, Derived.SiteRequirement(r) + 60);
-                        r.Site = new Site { Invested = true, Progress = Balance.SiteMonths };
+                        r.Site = new Site { Invested = true, Progress = GameEngine.SiteMonths(State) };
                     }
                     foreach (string tid in new[] { "red_altars", "scapegoats", "dreams_of_rlyeh" })
                     {
                         State.Talents.Add(tid);
-                        State.TalentYield[tid] = tid == "red_altars" ? 65 : tid == "scapegoats" ? 4 : 2;
+                        State.TalentYield[tid] = tid == "red_altars" ? 65 : tid == "scapegoats" ? 4 : 36;
                     }
+                    State.DreamRiteMonths = 2;
                     State = GameEngine.StartAwakening(State).State;
                     State.FinalProgress = 3;
                     State.ElapsedMonths = Balance.PreparationMonths + 2;
+                    ShowGame();
+                    break;
+                case "madness":
+                    State = GameEngine.PlaceStartingFoothold(GameEngine.CreateGameState("normal", "madness-shot"), "africa").State;
+                    State.ElapsedMonths = 112;
+                    State.Influence = 210;
+                    State.Dread = 95;
+                    State.Awareness = 38;
+                    Derived.Recruit(State.Regions["africa"], 380);
+                    State.Regions["africa"].Madness = 60;
+                    State.Regions["africa"].Exposure = 45;
+                    State.Regions["africa"].Site = new Site { Invested = true, Progress = 12 };
+                    State.Regions["africa"].ThreatGraceUntil = State.ElapsedMonths + 4;
+                    Derived.Recruit(State.Regions["latin_america"], 340);
+                    State.Regions["latin_america"].Madness = 35;
+                    State.Regions["latin_america"].Exposure = 40;
+                    State.Regions["latin_america"].Site = new Site { Invested = true, Progress = 10 };
+                    Derived.Recruit(State.Regions["europe"], 180);
+                    State.Regions["europe"].Madness = 20;
+                    Derived.Recruit(State.Regions["oceania"], 100);
+                    State.Regions["oceania"].Site = new Site { Invested = true, Progress = GameEngine.SiteMonths(State) };
+                    foreach (string tid in new[] { "red_altars", "mute_witnesses", "dreams_of_rlyeh" })
+                    {
+                        State.Talents.Add(tid);
+                        State.TalentYield[tid] = tid == "red_altars" ? 50 : tid == "mute_witnesses" ? 3 : 24;
+                    }
                     ShowGame();
                     break;
                 default:

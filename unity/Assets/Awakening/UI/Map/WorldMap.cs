@@ -43,7 +43,7 @@ namespace Awakening.UI.Map
         readonly Dictionary<string, List<Vector2>> _outlines = new Dictionary<string, List<Vector2>>();
         readonly Dictionary<string, Color> _regionColor = new Dictionary<string, Color>();
         readonly List<(Vector2 at, float radius, string region)> _hits = new List<(Vector2, float, string)>();
-        readonly Dictionary<string, (Label title, Label count)> _regionLabels = new Dictionary<string, (Label, Label)>();
+        readonly Dictionary<string, (Label title, Label count, Label madness)> _regionLabels = new Dictionary<string, (Label, Label, Label)>();
         readonly Dictionary<Label, Label> _halos = new Dictionary<Label, Label>();
         readonly List<Label> _threatLabels = new List<Label>();
         readonly Label _north, _rlyehName, _rlyehCoords;
@@ -107,7 +107,12 @@ namespace Awakening.UI.Map
                 Label count = MapLabel(Fonts.TypeBold, CultInk);
                 count.style.backgroundColor = Palette.PaperLight;
                 count.style.paddingLeft = count.style.paddingRight = 3;
-                _regionLabels[id] = (title, count);
+                Label madness = MapLabel(Fonts.TypeBold, Palette.Omen, 13, 0f);
+                madness.name = "map-madness-" + id;
+                madness.style.backgroundColor = Palette.PaperLight;
+                madness.style.paddingLeft = madness.style.paddingRight = 3;
+                madness.style.borderTopWidth = madness.style.borderBottomWidth = madness.style.borderLeftWidth = madness.style.borderRightWidth = 1;
+                _regionLabels[id] = (title, count, madness);
             }
             _north = MapLabel(Fonts.Display, Palette.Muted, 16);
             _north.text = "N";
@@ -299,7 +304,7 @@ namespace Awakening.UI.Map
         {
             get
             {
-                foreach (var pair in _regionLabels.Values) { yield return pair.title; yield return pair.count; }
+                foreach (var pair in _regionLabels.Values) { yield return pair.title; yield return pair.count; yield return pair.madness; }
                 foreach (var label in _threatLabels) yield return label;
             }
         }
@@ -522,6 +527,12 @@ namespace Awakening.UI.Map
                         float tint = Mathf.Clamp01(0.25f + Share(id) * 1.6f);
                         // The cult soaks into the paper like a verdigris stain.
                         color = Color.Lerp(Palette.Land, Palette.Hex(r.Public ? "6f8a52" : "8b9466"), tint);
+                        if (r.Madness > 0)
+                        {
+                            // Madness leaves a subtle bruised-violet wash across the region.
+                            float madTint = Mathf.Clamp01((float)(r.Madness / 100.0) * 0.42f);
+                            color = Color.Lerp(color, Palette.Hex("7c6588"), madTint);
+                        }
                     }
                 }
                 if (id == Hovered) color = Palette.Lightened(color, 0.08f);
@@ -808,27 +819,41 @@ namespace Awakening.UI.Map
         void DrawSite(Painter2D p, string id, RegionState r)
         {
             Vector2 at = ToScreen(Geo.Anchor(id)) + new Vector2(0, 32);
-            float progress = r.Site.Progress / (float)Balance.SiteMonths;
-            string state = Notes.SiteState(r);
+            int siteMonths = GameEngine.SiteMonths(State);
+            float progress = r.Site.Progress / (float)siteMonths;
+            string state = Notes.SiteState(State, r);
             bool ready = state == "ready";
             bool supported = state == "ready" || state == "preparing";
+            bool quickened = GameEngine.MadnessQuickens(State, id);
             Color color = !supported ? Palette.DangerBright : ready ? Palette.CultBright : Palette.OmenBright;
-            float pulse = 0.5f + 0.5f * Mathf.Sin(_time * (!supported ? 5f : 2f));
+            float pulse = 0.5f + 0.5f * Mathf.Sin(_time * (!supported ? 5f : quickened ? 3.2f : 2f));
+            if (quickened)
+                Draw2D.Ring(p, at, 15.5f, Palette.Alpha(Palette.OmenBright, 0.45f + 0.3f * pulse), 1.4f);
             Draw2D.Circle(p, at, 13f, Palette.Alpha(Palette.Text, 0.88f));
             Draw2D.Ring(p, at, 11f, Palette.Alpha(color, 0.25f), 1.5f);
             if (progress > 0) Draw2D.Arc(p, at, 11f, -Mathf.PI / 2, -Mathf.PI / 2 + Mathf.PI * 2 * progress, color, 2.5f);
-            // A slowly turning pentagram: five points joined by every second vertex.
-            float spin = _time * 0.35f - Mathf.PI / 2;
+            // A slowly turning pentagram: five points joined by every second vertex; quickened sites turn faster.
+            float spinRate = quickened ? 0.35f + (float)GameEngine.MadnessHaste(r) * 0.9f : 0.35f;
+            float spin = _time * spinRate - Mathf.PI / 2;
             var star = new Vector2[6];
             for (int k = 0; k < 6; k++) star[k] = at + Draw2D.FromAngle(spin + (k * 2 % 5) * Mathf.PI * 2 / 5f) * 7f;
             Draw2D.Polyline(p, star, Palette.Alpha(color, ready || !supported ? 0.6f + 0.4f * pulse : 0.85f), 1.3f);
+            if (quickened)
+            {
+                // Crisp double-chevron badge on the seal rim: Madness is hastening preparation.
+                Vector2 q = at + new Vector2(11f, -10f);
+                Draw2D.Circle(p, q, 6.2f, Palette.OmenDeep);
+                Draw2D.Ring(p, q, 6.2f, Palette.OmenBright, 1.3f);
+                Draw2D.Polyline(p, new[] { q + new Vector2(-3.2f, -2.5f), q + new Vector2(-0.6f, 0f), q + new Vector2(-3.2f, 2.5f) }, Palette.PaperLight, 1.3f);
+                Draw2D.Polyline(p, new[] { q + new Vector2(0.4f, -2.5f), q + new Vector2(3.0f, 0f), q + new Vector2(0.4f, 2.5f) }, Palette.PaperLight, 1.3f);
+            }
             if (!supported)
             {
                 // A struck-through seal: stalled, readable without the colour.
                 Draw2D.Line(p, at + new Vector2(-11, 11), at + new Vector2(11, -11), Palette.PaperLight, 4f);
                 Draw2D.Line(p, at + new Vector2(-11, 11), at + new Vector2(11, -11), color, 2.2f);
             }
-            _hits.Add((at, 14f, id));
+            _hits.Add((at, quickened ? 16f : 14f, id));
         }
 
         void DrawOmen(Painter2D p, string id)
@@ -894,12 +919,14 @@ namespace Awakening.UI.Map
                 {
                     pair.title.style.display = DisplayStyle.None;
                     pair.count.style.display = DisplayStyle.None;
+                    pair.madness.style.display = DisplayStyle.None;
                 }
                 return;
             }
             float grow = Mathf.Clamp(Mathf.Sqrt(_viewScale), 1f, 1.5f);
             int sizeTitle = Mathf.RoundToInt((FitZoom() < 1f ? 18 : 20) * grow);
             int sizeCount = Mathf.RoundToInt((FitZoom() < 1f ? 15 : 17) * grow);
+            int sizeMad = Mathf.RoundToInt((FitZoom() < 1f ? 11 : 12) * grow);
             var order = new List<string>(GameData.RegionIds);
             order.Sort((a, b) => LabelRank(b).CompareTo(LabelRank(a)));
             var obstacles = OverlayRects();
@@ -908,21 +935,30 @@ namespace Awakening.UI.Map
                 if (Shown(label)) placed.Add(Draw2D.Grow(this.WorldToLocal(label.worldBound), 4));
             foreach (string id in order)
             {
-                (Label title, Label count) = _regionLabels[id];
+                (Label title, Label count, Label madness) = _regionLabels[id];
+                RegionState r = State.Regions[id];
                 title.text = GameData.Regions[id].Name;
-                double followers = State.Regions[id].Population.Followers;
+                double followers = r.Population.Followers;
+                int mad = followers > 0 ? (int)Math.Round(r.Madness, MidpointRounding.AwayFromZero) : 0;
                 count.text = followers > 0 ? Format.Count(followers) : "";
+                madness.text = mad > 0 ? $"MAD {mad}%" : "";
                 title.style.fontSize = sizeTitle;
                 count.style.fontSize = sizeCount;
+                madness.style.fontSize = sizeMad;
                 Vector2 titleSize = title.MeasureTextSize(title.text, 0, MeasureMode.Undefined, 0, MeasureMode.Undefined);
                 Vector2 countSize = count.text.Length > 0 ? count.MeasureTextSize(count.text, 0, MeasureMode.Undefined, 0, MeasureMode.Undefined) : Vector2.zero;
-                float height = titleSize.y + countSize.y + 10;
-                float width = Mathf.Max(titleSize.x, countSize.x + 6) + 6;
+                Vector2 madSize = madness.text.Length > 0 ? madness.MeasureTextSize(madness.text, 0, MeasureMode.Undefined, 0, MeasureMode.Undefined) : Vector2.zero;
+                float countW = count.text.Length > 0 ? countSize.x + 6 : 0;
+                float madW = madness.text.Length > 0 ? madSize.x + 8 : 0;
+                float subW = countW + (countW > 0 && madW > 0 ? 4 : 0) + madW;
+                float subH = Mathf.Max(countSize.y, madSize.y + (madW > 0 ? 2 : 0));
+                float height = titleSize.y + subH + 10;
+                float width = Mathf.Max(titleSize.x, subW) + 6;
                 Vector2 at = ToScreen(Geo.Anchor(id));
                 // A zoomed-out-of-view region has no label in this viewport.
                 if (!contentRect.Contains(at) || !TryLabelRect(new Rect(at.x - width * .5f, at.y - titleSize.y, width, height), obstacles, placed, out Rect rect))
                 {
-                    title.style.display = count.style.display = DisplayStyle.None;
+                    title.style.display = count.style.display = madness.style.display = DisplayStyle.None;
                     continue;
                 }
                 placed.Add(Draw2D.Grow(rect, 3));
@@ -931,8 +967,19 @@ namespace Awakening.UI.Map
                 title.style.borderBottomWidth = emphasized ? 1 : 0;
                 title.style.borderBottomColor = Palette.Text;
                 Place(title, new Vector2(rect.center.x, rect.y + 3), .5f, 0);
-                if (count.text.Length > 0) Place(count, new Vector2(rect.center.x, rect.y + titleSize.y + 6), .5f, 0);
+                float rowX = rect.center.x - subW * 0.5f;
+                float rowY = rect.y + titleSize.y + 6;
+                if (count.text.Length > 0) Place(count, new Vector2(rowX, rowY), 0f, 0f);
                 else count.style.display = DisplayStyle.None;
+                if (madness.text.Length > 0)
+                {
+                    bool high = GameEngine.MadnessHigh(r);
+                    Color edge = high ? Palette.Omen : Palette.Alpha(Palette.Omen, 0.5f);
+                    madness.style.backgroundColor = high ? Color.Lerp(Palette.PaperLight, Palette.Omen, 0.14f) : Palette.PaperLight;
+                    madness.style.borderTopColor = madness.style.borderBottomColor = madness.style.borderLeftColor = madness.style.borderRightColor = edge;
+                    Place(madness, new Vector2(rowX + (countW > 0 ? countW + 4 : 0), rowY + Mathf.Max(0f, (countSize.y - (madSize.y + 2)) * 0.5f)), 0f, 0f);
+                }
+                else madness.style.display = DisplayStyle.None;
             }
         }
 
@@ -945,7 +992,12 @@ namespace Awakening.UI.Map
             {
                 RegionState r = State.Regions[id];
                 Vector2 anchor = ToScreen(Geo.Anchor(id));
-                if (r.Site.Invested) rects.Add(new Rect(anchor + new Vector2(-14, 18), new Vector2(28, 28)));
+                if (r.Site.Invested)
+                {
+                    rects.Add(GameEngine.MadnessQuickens(State, id)
+                        ? new Rect(anchor + new Vector2(-17, 15), new Vector2(36, 34))
+                        : new Rect(anchor + new Vector2(-14, 18), new Vector2(28, 28)));
+                }
                 if (!over && r.Opportunity != null) rects.Add(new Rect(anchor + new Vector2(23, -41), new Vector2(30, 30)));
                 if (!over && r.Threat != null)
                 {
