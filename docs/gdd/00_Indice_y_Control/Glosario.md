@@ -27,12 +27,14 @@ localización de la interfaz.
 | Bury | Enterrar el registro (`bury`): Influence a cambio de bajar la awareness mundial, con precio creciente por uso |
 | Restore | Restaurar el sitio (`restore`): Influence a cambio de recuperar meses que quitó una amenaza oculta ignorada |
 | Cornered | Amenaza acorralada: no se puede obstruir ni silenciar; solo dispersar o aguantar |
+| Madness | Locura regional (0–100) que dejan manifestar y sacrificar; desde `alignment-7` rinde Dread, acelera el sitio de la región y atrae ocultistas y awareness. Baja 1 por mes |
+| Grace | Respiro: meses en que una región no recibe amenazas nuevas después de obstruir o silenciar (5 desde `alignment-7`) |
 | Doctrine | Especialización de una partida hasta `alignment-4`; reemplazada por el árbol de talentos |
 | Director | Sistema de reglas y azar con semilla que programa amenazas y oportunidades |
 | Seed | Semilla: permite reproducir una partida junto con la secuencia de acciones |
 | Obstruct | Obstruir (`counter`): detener una amenaza con Influence; quema las conexiones de la región 12 meses |
 | Scatter | Dispersar (`scatter`): la célula se oculta 8 meses; la amenaza no encuentra a nadie y la célula no recluta, no ingresa ni sostiene su sitio |
 | Silence | Silenciar (`silence`): detener una amenaza con Dread; las desapariciones suman awareness |
-| `alignment-6` | Identificador del conjunto de reglas actual (juego 0.8.0), distinto de la versión documental. `alignment-1` a `alignment-5` son los anteriores; el [registro de versiones](../../playtests/versiones.md) dice qué juego usó cada uno |
+| `alignment-7` | Identificador del conjunto de reglas actual (juego 0.9.0), distinto de la versión documental. `alignment-1` a `alignment-6` son los anteriores; el [registro de versiones](../../playtests/versiones.md) dice qué juego usó cada uno |
 
 [Volver al índice](../README.md)

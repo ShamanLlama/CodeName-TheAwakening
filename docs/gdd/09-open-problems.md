@@ -1,5 +1,21 @@
 # 09 — Open problems
 
+> **`alignment-7` (2026-11-23, juego 0.9.0) — estado de cada problema:**
+>
+> | Problema | Estado |
+> | --- | --- |
+> | 1 | Sin cambios. |
+> | 2 | Bot en Normal: 27, 35 y 21 de 48 por rama; Hidden hand sigue siendo la más fuerte. En Hard ya ganan las tres estrategias (4, 31 y 12 de 48), pero late gana casi lo mismo que en Normal. |
+> | 3 | Cambia de forma: en las dos partidas humanas de 0.8.0 la Influence no alcanzó (en Easy quedaron cinco sellos sin usar). 0.9.0 abarata los talentos (paso 25; Easy 30 + 20 por talento). |
+> | 5 | Medido con el bot: Easy 142/144, Normal 83/144, Hard 47/144. |
+> | 6 | Cuatro partidas humanas del mismo jugador interno. Con 0.8.0 se rindió dos veces en el mes 200 sin tres sitios listos: Dread gastado en silenciar y amenazas encadenadas sobre los sitios. 0.9.0 suma Dread y aceleración por Madness, y un respiro de 5 meses tras obstruir o silenciar. |
+>
+> **Abiertos nuevos:**
+> - Madness era decorativa hasta 0.8.0; falta ver si los jugadores la buscan a propósito y si las amenazas ocultistas que atrae se sienten justas.
+> - El respiro es la palanca más sensible: con 4 meses Normal daba 50/144 y con 6, 93/144. Normal se compensó con presión ×1,45, y Hard (×1,15) quedó por debajo de Normal en presión.
+> - En Easy la Madness de la política terror se dispara (Dread al tope, awareness mediana 93).
+> - Falta gente externa jugando, que es requisito de «completo».
+>
 > **`alignment-6` (2026-11-22, juego 0.8.0) — estado de cada problema:**
 >
 > | Problema | Estado |

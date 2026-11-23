@@ -1,6 +1,6 @@
 # Control, origen y adaptación
 
-**Versión:** 0.4 · **Fecha:** 2026-11-22 · **Estado:** documentación de lo implementado en curso.
+**Versión:** 0.5 · **Fecha:** 2026-11-23 · **Estado:** documentación de lo implementado en curso.
 **Proyecto:** The Awakening of Cthulhu · **Estudio:** Lucid Labworks Studio.
 **Responsable de aprobar visión y alcance:** por confirmar con dirección del proyecto.
 
@@ -87,6 +87,7 @@ resuelven a destinos existentes.
 | 2026-11-21 | 0.3 | `alignment-4`, decisiones del usuario y D05 | Ocultar con plazo mundial, margen del rito y cerrar la partida (juego 0.6.0); árbol dentro de la partida, eventos que pausan, efecto para Mysticism y definición de «completo» |
 | 2026-11-21 | 0.3 | `alignment-5` y D15 | Árbol de talentos en lugar de la doctrina, Bury the record, Restore the site, amenazas acorraladas, Mysticism y dificultades que cambian reglas (juego 0.7.0), tras la primera partida humana de 0.6.0 |
 | 2026-11-22 | 0.4 | `alignment-6`, D18–D20 y revisión general | Remates que cambian la partida, rendimiento por talento, rito detenido visible y Normal más exigente (juego 0.8.0), tras la primera partida humana de 0.7.0 |
+| 2026-11-23 | 0.5 | `alignment-7`, D21–D24 y revisión general | Madness como recurso (Dread, sitios más rápidos, ocultistas), Dreams of R'lyeh antes del rito, respiro de 5 meses tras obstruir o silenciar, y Easy con sitios de 20 meses y talentos más baratos (juego 0.9.0), tras dos partidas humanas de 0.8.0 rendidas en el mes 200 |
 | 2026-11-18 | 0.3 | D12 y revisión contra el juego 0.5.1 | Port a Unity, Steam como salida principal e itch.io para la beta. Se actualizaron motor, rutas de código, interfaz y plataformas; reglas y valores ya coincidían con `Core/Rules` y el bot reproduce las 103/144 victorias registradas |
 
 Al resolver una pregunta, actualizar su ficha y el
