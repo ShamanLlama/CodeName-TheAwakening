@@ -6,7 +6,7 @@ using static Awakening.Core.Playtest.PlaytestJson;
 
 namespace Awakening.Core.Playtest
 {
-    // Event-level awakening-5 schema and semantics. Batch/stream ordering is checked by GTC.
+    // Event-level awakening-6 schema and semantics. Batch/stream ordering is checked by GTC.
     internal static class PlaytestEventContract
     {
         static readonly string[] Regions = { "north_america", "latin_america", "europe", "africa", "middle_east", "south_asia", "east_asia", "oceania" };
@@ -25,7 +25,9 @@ namespace Awakening.Core.Playtest
 
         internal static bool Valid(Dictionary<string, object> entry)
         {
-            if (!Keys(entry, "event_id", "sequence", "type", "phase", "game_month", "clock", "data") || Bytes(entry) > 2048) return false;
+            if (!Keys(entry, "event_id", "sequence", "type", "phase", "game_month", "clock", "data")) return false;
+            try { if (Bytes(entry) > 2048) return false; }
+            catch (ArgumentException) { return false; } // Non-finite numbers cannot be JSON.
             var data = Obj(entry, "data");
             var clock = Obj(entry, "clock");
             if (!Keys(clock, PlaytestCapture.ClockKeys)) return false;
@@ -35,7 +37,7 @@ namespace Awakening.Core.Playtest
             switch (kind)
             {
                 case "run_started": case "capture_started":
-                    return Keys(data, "difficulty", "seed", "ruleset") && In(Get(data, "difficulty"), "easy", "normal", "hard") && Get(data, "seed") is string seed && Characters(seed) >= 1 && Characters(seed) <= 64 && Equals(Get(data, "ruleset"), "alignment-6")
+                    return Keys(data, "difficulty", "seed", "ruleset") && In(Get(data, "difficulty"), "easy", "normal", "hard") && Get(data, "seed") is string seed && Characters(seed) >= 1 && Characters(seed) <= 64 && Equals(Get(data, "ruleset"), "alignment-7")
                         && Num(entry, "sequence") == 1 && Num(clock, "elapsed_ms") == 0 && (kind != "run_started" || phase == "placing" && month == 0);
                 case "session_started":
                     return Keys(data, "mode") && In(Get(data, "mode"), "new", "resume", "partial") && Num(clock, "elapsed_ms") == 0;
@@ -43,7 +45,11 @@ namespace Awakening.Core.Playtest
                     return Keys(data, "region") && In(Get(data, "region"), Regions) && phase == "playing" && month == 0;
                 case "action_performed":
                     bool sacrifice = phase == "awakening" && Equals(Get(data, "action"), "sacrifice");
-                    return playing && (sacrifice ? Keys(data, "action", "region", "spent", "rite_advanced") && Get(data, "rite_advanced") is bool : Keys(data, "action", "region", "spent")) && In(Get(data, "action"), Actions) && In(Get(data, "region"), Regions) && Spent(Get(data, "spent"));
+                    bool madnessAction = In(Get(data, "action"), "manifest", "sacrifice");
+                    var actionKeys = new List<string> { "action", "region", "spent" };
+                    if (sacrifice) actionKeys.Add("rite_advanced");
+                    if (madnessAction) actionKeys.Add("madness_after");
+                    return playing && Keys(data, actionKeys.ToArray()) && (!sacrifice || Get(data, "rite_advanced") is bool) && (!madnessAction || Number(Get(data, "madness_after"), 100)) && In(Get(data, "action"), Actions) && In(Get(data, "region"), Regions) && Spent(Get(data, "spent"));
                 case "talent_taken":
                     return playing && Keys(data, "talent", "branch", "tier", "slot", "spent") && Get(data, "talent") is string talent && TalentId.IsMatch(talent) && In(Get(data, "branch"), "congregation", "hidden_hand", "harbinger") && PositiveInteger(Get(data, "tier"), 3) && PositiveInteger(Get(data, "slot"), 6) && Spent(Get(data, "spent"));
                 case "awakening_started":
@@ -63,11 +69,13 @@ namespace Awakening.Core.Playtest
                 case "threat_spawned":
                     return playing && Keys(data, "region", "kind", "severity", "due_month", "legal_responses", "cornered") && Threat(data) && Num(data, "due_month") > month && Get(data, "cornered") is bool cornered && cornered == !Arr(data, "legal_responses").Any(v => In(v, "counter", "silence"));
                 case "threat_resolved":
-                    if (!playing || !Keys(data, "region", "kind", "severity", "due_month", "legal_responses", "response", "losses") || !Threat(data) || !In(Get(data, "response"), "counter", "scatter", "silence", "forgotten", "ignored") || !(Get(data, "losses") is Dictionary<string, object> losses)) return false;
+                    if (!playing || !Keys(data, "region", "kind", "severity", "due_month", "legal_responses", "response", "losses", "grace_months") || !Threat(data) || !In(Get(data, "response"), "counter", "scatter", "silence", "forgotten", "ignored") || !(Get(data, "losses") is Dictionary<string, object> losses)) return false;
+                    if (!Integer(Get(data, "grace_months"), 24) || (!In(data["response"], "counter", "silence") && Num(data, "grace_months") != 0)) return false;
                     if (!Keys(losses, "followers", "preparation_months", "income_per_month", "cells", "sites") || !Number(Get(losses, "followers"), 1e9) || !Number(Get(losses, "income_per_month"), 1e9) || !Integer(Get(losses, "preparation_months"), 48) || !Integer(Get(losses, "cells"), 1) || !Integer(Get(losses, "sites"), 1)) return false;
                     return Equals(data["response"], "ignored") ? Num(data, "due_month") <= month : (Equals(data["response"], "forgotten") || Arr(data, "legal_responses").Contains(data["response"])) && losses.Values.All(v => Convert.ToDouble(v) == 0);
                 case "month_snapshot":
-                    return playing && month > 0 && month % 12 == 0 && Keys(data, "awareness", "influence", "dread", "followers", "cells", "funded_sites", "ready_sites", "talents", "unused_slots", "bury_uses", "yields") && Number(Get(data, "awareness"), 100) && new[] { "influence", "dread", "followers" }.All(k => Number(Get(data, k), 1e9)) && new[] { "cells", "funded_sites", "ready_sites" }.All(k => Integer(Get(data, k), 8)) && Num(data, "ready_sites") <= Num(data, "funded_sites") && Num(data, "funded_sites") <= Num(data, "cells") && Integer(Get(data, "talents"), 6) && Integer(Get(data, "unused_slots"), 6) && Num(data, "talents") + Num(data, "unused_slots") <= 6 && Integer(Get(data, "bury_uses"), 20000) && Get(data, "yields") is Dictionary<string, object> yields && yields.Count == Num(data, "talents") && yields.All(pair => TalentId.IsMatch(pair.Key) && Number(pair.Value, 1e9));
+                    return playing && month > 0 && month % 12 == 0 && Keys(data, "awareness", "influence", "dread", "followers", "cells", "funded_sites", "ready_sites", "talents", "unused_slots", "bury_uses", "yields", "madness", "madness_dread", "quickened_sites") && Number(Get(data, "awareness"), 100) && new[] { "influence", "dread", "followers" }.All(k => Number(Get(data, k), 1e9)) && new[] { "cells", "funded_sites", "ready_sites" }.All(k => Integer(Get(data, k), 8)) && Num(data, "ready_sites") <= Num(data, "funded_sites") && Num(data, "funded_sites") <= Num(data, "cells") && Integer(Get(data, "talents"), 6) && Integer(Get(data, "unused_slots"), 6) && Num(data, "talents") + Num(data, "unused_slots") <= 6 && Integer(Get(data, "bury_uses"), 20000) && Get(data, "yields") is Dictionary<string, object> yields && yields.Count == Num(data, "talents") && yields.All(pair => TalentId.IsMatch(pair.Key) && Number(pair.Value, 1e9))
+                        && Get(data, "madness") is Dictionary<string, object> madness && madness.All(pair => In(pair.Key, Regions) && Number(pair.Value, 100)) && Number(Get(data, "madness_dread"), double.MaxValue) && Integer(Get(data, "quickened_sites"), 8);
                 case "capstone_invoked":
                     return playing && Keys(data, "talent", "awareness_before", "awareness_after", "threats_cancelled") && Get(data, "talent") is string capstone && TalentId.IsMatch(capstone) && Number(Get(data, "awareness_before"), 100) && Number(Get(data, "awareness_after"), 100) && Integer(Get(data, "threats_cancelled"), 8);
                 case "rite_month":

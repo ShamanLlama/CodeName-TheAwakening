@@ -28,7 +28,7 @@ namespace Awakening.Core.Tests
             while (A(game.Lab.Data, "staging").Count != 0) game.Lab.SealBatch();
             foreach (Dictionary<string, object> job in A(game.Lab.Data, "jobs"))
             {
-                Assert.Equal("awakening-5", Body(job)["adapter"]);
+                Assert.Equal("awakening-6", Body(job)["adapter"]);
                 Assert.All(A(Body(job), "events"), e => Assert.True(PlaytestCapture.ValidEvent(e)));
                 string output = Environment.GetEnvironmentVariable("AWAKENING_PLAYTEST_BATCH_OUTPUT");
                 if (!string.IsNullOrEmpty(output))

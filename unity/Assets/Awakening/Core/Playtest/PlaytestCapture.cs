@@ -21,8 +21,8 @@ namespace Awakening.Core.Playtest
         public const int MaxSessions = 64;
         public const int MaxBodyBytes = 65536;
         public const int BatchEvents = 32;
-        public const string Adapter = "awakening-5";
-        public static readonly string[] StoredAdapters = { "awakening-1", "awakening-2", "awakening-3", "awakening-4", "awakening-5" };
+        public const string Adapter = "awakening-6";
+        public static readonly string[] StoredAdapters = { "awakening-1", "awakening-2", "awakening-3", "awakening-4", "awakening-5", "awakening-6" };
         public static readonly string[] ClockKeys = { "elapsed_ms", "simulation_ms", "planning_ms", "background_ms", "excluded_ms" };
         static readonly Regex IdPattern = new Regex("^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$", RegexOptions.CultureInvariant);
         readonly Func<double> _unixSeconds;

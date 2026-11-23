@@ -27,8 +27,10 @@ namespace Awakening.Core.Tests
                 state.ElapsedMonths++; state.NextLogId++;
                 c.Tick(250, "simulation");
                 if (state.ElapsedMonths == 12)
-                    c.EmitEvent("month_snapshot", M("awareness", 25, "influence", 100, "dread", 70, "followers", 320, "cells", 3, "funded_sites", 2, "ready_sites", 1, "talents", 0, "unused_slots", 0, "bury_uses", 0, "yields", M()), state);
-                c.EmitEvent("action_performed", M("action", action, "region", "africa", "spent", M("influence", action == "scatter" ? 0 : 12.5, "dread", action == "silence" ? 15 : 0, "followers", 0)), state);
+                    c.EmitEvent("month_snapshot", M("awareness", 25, "influence", 100, "dread", 70, "followers", 320, "cells", 3, "funded_sites", 2, "ready_sites", 1, "talents", 0, "unused_slots", 0, "bury_uses", 0, "yields", M(), "madness", M("africa", 0), "madness_dread", 0, "quickened_sites", 0), state);
+                var performed = M("action", action, "region", "africa", "spent", M("influence", action == "scatter" ? 0 : 12.5, "dread", action == "silence" ? 15 : 0, "followers", 0));
+                if (action == "manifest" || action == "sacrifice") performed["madness_after"] = 20;
+                c.EmitEvent("action_performed", performed, state);
             }
             var threat = M("region", "africa", "kind", "occult", "severity", 2, "due_month", 20);
             foreach (string response in new[] { "counter", "scatter", "silence", "ignored" })
@@ -38,6 +40,7 @@ namespace Awakening.Core.Tests
                 if (response == "ignored") state.ElapsedMonths = 20;
                 var resolved = new Dictionary<string, object>(threat);
                 resolved["response"] = response;
+                resolved["grace_months"] = response == "counter" || response == "silence" ? 5 : 0;
                 resolved["legal_responses"] = new List<object> { "counter", "scatter", "silence" };
                 resolved["losses"] = M("followers", response == "ignored" ? 24 : 0, "preparation_months", response == "ignored" ? 6 : 0, "income_per_month", response == "ignored" ? 0.48 : 0, "cells", 0, "sites", 0);
                 c.EmitEvent("threat_resolved", resolved, state);

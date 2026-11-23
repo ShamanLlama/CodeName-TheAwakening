@@ -330,6 +330,8 @@ namespace Awakening.Core.Session
                 State = result.State;
                 if (kind != "starting_region_selected") payload["spent"] = Spent(before, State);
                 if (kind == "awakening_started") payload["required"] = State.RiteMonthsRequired;
+                if (kind == "action_performed" && (Equals(payload["action"], "manifest") || Equals(payload["action"], "sacrifice")))
+                    payload["madness_after"] = State.Regions[(string)payload["region"]].Madness;
                 if (kind == "action_performed" && Equals(payload["action"], "sacrifice") && before.Status == "awakening")
                     payload["rite_advanced"] = State.FinalProgress > before.FinalProgress;
                 Lab.EmitEvent(kind, payload, Capture(State), ObservationPhase(before));
@@ -536,6 +538,7 @@ namespace Awakening.Core.Session
                     var data = ThreatData(id, previous.Threat);
                     data["response"] = answer;
                     data["legal_responses"] = legal;
+                    data["grace_months"] = answer == "counter" || answer == "silence" ? GameEngine.ThreatGraceLeft(State, id) : 0;
                     // Loss counters exclude recruitment in this tick; preparation uses the
                     // consequence because upkeep/progress also changes during the month.
                     data["losses"] = new Dictionary<string, object>
@@ -596,6 +599,9 @@ namespace Awakening.Core.Session
                     ["unused_slots"] = GameEngine.TalentSlotsUnused(State),
                     ["bury_uses"] = State.BuryUses,
                     ["yields"] = State.Talents.ToDictionary(id => id, id => (object)GameEngine.TalentYieldOf(State, id)),
+                    ["madness"] = State.Regions.Where(pair => pair.Value.Population.Followers > 0).ToDictionary(pair => pair.Key, pair => (object)pair.Value.Madness),
+                    ["madness_dread"] = GameEngine.MadnessDreadTotal(State),
+                    ["quickened_sites"] = GameData.RegionIds.Count(id => GameEngine.MadnessQuickens(State, id)),
                 }, Capture(State), ObservationPhase(before));
             LabSpeedChanged(before);
             if (GameEngine.IsOver(State))
@@ -611,7 +617,7 @@ namespace Awakening.Core.Session
             {
                 RegionState site = State.Regions[id];
                 RegionState previous = before.Regions[id];
-                if (site.Site.Progress >= Balance.SiteMonths && Derived.Supported(site) && (previous.Site.Progress < Balance.SiteMonths || !Derived.Supported(previous)))
+                if (site.Site.Progress >= GameEngine.SiteMonths(State) && Derived.Supported(site) && (previous.Site.Progress < GameEngine.SiteMonths(State) || !Derived.Supported(previous)))
                     Lab.Checkpoint("first_site_ready", id, Capture(State));
             }
         }

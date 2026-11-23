@@ -16,11 +16,11 @@ namespace Awakening.Core.Tests
     public class PlaytestAlignment6Tests
     {
         // Mirror the production bot's orders through GameSession, with no state/resource grants.
-        static GameSession Play(string strategy, string seed, Action<GameSession> onMonth = null, int stopMonth = Balance.Deadline)
+        internal static GameSession Play(string strategy, string seed, Action<GameSession> onMonth = null, int stopMonth = Balance.Deadline, string difficulty = "normal", bool madnessPolicy = false)
         {
             var game = new GameSession(SaveData.DefaultSave(), Configuration(), () => 0, _ => 1);
             game.SetParticipation(true);
-            game.Begin("normal", seed); game.Place(Farm);
+            game.Begin(difficulty, seed); game.Place(Farm);
             var s = game.State;
             GameState Command(Action command) { command(); return game.State; }
             Action<string, string> act = (id, region) =>
@@ -94,6 +94,19 @@ namespace Awakening.Core.Tests
                     else if (needConceal == "awareness") spare("conceal", id);
                     if (s.Dread < owed && r.Population.Followers - Balance.SacrificeFollowers >= need + 120) act("sacrifice", id);
                 }
+                if (madnessPolicy && strategy == "terror")
+                {
+                    foreach (string id in Targets)
+                    {
+                        var r = s.Regions[id];
+                        if (r.Population.Followers <= 0 || !r.Site.Invested || r.Site.Progress >= GameEngine.SiteMonths(s) || !Derived.Supported(r)) continue;
+                        bool late = GameEngine.SiteMonths(s) - r.Site.Progress > Balance.PreparationMonths - s.ElapsedMonths;
+                        if (late && r.Madness < MadnessTarget && s.Dread - GameEngine.PreviewAction(s, "manifest", id).Dread >= MadnessDreadFloor)
+                            act("manifest", id);
+                        if (r.Madness < MadnessTarget && r.Population.Followers - Balance.SacrificeFollowers >= Derived.SiteRequirement(r) + MadnessKeep)
+                            act("sacrifice", id);
+                    }
+                }
                 if (GameEngine.HasTalent(s, "great_procession"))
                 {
                     // The procession needs five public regions: the farm and one more cell walk with the three sites.
@@ -129,7 +142,7 @@ namespace Awakening.Core.Tests
             int index = 0;
             foreach (Dictionary<string, object> job in A(game.Lab.Data, "jobs"))
             {
-                Assert.Equal("awakening-5", Body(job)["adapter"]);
+                Assert.Equal("awakening-6", Body(job)["adapter"]);
                 Assert.All(A(Body(job), "events"), e => Assert.True(PlaytestCapture.ValidEvent(e), JsonWriter.Write(e)));
                 string output = Environment.GetEnvironmentVariable("AWAKENING_PLAYTEST_BATCH_OUTPUT");
                 if (string.IsNullOrEmpty(output)) continue;

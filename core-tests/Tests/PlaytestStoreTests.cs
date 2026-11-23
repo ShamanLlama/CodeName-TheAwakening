@@ -23,10 +23,10 @@ namespace Awakening.Core.Tests
             string body = (string)Item(stored, "jobs", 0)["body"];
             var state = State(); state.Seed = "godot-stored-fixture"; state.Ruleset = "alignment-3";
             Assert.Equal(stored["signature"], PlaytestCapture.Signature(state));
-            state.Ruleset = "alignment-6";
+            state.Ruleset = "alignment-7";
             Assert.True(c.Restore()); c.Resume(state);
             Assert.NotEqual(stored["active"], c.Data["active"]);
-            Assert.Equal("awakening-5", O(c.Active(), "context")["adapter"]);
+            Assert.Equal("awakening-6", O(c.Active(), "context")["adapter"]);
             Assert.Equal("partial", O(c.Active(), "context")["coverage"]);
             Assert.Equal(body, Item(c.Data, "jobs", 0)["body"]);
             Assert.Equal(0, N(O(c.Active(), "clock"), "elapsed_ms"));
@@ -48,7 +48,7 @@ namespace Awakening.Core.Tests
             Assert.False(restored.Corrupt);
             restored.Accept(); restored.Resume(r.State);
             Assert.Equal(original, Item(restored.Data, "jobs", 0)["body"]);
-            Assert.Equal("awakening-5", O(restored.Active(), "context")["adapter"]);
+            Assert.Equal("awakening-6", O(restored.Active(), "context")["adapter"]);
             Assert.Equal("capture_started", O(Item(restored.Data, "staging", 0), "event")["type"]);
             Assert.True(PlaytestCapture.ValidStore(restored.Snapshot(r.State)));
         }
@@ -65,10 +65,10 @@ namespace Awakening.Core.Tests
             var restored = new PlaytestCapture(() => rig.Unix);
             restored.Configure(Configuration(), Saved(rig.Capture, rig.State));
             Assert.False(restored.Corrupt);
-            rig.State.Ruleset = "alignment-6";
+            rig.State.Ruleset = "alignment-7";
             Assert.True(restored.Restore()); restored.Resume(rig.State);
             Assert.Equal(body, Item(restored.Data, "jobs", 0)["body"]);
-            Assert.Equal("awakening-5", O(restored.Active(), "context")["adapter"]);
+            Assert.Equal("awakening-6", O(restored.Active(), "context")["adapter"]);
             Assert.Equal("capture_started", O(Item(restored.Data, "staging", 0), "event")["type"]);
             Assert.True(PlaytestCapture.ValidStore(restored.Snapshot(rig.State)));
         }
