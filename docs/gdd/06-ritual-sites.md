@@ -73,7 +73,13 @@ run lost that way.
 ## Preparation
 
 A funded site gains one preparation month per month **while supported**, up to
-`BALANCE.siteMonths`. Progress is not lost when support lapses — it pauses.
+`GameEngine.SiteMonths(state)`: 24 months, or 20 on Easy (`DifficultyDefinition.SiteMonths`,
+`alignment-7`). Every text that names the months uses the difficulty's value. Progress is not
+lost when support lapses — it pauses.
+
+Since `alignment-7` the region's Madness also quickens a progressing site: it gathers
+Madness/100 extra months a month (`Site.Quickening`), so at 50 Madness it gains one month
+every two. See [03 — Population](03-population.md#madness-alignment-7).
 
 Preparation can be accelerated by exploiting an eclipse in that region, or by unmasking a
 converted figure there.

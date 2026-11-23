@@ -33,7 +33,9 @@ pressure = (base
           + 0.12 if a ritual site is funded
           + awareness/1500
           + believerShare × 0.15
-          + madness/2000)
+          + madness/400                      (alignment-7; /2000 before)
+          + 0.05 from month 100              (alignment-6)
+          + 0.6 at a funded site from month 200)
           × difficulty.pressure
           × (0.6 + institutionalResistance/150)
 ```
@@ -55,11 +57,23 @@ Chosen by what the region visibly is (`scheduleThreat`, `src/game/director.ts:14
 | Kind | When | Extra consequence |
 | --- | --- | --- |
 | `investigation` | Underground cell | — |
+| `occult` | Underground cell without a site at 50+ Madness (`alignment-7`) | Same losses as an investigation |
 | `raid` | Public worship | Higher proportional losses |
 | `occult` | A funded ritual site | **Strips preparation months from the site** |
 
 Funding a site schedules an occult threat immediately — the act of building draws a
 response, it is not left to the dice.
+
+## Grace after an answer (`alignment-7`)
+
+Obstructing or silencing a threat leaves the region out of the threat rolls for
+`Balance.ThreatGraceMonths` (5) months (`RegionState.ThreatGraceUntil`,
+`GameEngine.ThreatGraceLeft`). Before it, a second threat could arrive while both answers were
+still on their 12-month cooldowns, leaving only a scatter that stalled a site for 8 months.
+Scattering gives no grace: the cell is already out of the rolls while it hides. Because the
+grace takes rolls away, Normal's pressure rose to ×1.45 and Hard's is ×1.15, which keeps the
+threats per run at the `alignment-6` level. Rolls come every 4 months, so the grace changes
+difficulty in steps; re-measure the pressure before changing it.
 
 ## Warning and severity
 

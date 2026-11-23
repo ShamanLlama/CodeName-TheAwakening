@@ -9,12 +9,12 @@ live in [`GameData.cs`](../../unity/Assets/Awakening/Core/Rules/GameData.cs). No
 folder overrides them. The snapshots below are dated and will drift; when they disagree
 with the code, the code is right and this file is stale.
 
-**Checked 2026-11-22 against game 0.8.0 (Unity, `alignment-6`):** the latest snapshotted value of
+**Checked 2026-11-23 against the `alignment-7` rules (game 0.9.0):** the latest snapshotted value of
 every constant matches `Balance.cs` and `GameData.cs` (older values, such as `concealAwareness`
 1 in the 2026-09-14 snapshot, are superseded by a later snapshot), and
-`dotnet run --project core-tests/Tools -- measure --seeds=48` gives the 80/144 bot wins
-of the `alignment-6` snapshot (early 22, late 31, terror 27). Add `--difficulty=easy` or
-`--difficulty=hard` for the other modes (135/144 and 17/144).
+`dotnet run --project core-tests/Tools -- measure --seeds=48` gives the 83/144 bot wins
+of the `alignment-7` snapshot (early 27, late 35, terror 21). Add `--difficulty=easy` or
+`--difficulty=hard` for the other modes (142/144 and 47/144).
 
 Balance changed three times in a single working session during the tuning pass that
 produced the current build. Duplicating numbers across a dozen prose documents is how the
@@ -33,6 +33,39 @@ alone silently changes difficulty:
 | `TalentBaseCost` / `TalentCostStep` | The seal months of each difficulty | Together they decide when a policy can afford its second node; that timing, not the total price, decided whether public worship works |
 | `FinaleSitePressure` | `FinaleWarningMonths`, `RestoreMonthCost`, the capstones | The site hunt is what restoring and the three capstones answer (a shorter rite, an advanced rite, cancelled threats) |
 | `MidgamePressure` | Each difficulty's `Pressure` | It is added before the multiplier; more pressure favours the hidden strategies |
+| `ThreatGraceMonths` | Each difficulty's `Pressure`, `ThreatRollMonths` | The grace removes rolls in steps of the 4-month cadence; the pressure puts the threats back |
+| `MadnessDecay` | `ManifestMadness`, `SacrificeMadness`, `DreamsSpread` | Together they decide whether Madness can stay high and what it costs to keep it there |
+
+## Snapshot — 2026-11-23 (`alignment-7`, Unity 0.9.0)
+
+Fuente de verdad: `Balance.cs` y `GameData.cs`. Solo se listan los valores nuevos o cambiados desde `alignment-6`.
+
+| Constante | Valor | Controla |
+| --- | --- | --- |
+| `Ruleset` | `alignment-7` | Los saves de `alignment-6` se retiran con aviso; los ajustes se conservan |
+| `ManifestMadness` / `SacrificeMadness` | 20 / 10 | Madness que deja cada acción en su región |
+| `MadnessDecay` | 1 | Madness que se pierde por mes (antes 0,3) |
+| `MadnessDreadDivisor` | 20 | Dread por mes de cada región con célula: Madness/20 |
+| `MadnessQuickenFull` | 100 | Meses extra de preparación por mes: Madness/100 |
+| `MadnessPressureDivisor` | 400 | Presión de amenaza: Madness/400 (antes /2000) |
+| `MadnessHigh` / `MadnessAwareness` | 50 / 0,05 | Desde 50, amenaza ocultista en una célula oculta sin sitio y +0,05 de awareness por mes |
+| `DreamsSacrificeMadness` | 2 | Dreams of R'lyeh: multiplica la Madness del sacrificio |
+| `DreamsSpreadFrom` / `DreamsSpread` | 30 / 2 | Dreams of R'lyeh: regiones que contagian y Madness que dan a cada vecina con célula, después de bajar |
+| `DreamsRiteMadness` / `DreamsMadRiteMonths` | 30 / 2 | Dreams of R'lyeh: meses de rito por sacrificio donde la Madness llega a 30 (si no, 1) |
+| `ThreatGraceMonths` | 5 | Meses sin tiradas de amenaza en una región después de obstruir o silenciar |
+| `TalentCostStep` | 25 | Normal y Hard (antes 30) |
+| `DifficultyDefinition` Normal | `Pressure` 1,45 | Antes 1,0 |
+| `DifficultyDefinition` Hard | `Pressure` 1,15 | Antes 1,25 |
+| `DifficultyDefinition` Easy | `SiteMonths` 20; talentos 30 + 20n | Antes 24 y 40 + 30n |
+| Sale | `LatestSiteStart` | Ahora `GameEngine.LatestSiteStart(state)`, según la dificultad |
+
+Campos nuevos del estado: `DreamRiteMonths`, `RegionState.ThreatGraceUntil`, `Site.Quickening`,
+`Telemetry.MadnessDread` y `Telemetry.QuickenedMonths`.
+
+Medición con bot (48 seeds por estrategia): Normal 80/144 → 83/144 (early 22 → 27, late 31 → 35,
+terror 27 → 21), Easy 135 → 142 y Hard 17 → 47. Con 144 seeds, Normal da 76, 107 y 65 de 144.
+Detalle, descartes y cambios de la política en
+[Experiencia y loops](02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-7--2026-11-23).
 
 ## Snapshot — 2026-11-22 (`alignment-6`, Unity 0.8.0)
 
@@ -247,20 +280,24 @@ Derived support requirements, by region weight:
 
 `GameData.Difficulties`. Three multipliers and, since `alignment-5`, four rules that change
 decisions. `DifficultyDefinition.Rule` states the rules in one line for the start screen.
-Values as of `alignment-6` (Easy's pressure and occult loss, and Normal's burial step, changed).
+Values as of `alignment-7` (Normal's and Hard's pressure, Easy's site months and every talent price changed).
 
-| | Recruitment | Threat pressure | Warning months | Talent seals (months) | Occult loss | Burial step | Conceal world rest |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| Easy | ×1.2 | ×1.0 | +2 | 6 (24, 44, 64, 104, 144, 176) | 5 months | +15 | 6 months |
-| Normal | ×1.0 | ×1.0 | +0 | 5 (24, 64, 104, 144, 176) | 6 months | +35 | 6 months |
-| Hard | ×0.85 | ×1.25 | −1 | 4 (24, 72, 120, 168) | 6 months | +40 | 9 months |
+| | Recruitment | Threat pressure | Warning months | Talent seals (months) | Talent cost | Site months | Occult loss | Burial step | Conceal world rest |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| Easy | ×1.2 | ×1.0 | +2 | 6 (24, 44, 64, 104, 144, 176) | 30 + 20n | 20 | 5 months | +15 | 6 months |
+| Normal | ×1.0 | ×1.45 | +0 | 5 (24, 64, 104, 144, 176) | 40 + 25n | 24 | 6 months | +35 | 6 months |
+| Hard | ×0.85 | ×1.15 | −1 | 4 (24, 72, 120, 168) | 40 + 25n | 24 | 6 months | +40 | 9 months |
+
+Hard's pressure sits below Normal's because the grace hit it harder: at ×1.25 its public cult
+won 2/48. Hard keeps the shorter warning, lower recruitment and fewer seals, and its public and
+harbinger policies still face more threats per run than on Normal.
 
 ## Talents (replace the doctrines since `alignment-5`)
 
 `GameData.Branches` and `GameData.Talents`. Three branches of a root, two mutually exclusive
 middles and a capstone that needs the root and either middle. A seal opens at each month of
-the difficulty's `TalentSlotMonths`; each talent costs 30 Influence more than the last, from
-40. Permanent; no respecialization. The table of the twelve nodes is in
+the difficulty's `TalentSlotMonths`; each talent costs 25 Influence more than the last, from
+40 (Easy: 20 more, from 30; `alignment-7`). Permanent; no respecialization. The table of the twelve nodes is in
 [Experiencia y loops](02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-6--2026-11-22);
 the capstones changed in `alignment-6` (The Great Procession, The world forgets, Dreams of R'lyeh).
 The roots keep the old doctrines:

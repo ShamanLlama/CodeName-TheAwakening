@@ -59,7 +59,7 @@ is a base rate plus a proportion of existing followers, multiplied by:
 - **Public worship** — a flat multiplier, the main reason to accept exposure.
 - **Talents** — Swelling flock (Congregation root) multiplies it; Open worship multiplies public cells.
 - **Backlash** — a penalty for a window after revealing, so going public is not free.
-- **Madness** — a small bonus from recent manifestations.
+- **Madness** — a small bonus (Madness/500) from recent manifestations and sacrifices.
 - **Difficulty**.
 - **Awareness drag** — the same global multiplier that throttles income.
 
@@ -74,11 +74,28 @@ It is the tool for repairing a raided cell; the automatic rate is what compounds
 `manifest` spends Dread to move a block of **deniers and unaware people into believers**.
 It is the only way through the denier wall.
 
-The costs are deliberate: exposure, world awareness, and `madness`. Madness slightly raises
-recruitment while it lasts and decays monthly. Crucially, **believers also raise the
+The costs are deliberate: exposure, world awareness, and `madness`. Crucially, **believers also raise the
 region's threat pressure** ([05](05-opposition.md)) — a population that accepts the
 impossible is a population that starts looking for you. Manifesting is buying growth with
 attention.
+
+## Madness (`alignment-7`)
+
+Madness is regional, 0–100. A manifestation leaves +20 and a sacrifice +10 (twice that with
+Dreams of R'lyeh); it fades 1 a month. While the region has a cell, Madness:
+
+- **yields Dread** — Madness/20 a month, within the Dread cap (`GameEngine.MadnessDread`);
+- **quickens a preparing site** — Madness/100 extra preparation months a month, one every two
+  months at 50 ([06](06-ritual-sites.md));
+- **draws opposition** — threat pressure +Madness/400 ([05](05-opposition.md)); from 50 a
+  hidden cell without a site draws an occult society, and the region adds +0.05 world
+  awareness a month;
+- still raises recruitment slightly.
+
+Keeping it high is a choice paid for again and again: the manifestations and sacrifices that
+feed it cost Dread, awareness, exposure and followers. `GameEngine.MadnessText` states what a
+region's Madness does in one line. Values and their tuning are in
+[Experiencia y loops](02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-7--2026-11-23).
 
 ## Losing followers
 

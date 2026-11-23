@@ -1,6 +1,6 @@
 # Decisiones pendientes
 
-**Versión:** 0.8 · **Fecha:** 2026-11-22 · **Estado:** D01–D05 y D08–D17 confirmadas; D05 y D15 implementadas en `alignment-5` (juego 0.7.0); remates de D05 y D18–D20 tomadas en `alignment-6` (juego 0.8.0) y pendientes de revisión de dirección; D07 con respuesta parcial; D06 pendiente.
+**Versión:** 0.9 · **Fecha:** 2026-11-23 · **Estado:** D01–D05 y D08–D17 confirmadas; D05 y D15 implementadas en `alignment-5` (juego 0.7.0); remates de D05 y D18–D20 tomadas en `alignment-6` (juego 0.8.0) y D21–D24 en `alignment-7` (juego 0.9.0), pendientes de revisión de dirección; D07 con respuesta parcial; D06 pendiente.
 
 Este registro distingue las decisiones confirmadas de las preguntas abiertas.
 La primera etapa del GDD documenta la implementación; los objetivos futuros
@@ -74,6 +74,29 @@ puede revisarlas.
    presión de Normal y una amenaza oculta le quita 5 meses. Ninguna regla nueva convierte un
    error en derrota: las tres suman amenazas que se pueden responder.
 
+## Decisiones de diseño de `alignment-7` — 2026-11-23
+
+Las tomó el agente de reglas de 0.9.0 dentro del plan de la build. Responden a dos partidas
+humanas con 0.8.0: «Tenemos Madness como variable pero no se usa en nada», amenazas encadenadas
+que solo dejaban dispersar y un Easy sin Influence para talentos. Dirección puede revisarlas.
+
+1. **D21 — Madness como recurso.** Manifestar deja +20 y sacrificar +10; baja 1 por mes. Rinde
+   Madness/20 de Dread por mes y acelera un sitio que avanza en Madness/100 meses por mes. Cuesta
+   presión de amenaza (Madness/400) y, desde 50, amenazas ocultistas y +0,05 de awareness por mes.
+   La aceleración es proporcional y no por umbral: con umbral, llegar a 50 pedía unos 120 seguidores
+   sacrificados en la región del sitio.
+2. **D22 — Dreams of R'lyeh antes del rito.** Los sacrificios dejan el doble de Madness y las regiones
+   con 30 o más la contagian a sus vecinas con célula. En el rito sigue adelantando un mes por
+   sacrificio, y dos donde la Madness llega a 30. No se exige Madness para adelantar: con esa condición,
+   Harbinger perdía la mayoría de sus victorias.
+3. **D23 — Respiro tras responder.** Obstruir o silenciar deja la región 5 meses sin tiradas de
+   amenaza. Para no volver trivial Normal, su presión pasa a ×1,45 y la de Hard a ×1,15, con lo que las
+   amenazas por partida vuelven al nivel de `alignment-6`. Hard queda con menos presión que Normal: se
+   compensa con su aviso más corto, menos reclutamiento y menos sellos.
+4. **D24 — Easy con margen y talentos más baratos.** Sitios de 20 meses y talentos de 30 + 20n. En
+   Normal y Hard cada talento cuesta 25 más que el anterior (antes 30). Detalle y medición en
+   [Experiencia y loops](../02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-7--2026-11-23).
+
 ## Preguntas abiertas para las siguientes conversaciones
 
 - **Identidad del jugador y tono.** ¿Quién dirige el culto? ¿El nombre actual es
@@ -112,6 +135,10 @@ puede revisarlas.
 | D18 | Remates de 0.7.0 | Tomada en `alignment-6`; falta revisión de dirección | Salen A faith among faiths, Bought press y Offerings to the deep; el efecto de A faith among faiths pasa a Open worship para las células públicas — 2026-11-22 | Game Design y balance |
 | D19 | Rendimiento por talento | Tomada en `alignment-6`; falta revisión de dirección | Cada talento tomado dice en una línea lo que rindió en la partida — 2026-11-22 | Game Design, UI/UX y playtesting |
 | D20 | Exigencia de Normal y Easy | Tomada en `alignment-6`; falta revisión de dirección | Normal: enterrar +35, presión +0,05 desde el mes 100, caza +0,6. Easy: presión ×1,0 y amenaza oculta de 5 meses. Bot: Normal 80/144, Easy 135, Hard 17 — 2026-11-22 | Balance y playtesting |
+| D21 | Madness como recurso | Tomada en `alignment-7`; falta revisión de dirección | Dread pasivo, sitios más rápidos y precio en amenazas ocultistas y awareness — 2026-11-23 | Game Design, población, oposición y balance |
+| D22 | Dreams of R'lyeh antes del rito | Tomada en `alignment-7`; falta revisión de dirección | Doble Madness por sacrificio y contagio; dos meses de rito donde la Madness llega a 30 — 2026-11-23 | Game Design y balance |
+| D23 | Respiro tras responder | Tomada en `alignment-7`; falta revisión de dirección | 5 meses sin amenazas tras obstruir o silenciar; presión de Normal ×1,45 y Hard ×1,15 — 2026-11-23 | Oposición, balance y playtesting |
+| D24 | Easy y precio de talentos | Tomada en `alignment-7`; falta revisión de dirección | Easy: sitios de 20 meses y talentos de 30 + 20n. Normal y Hard: +25 por talento. Bot: Normal 83/144, Easy 142, Hard 47 — 2026-11-23 | Balance, rituales y playtesting |
 
 No convertir preguntas pendientes en funcionalidades comprometidas. Los problemas
 observados del prototipo siguen en [Open problems](../09-open-problems.md).

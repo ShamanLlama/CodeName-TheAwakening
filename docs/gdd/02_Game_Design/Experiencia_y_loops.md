@@ -1,6 +1,6 @@
 # Experiencia, loops y sistemas
 
-**Versión:** 0.8 · **Fecha:** 2026-11-22 · **Estado:** síntesis de `alignment-6` (juego 0.8.0, Unity); pilares sin cambios.
+**Versión:** 0.9 · **Fecha:** 2026-11-23 · **Estado:** síntesis de `alignment-7` (juego 0.9.0, Unity); pilares sin cambios.
 
 ## Pilares de la base actual
 
@@ -37,11 +37,12 @@ en pausa.
 | --- | --- | --- |
 | Crecimiento | Reclutar en secreto o hacer público el culto | Más seguidores frente a evidencia y oposición |
 | Expansión | Abrir una célula en una región conectada | Nuevo potencial económico y ritual; más frentes |
-| Sacrificio | Consumir seguidores y elegir dónde hacerlo | Dread inmediato; menos ingreso y posible pérdida de apoyo |
-| Contención | Ocultar evidencia o enterrar el registro; ante cada amenaza, obstruir, dispersar, silenciar o aceptar el golpe | Menor presión o daño evitado, a cambio de Influence, meses de la célula, Dread y awareness, o seguidores. Ocultar baja la awareness mundial solo una vez cada 6 meses (9 en Hard): entre medio, limpia solo la evidencia local. Enterrar el registro baja 5 de awareness al momento, por una Influence que sube con cada uso (35 más por uso en Normal desde `alignment-6`) |
+| Sacrificio | Consumir seguidores y elegir dónde hacerlo | Dread inmediato y +10 de Madness en la región; menos ingreso y posible pérdida de apoyo |
+| Contención | Ocultar evidencia o enterrar el registro; ante cada amenaza, obstruir, dispersar, silenciar o aceptar el golpe. Desde `alignment-7`, obstruir o silenciar deja la región 5 meses sin amenazas nuevas | Menor presión o daño evitado, a cambio de Influence, meses de la célula, Dread y awareness, o seguidores. Ocultar baja la awareness mundial solo una vez cada 6 meses (9 en Hard): entre medio, limpia solo la evidencia local. Enterrar el registro baja 5 de awareness al momento, por una Influence que sube con cada uso (35 más por uso en Normal desde `alignment-6`) |
 | Talentos | Qué nodo tomar cuando se abre un sello y qué rama cerrar | Una regla que cambia a favor del plan elegido, a cambio de Influence creciente y de los nodos que ya no se podrán tomar. Cada rama termina en un remate que abre otra forma de ganar (`alignment-6`), y cada nodo muestra lo que rindió en la partida |
 | Reparación | Recuperar meses que una amenaza oculta quitó a un sitio | Margen del rito a cambio de Influence y exposición |
-| Creencia | Manifestar lo imposible | Más población reclutable; mayor atención y resistencia |
+| Creencia | Manifestar lo imposible | Más población reclutable y +20 de Madness; mayor atención y resistencia |
+| Madness (`alignment-7`) | Dónde mantener alta la Madness regional | Dread cada mes y sitios que se preparan más rápido, a cambio de más amenazas (ocultistas desde 50) y awareness desde 50 |
 | Oportunidades | Aprovechar un presagio o convertir una figura | Dread, aceleración o beneficio secreto; coste y plazo |
 | Mantenimiento | Cuándo financiar cada sitio y cuánta Influence reservar | Margen de calendario frente a 1 Influence/mes por sitio durante toda la partida |
 | Final | Conservar sitios listos, pagarlos y recuperar interrupciones; si el rito ya no cabe, cerrar la partida | Avance del rito frente al calendario y a la caza de sitios. El margen del rito (último inicio menos inicio más temprano) dice cuántos meses se pueden perder. Desde `alignment-6`, `Forecast.Rite` dice si el rito avanza este mes y qué sitio lo frena, y dispersar o sacrificar un sitio que lo sostiene lo avisa en el riesgo |
@@ -450,6 +451,126 @@ rito detenido y sus causas, lo que rindió cada talento (¿Martyrs sigue en 0?) 
 siente exigente sin que un error decida la partida. Preguntar «¿tu remate cambió cómo
 terminaste?».
 
+## Cambios de `alignment-7` — 2026-11-23
+
+**Problema.** Dos partidas humanas con 0.8.0 (2026-11-22), una en Normal y otra en Easy, ambas con
+Harbinger. El jugador se rindió en los meses 199 y 200 sin empezar el rito, con el primer sitio
+listo en los meses 157 y 149. Cinco amenazas ocultas cayeron sobre regiones con sitio 2–12 meses
+después de obstruir o silenciar ahí: las dos respuestas seguían en espera de 12 meses, así que solo
+quedaba dispersar, y cada dispersión frenó el sitio 8 meses. En Easy tomó un solo talento porque no
+le alcanzó la Influence. Dreams of R'lyeh rindió 0 porque solo actuaba durante el rito. El jugador
+dijo: «Tenemos Madness como variable pero no se usa en nada».
+
+**Objetivo.** Que la Madness sea un recurso con precio (M1), que Dreams of R'lyeh cambie la partida
+antes del rito (M2), que responder una amenaza deje respirar a la región (G1) y que Easy dé margen
+de calendario y talentos (E1), con Normal entre 75 y 85 de 144 para el bot.
+
+| Cambio | Regla | Pilar que refuerza | Condición de legibilidad |
+| --- | --- | --- | --- |
+| Madness: fuentes | Manifestar suma +20 a la Madness regional (0–100) y sacrificar +10. Baja 1 por mes (antes 0,3) | 1: el terror deja huella y mantenerla exige seguir pagando | Las vistas previas de `manifest` y `sacrifice` dicen cuánta queda («Madness here +20 (40)») |
+| Madness: Dread | Cada región con célula rinde Madness/20 de Dread por mes, dentro de `DreadCap` | 1 y 3: el sacrificio y la manifestación rinden después | `GameEngine.MadnessDread`, `MadnessDreadTotal` y `MadnessText` («+2 Dread/month · …») |
+| Madness: sitios | Un sitio que avanza (financiado, activo y con apoyo) gana Madness/100 meses extra por mes; con 50, uno cada 2 meses. La fracción se guarda en `Site.Quickening` | 3: la Madness es otra forma de acelerar un sitio tarde | `MadnessQuickens` y `MadnessText` («site prepares 60% faster»); `Forecast.Margin` la cuenta como aceleración al decidir si el rito todavía cabe |
+| Madness: precio | La presión de amenaza suma Madness/400 (antes /2000). Con 50 o más, una célula oculta sin sitio atrae una sociedad ocultista en vez de investigadores, y cada región así suma +0,05 de awareness por mes | 1 y 2: la Madness alta atrae a quien la persigue y se nota en el mundo | `MadnessText` («draws occultists · +0.05 world awareness/month») y el riesgo de manifestar («Madness draws occultists.») |
+| Dreams of R'lyeh | Los sacrificios dejan el doble de Madness. Cada mes, después de bajar, cada región con 30 o más da +2 a cada región vecina con célula (+1 neto). En el rito, el sacrificio que deja tres sitios con apoyo adelanta un mes, o dos si la región tiene 30 o más de Madness, con +2 de awareness | 1: el remate de Harbinger arma la partida antes del rito, con el riesgo de la Madness | `TalentYield` cuenta la Madness que puso el sueño y `GameState.DreamRiteMonths` los meses de rito; `TalentYieldText`: «+N Madness spread so far», y en el rito «… · M rite months dreamed forward so far» |
+| Respiro tras responder | Obstruir o silenciar deja la región fuera de las tiradas de amenaza durante 5 meses (`Balance.ThreatGraceMonths`, `RegionState.ThreatGraceUntil`). Dispersar no da respiro: la región ya queda fuera de la tirada mientras dura | 2: responder sigue costando, pero no lleva a una segunda amenaza sin respuesta | `GameEngine.ThreatGraceLeft`; obstruir y silenciar lo dicen en la vista previa («No new threat here for 5 months.») |
+| Presión de Normal y Hard | `DifficultyDefinition.Pressure`: Normal ×1,45 (antes 1,0) y Hard ×1,15 (antes 1,25). Easy queda en ×1,0 | 2: el respiro quita tiradas; la presión devuelve las amenazas por partida al nivel de `alignment-6` | `Director.ThreatPressure` |
+| Easy | Sitios de 20 meses (`DifficultyDefinition.SiteMonths`) y talentos de 30 + 20 por talento tomado | D16: Easy da margen a quien no sabe el calendario de memoria | `GameEngine.SiteMonths`, `LatestSiteStart`, la descripción de `prepare`, su vista previa, `Derived.SiteLabel(state, region)`, `Forecast` y `DifficultyDefinition.Rule` usan el valor de la dificultad |
+| Talentos en Normal y Hard | Cada talento cuesta 25 más que el anterior, desde 40 (antes 30) | 2: los talentos compiten menos con obstruir | `TalentCost` |
+| Saves | El ruleset pasa a `alignment-7`. Los saves de `alignment-6` se retiran con aviso y los ajustes se conservan | — | Aviso de `SaveData.TakeRetiredNotice` |
+
+**Cifras cambiadas frente al plan.**
+- **Aceleración proporcional.** El plan pedía un mes extra cada 2 meses con 50 o más. Con un umbral y
+  una baja lineal, la Madness llegaba a 50 solo con unos 120 seguidores sacrificados en la región del
+  sitio, y por debajo no daba nada. Ahora cada punto acelera, y con 50 da lo mismo que el plan.
+- **Baja de 1 por mes.** Con 0,5 la Madness de la región donde se sacrifica crecía sola: el bot
+  sumaba más Dread pasivo, más presión y más awareness sin decidirlo. Con 1, mantenerla alta pide
+  seguir manifestando o sacrificando.
+- **Dreams of R'lyeh no exige Madness para adelantar el rito.** Con la condición del plan (Madness ≥ 50
+  para adelantar) y sin respiro, terror ganó 10 de 48; sin la condición, 29. Los meses de rito
+  adelantados cayeron de unos 5 a unos 2 por partida, y juntar Madness en el final obligaba a
+  manifestar, que suma unos 8 de awareness cada vez. La Madness alta da un mes de más; no es la condición.
+- **El sueño duplica la Madness del sacrificio.** Solo con el contagio, ninguna región del bot
+  llegaba a 30 y el remate seguía rindiendo 0 antes del rito. Con el doble, el contagio rinde una
+  mediana de 58 de Madness por partida en Normal.
+- **Contagio de +2 después de bajar.** Con +1 antes de bajar, la región vecina perdía en el mismo mes
+  lo que recibía y su Madness no se movía.
+- **Respiro de 5 meses, no 6, con más presión.** Las tiradas son cada 4 meses, así que el respiro
+  salta de golpe: con 4 meses Normal da 50/144 y con 6, 93/144, aun con la presión ×1,4. Con 5 y
+  ×1,45 las amenazas por partida vuelven al nivel previo (early 38,6, late 24,2, terror 27,7, frente a
+  35,2, 24,6 y 24,0 sin respiro) y Normal queda en 83.
+- **Hard ×1,15.** Con ×1,25 y el respiro, el culto público gana 2/48 (7/144). Con ×1,15 gana 4/48 y Hard
+  sigue muy por debajo de Normal. Hard conserva su aviso más corto, menos reclutamiento y menos sellos.
+  early y terror reciben más amenazas por partida que en Normal (46,8 y 30,4, frente a 38,6 y 27,7);
+  late, algo menos (21,8 frente a 24,2).
+- **Talentos a +25.** En Normal el bot gasta en talentos cerca de un tercio de lo que gasta en obstruir:
+  255/220/194 de Influence frente a 872/752/650 por partida (media). Sin respiro ni Madness la proporción
+  era parecida: 315/286/247 frente a 860/647/698. En la configuración de prueba, con +25 las victorias no
+  se mueven (77 frente a 79 con +30), pero más partidas llegan al remate: Dreams de 20 a 27 y la
+  procesión de 34 a 37. Con +20, Normal sube a 105.
+
+**Descartes medidos (bot, Normal, 48 seeds salvo que se diga).**
+- Que Harbinger manifieste siempre donde se prepara un sitio: 0/48. Cada manifestación suma unos 8 de
+  awareness, 15 de exposición y creyentes que suben la presión, y las amenazas ocultas le quitan el
+  sitio. Por eso la política solo manifiesta donde un sitio no estaría listo en el mes 200.
+- Más presión de Normal sin respiro más corto (×1,5 con 6 meses): Hidden hand se aleja 16 de Harbinger.
+  Más presión favorece a quien se oculta, como en `alignment-6`.
+- Presión desde el mes 100 de +0,1 o caza de sitios de +1,0: no compensan el respiro y castigan sobre
+  todo al culto público.
+- The world forgets de 8 meses: Hidden hand no cambia (107/144 con 6 y con 8).
+
+**Política del bot.** `dotnet run --project core-tests/Tools -- measure --seeds=48 --difficulty=normal|easy|hard`.
+Cambia en `alignment-7`:
+- Antes del mes 200, todas las políticas silencian solo hasta 50 de awareness (antes 75). Con el Dread
+  de la Madness, 75 gastaba la awareness que el final necesita.
+- **terror** sacrifica en la región de un sitio que se prepara mientras le sobren 160 seguidores sobre
+  el apoyo, hasta 50 de Madness. Manifiesta además donde el sitio no estaría listo en el mes 200.
+  Responde primero con Dread mientras le alcance para los sitios. En el rito silencia hasta 85 de awareness.
+- La herramienta informa el Dread de la Madness, los meses de sitio acelerados, la Madness del sueño,
+  las amenazas por partida y la Influence gastada por uso. `trace <estrategia> <seed>` imprime una partida.
+
+| Estrategia | Normal (`alignment-6` → `alignment-7`) | Easy | Hard |
+| --- | --- | --- | --- |
+| early (Congregation, procesión) | 22 → 27 | 44 → 48 | 0 → 4 |
+| late (Hidden hand, olvido) | 31 → 35 | 47 → 48 | 14 → 31 |
+| terror (Harbinger, sueños y Madness) | 27 → 21 | 44 → 46 | 3 → 12 |
+| Total | 80/144 → 83/144 | 135/144 → 142/144 | 17/144 → 47/144 |
+
+Con 144 seeds, Normal da 76, 107 y 65 de 144, unos 83 de 144. La diferencia mayor es de unos 14 sobre 48.
+
+**Uso de los remates y de la Madness, en partidas de 48.**
+
+| Dificultad | Procesión | The world forgets | Dreams of R'lyeh | Meses de sitio acelerados por Madness (early / late / terror) | Dread de Madness por partida (mediana) |
+| --- | --- | --- | --- | --- | --- |
+| Normal | 32 partidas, 27 ganadas | 22, 17 ganadas | 25 partidas, 110 meses de rito, 21 ganadas | 112 / 1 / 87 | 71 / 60 / 88 |
+| Easy | 48, 48 ganadas | 1, 1 ganada | 44 partidas, 284 meses, 43 ganadas | 92 / 0 / 448 | 84 / 72 / 443 |
+| Hard | 9, 4 ganadas | 21, 15 ganadas | 14 partidas, 67 meses, 12 ganadas | 94 / 2 / 84 | 65 / 62 / 81 |
+
+early también acelera sitios: sacrifica en las regiones de sus sitios cuando le falta Dread. En las
+partidas de terror que aceleran, la aceleración casi siempre rescata un sitio atrasado. Por eso esas
+partidas ganan menos que el promedio.
+
+**Criterios.**
+- **Normal:** 83/144, dentro de 75–85. Cada política gana al menos 12/48 y la mayor diferencia es 14. **Se cumple.**
+- **Política con Madness** (terror): 21/48, al menos 12. **Se cumple.**
+- **Easy:** 142/144, al menos 138. **Se cumple.**
+- **Hard:** 47/144, por debajo de Normal; culto público 4/48, al menos 3. **Se cumple.**
+
+**Riesgos.**
+- El respiro es la palanca más fuerte de la build y, por la cadencia de 4 meses, salta por escalones. No
+  conviene tocarlo sin volver a medir la presión.
+- En Easy, Harbinger dispara la Madness: el contagio forma un racimo, el Dread llega al tope y la
+  awareness termina en 93 de mediana (una derrota por awareness en 48). Hay que ver si a un humano le
+  pasa lo mismo.
+- Hidden hand sigue siendo la rama más fuerte para el bot.
+- Manifestar en la región de un sitio sigue siendo mala idea para el bot salvo para rescatarlo. Hay que
+  comprobar con jugadores si la Madness se siente como estrategia o solo como un extra del sacrificio.
+
+**Comprobación con jugadores.** Con `awakening-6`:
+- ¿Dónde y cuándo sube la Madness? ¿Cuánto Dread rindió y cuántos meses de sitio aceleró?
+- ¿Cuántos respiros se usaron y cuántas amenazas cayeron sin respuesta posible?
+- En Easy, ¿cuándo se financia cada sitio y cuántos talentos se toman?
+- Preguntar «¿usaste la Madness a propósito?» y «¿alguna amenaza te dejó sin respuesta?».
+
 ## Acciones y progresión actuales
 
 El conjunto actual tiene dieciséis acciones: `recruit`, `expand`, `sacrifice`, `reveal`,
@@ -466,7 +587,9 @@ ampliar la red, tomar talentos, financiar sitios y alcanzar el final; no hay des
 permanentes entre partidas.
 
 Se gana completando el rito dentro de la ventana con suficientes sitios listos y
-apoyados: 12 meses, u 8 con The Great Procession, que Dreams of R'lyeh puede adelantar. Se pierde por conocimiento global máximo o por agotar el calendario. Desde
+apoyados: 12 meses, u 8 con The Great Procession, que Dreams of R'lyeh puede adelantar
+(dos meses por sacrificio donde la Madness llega a 30, desde `alignment-7`). Los sitios se
+preparan en 24 meses, o en 20 en Easy, y la Madness de su región los acelera. Se pierde por conocimiento global máximo o por agotar el calendario. Desde
 `alignment-4`, el jugador también puede cerrar la partida como derrota cuando el rito ya
 no cabe y no empezó.
 El progreso del rito se conserva durante interrupciones; un sitio puede perder
