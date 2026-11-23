@@ -57,9 +57,12 @@ namespace Awakening.Core.Tests
         // talent), an occult threat against a site on Easy (4 months, not 6) and the site hunt from month 200 (0.3, not 0.15).
         // alignment-6 adds three more: threat pressure from month 100 (+0.05), the site hunt (0.6) and Easy's threat
         // pressure (1.0, not 0.75), which can change any threat roll on Easy from the first one (month 4).
+        // alignment-7 adds Normal's and Hard's threat pressure (1.45 and 1.15), which change every roll there from the
+        // first; manifestations and sacrifices (Madness and its Dread); obstructing and silencing (the grace that follows
+        // changes later rolls); and Easy sites (20 months) and talents.
         [Theory]
         [MemberData(nameof(GodotTraces))]
-        public void GodotTracesStillMatchUntilAlignment6Diverges(string file)
+        public void GodotTracesStillMatchUntilAlignment7Diverges(string file)
         {
             var trace = GoldenTraces.LoadTrace(Path.Combine(GodotGoldenDirectory, file));
             var state = GameEngine.CreateGameState((string)trace["difficulty"], (string)trace["seed"]);
@@ -69,7 +72,8 @@ namespace Awakening.Core.Tests
             {
                 var commands = ((List<object>)step["commands"]).Cast<Dictionary<string, object>>().ToList();
                 double months = Convert.ToDouble(step["months"], CultureInfo.InvariantCulture);
-                bool diverges = commands.Any(c => (string)c["op"] == "doctrine" || (string)c["op"] == "action" && (string)c["id"] == "manifest")
+                bool diverges = commands.Any(c => (string)c["op"] == "doctrine" || (string)c["op"] == "action" && Alignment7Actions.Contains((string)c["id"]))
+                    || state.Difficulty != "easy" && state.Status != "placing" && state.ElapsedMonths + months >= Balance.ThreatRollMonths
                     || state.ElapsedMonths + months >= Balance.PreparationMonths && state.Regions.Values.Any(r => r.Site.Invested)
                     || state.ElapsedMonths + months >= Balance.MidgamePressureMonth
                     || state.Difficulty == "easy" && state.Status != "placing" && state.ElapsedMonths + months >= Balance.ThreatRollMonths;
@@ -101,7 +105,8 @@ namespace Awakening.Core.Tests
             }
             Assert.Equal(trace["final"], state.Status);
         }
-        static readonly string[] ChangedPreviews = { "conceal", "manifest", "bury", "restore" };
+        static readonly string[] Alignment7Actions = { "manifest", "sacrifice", "counter", "silence", "prepare" };
+        static readonly string[] ChangedPreviews = { "conceal", "manifest", "bury", "restore", "sacrifice", "prepare", "counter", "silence" };
         static void RequireGodot(Dictionary<string, object> expected, GameState state, int logFrom, string where)
         {
             var actual = GoldenTraces.Snapshot(state, logFrom, expected.ContainsKey("previews"));
@@ -110,12 +115,25 @@ namespace Awakening.Core.Tests
             plain.Remove("resultCode");
             plain.Remove("talents");
             plain.Remove("buryUses");
-            foreach (string key in new[] { "talentYield", "capstonesUsed", "riteMonthsRequired", "riteSites" }) plain.Remove(key);
+            foreach (string key in new[] { "talentYield", "capstonesUsed", "riteMonthsRequired", "riteSites", "dreamRiteMonths" }) plain.Remove(key);
+            var telemetry = (Dictionary<string, object>)plain["telemetry"];
+            telemetry.Remove("madnessDread"); telemetry.Remove("quickenedMonths");
             plain["specialization"] = null;
             foreach (Dictionary<string, object> region in ((Dictionary<string, object>)plain["regions"]).Values)
+            {
                 ((Dictionary<string, object>)region["site"]).Remove("recoverable");
+                ((Dictionary<string, object>)region["site"]).Remove("quickening");
+                region.Remove("threatGraceUntil");
+            }
             plain["ruleset"] = "alignment-3";
             var godot = new Dictionary<string, object>(expected);
+            if (state.Difficulty == "easy")
+            {
+                // alignment-7: Easy's forecast counts 20-month sites from the first month.
+                godot["derived"] = new Dictionary<string, object>((Dictionary<string, object>)expected["derived"]);
+                ((Dictionary<string, object>)godot["derived"]).Remove("forecast");
+                ((Dictionary<string, object>)actual["derived"]).Remove("forecast");
+            }
             if (expected.ContainsKey("previews"))
             {
                 godot["previews"] = WithoutChanged(expected["previews"]);

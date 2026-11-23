@@ -892,7 +892,7 @@ namespace Awakening.UI
                 var r = s.Regions[id];
                 if (!r.Site.Invested) continue;
                 sites++;
-                checks.Add(Check(r.Site.Progress >= Balance.SiteMonths && Derived.Supported(r) && !r.Site.Dormant, GameData.Regions[id].Name, Derived.SiteLabel(r)));
+                checks.Add(Check(r.Site.Progress >= GameEngine.SiteMonths(s) && Derived.Supported(r) && !r.Site.Dormant, GameData.Regions[id].Name, Derived.SiteLabel(s, r)));
             }
             for (int i = sites; i < Balance.RequiredSites; i++) checks.Add(Check(false, "Unfunded site", "Fund a site in a small region"));
             checks.Add(Check(s.Dread >= Balance.FinalDread, "Dread", $"{Format.Count(s.Dread)} / {Balance.FinalDread}"));

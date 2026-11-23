@@ -4,7 +4,7 @@ namespace Awakening.Core.Rules
 {
     public static class Balance
     {
-        public const string Ruleset = "alignment-6";
+        public const string Ruleset = "alignment-7";
         public const int PreparationMonths = 200;
         public const int AlignmentMonths = 24;
         public const int FinalMonths = 12;
@@ -25,6 +25,7 @@ namespace Awakening.Core.Rules
         public const int SacrificeDread = 25;
         public const int ManifestationDeniers = 65;
         public const int ManifestationUnaware = 50;
+        /// <summary>Normal's preparation months; GameEngine.SiteMonths(state) rules, since alignment-7 it depends on difficulty.</summary>
         public const int SiteMonths = 24;
         public const int SiteFollowers = 60;
         public const int RequiredSites = 3;
@@ -63,8 +64,9 @@ namespace Awakening.Core.Rules
         public const int ThreatWarningMonths = 5;
         public const int ThreatRollMonths = 4;
         // alignment-5: the talent tree (seal months and the costs of each difficulty live in GameData.Difficulties).
+        /// <summary>Normal's talent prices; DifficultyDefinition.TalentBaseCost and TalentCostStep rule (alignment-7).</summary>
         public const int TalentBaseCost = 40;
-        public const int TalentCostStep = 30;
+        public const int TalentCostStep = 25;
         public const double SwellingFlockRecruitment = 0.35;
         public const int QuietFriendsWarning = 2;
         public const int RedAltarsSacrificeDread = 35;
@@ -87,6 +89,31 @@ namespace Awakening.Core.Rules
         public const int WorldForgetsScatterMonths = 6;
         /// <summary>Dreams of R'lyeh: world awareness each rite-advancing sacrifice adds.</summary>
         public const double DreamsAwareness = 2.0;
+        /// <summary>Dreams of R'lyeh (alignment-7): regions at or above this Madness pass it to neighbouring cells every month.</summary>
+        public const double DreamsSpreadFrom = 30.0;
+        /// <summary>Dreams of R'lyeh: Madness each such region adds to each neighbouring region with a cell, every month after it fades (net +1).</summary>
+        public const double DreamsSpread = 2.0;
+        /// <summary>Dreams of R'lyeh: Madness a sacrifice leaves is multiplied by this.</summary>
+        public const double DreamsSacrificeMadness = 2.0;
+        /// <summary>Dreams of R'lyeh: during the rite, a sacrifice where Madness is at least this carries it DreamsMadRiteMonths forward, not one.</summary>
+        public const double DreamsRiteMadness = 30.0;
+        public const int DreamsMadRiteMonths = 2;
+        // alignment-7: Madness is a regional resource (0–100). Manifestations and sacrifices raise it; it fades every month.
+        public const double ManifestMadness = 20.0;
+        public const double SacrificeMadness = 10.0;
+        public const double MadnessDecay = 1.0;
+        /// <summary>Each month a region with a cell yields Madness / MadnessDreadDivisor Dread.</summary>
+        public const double MadnessDreadDivisor = 20.0;
+        /// <summary>From this Madness, new threats against a hidden cell without a site are occult, and the world notices the region.</summary>
+        public const double MadnessHigh = 50.0;
+        /// <summary>A preparing site gains Madness / MadnessQuickenFull extra preparation months every month (at 50, one every 2 months).</summary>
+        public const double MadnessQuickenFull = 100.0;
+        /// <summary>Threat pressure adds Madness / MadnessPressureDivisor (alignment-6: 2000).</summary>
+        public const double MadnessPressureDivisor = 400.0;
+        /// <summary>World awareness each region of high Madness with a cell adds every month.</summary>
+        public const double MadnessAwareness = 0.05;
+        // alignment-7: after obstructing or silencing, the region draws no new threat for these months.
+        public const int ThreatGraceMonths = 5;
         // Bury the record: Influence for world awareness, dearer with each use (the step depends on difficulty).
         public const int BuryAwareness = 5;
         public const int BuryBaseCost = 50;
@@ -101,7 +128,6 @@ namespace Awakening.Core.Rules
         // awareness and converts its usual numbers × (1 + (m − 50)/100), both rounded half up.
         public const int MysticismPivot = 50;
         public const int Deadline = PreparationMonths + AlignmentMonths;
-        public const int LatestSiteStart = Deadline - FinalMonths - SiteMonths;
         public const int LatestRiteStart = Deadline - FinalMonths;
     }
 }

@@ -36,6 +36,7 @@ namespace Awakening.Core.Rules
                 ["riteMonthsRequired"] = value.RiteMonthsRequired,
                 ["riteSites"] = value.RiteSites.Select(t => (object)t).ToList(),
                 ["finalProgress"] = value.FinalProgress,
+                ["dreamRiteMonths"] = value.DreamRiteMonths,
                 ["regions"] = value.Regions.ToDictionary(e => e.Key, e => (object)ToJson(e.Value)),
                 ["log"] = value.Log.Select(e => (object)ToJson(e)).ToList(),
                 ["nextLogId"] = value.NextLogId,
@@ -69,6 +70,7 @@ namespace Awakening.Core.Rules
                 RiteMonthsRequired = (int)Convert.ToDouble(Get(value, "riteMonthsRequired"), System.Globalization.CultureInfo.InvariantCulture),
                 RiteSites = ((List<object>)Get(value, "riteSites")).Cast<string>().ToList(),
                 FinalProgress = (int)Convert.ToDouble(Get(value, "finalProgress"), System.Globalization.CultureInfo.InvariantCulture),
+                DreamRiteMonths = (int)Convert.ToDouble(Get(value, "dreamRiteMonths"), System.Globalization.CultureInfo.InvariantCulture),
                 Regions = ReadRegions(Get(value, "regions")),
                 Log = ((List<object>)Get(value, "log")).Select(e => ReadLogEntry((Dictionary<string, object>)e)).ToList(),
                 NextLogId = (int)Convert.ToDouble(Get(value, "nextLogId"), System.Globalization.CultureInfo.InvariantCulture),
@@ -92,6 +94,7 @@ namespace Awakening.Core.Rules
                 ["scatteredUntil"] = value.ScatteredUntil,
                 ["exposure"] = value.Exposure,
                 ["madness"] = value.Madness,
+                ["threatGraceUntil"] = value.ThreatGraceUntil,
                 ["backlashUntil"] = value.BacklashUntil,
                 ["cooldowns"] = WriteCounts(value.Cooldowns),
                 ["site"] = ToJson(value.Site),
@@ -113,6 +116,7 @@ namespace Awakening.Core.Rules
                 ScatteredUntil = (int)Convert.ToDouble(Get(value, "scatteredUntil"), System.Globalization.CultureInfo.InvariantCulture),
                 Exposure = (double)Convert.ToDouble(Get(value, "exposure"), System.Globalization.CultureInfo.InvariantCulture),
                 Madness = (double)Convert.ToDouble(Get(value, "madness"), System.Globalization.CultureInfo.InvariantCulture),
+                ThreatGraceUntil = (int)Convert.ToDouble(Get(value, "threatGraceUntil"), System.Globalization.CultureInfo.InvariantCulture),
                 BacklashUntil = (int)Convert.ToDouble(Get(value, "backlashUntil"), System.Globalization.CultureInfo.InvariantCulture),
                 Cooldowns = ReadCounts(Get(value, "cooldowns")),
                 Site = ReadSite((Dictionary<string, object>)Get(value, "site")),
@@ -157,6 +161,7 @@ namespace Awakening.Core.Rules
                 ["progress"] = value.Progress,
                 ["dormant"] = value.Dormant,
                 ["recoverable"] = value.Recoverable,
+                ["quickening"] = value.Quickening,
             };
         }
 
@@ -169,6 +174,7 @@ namespace Awakening.Core.Rules
                 Progress = (int)Convert.ToDouble(Get(value, "progress"), System.Globalization.CultureInfo.InvariantCulture),
                 Dormant = (bool)Get(value, "dormant"),
                 Recoverable = (int)Convert.ToDouble(Get(value, "recoverable"), System.Globalization.CultureInfo.InvariantCulture),
+                Quickening = Convert.ToDouble(Get(value, "quickening"), System.Globalization.CultureInfo.InvariantCulture),
             };
         }
 
@@ -270,6 +276,8 @@ namespace Awakening.Core.Rules
                 ["dreadSpent"] = value.DreadSpent,
                 ["upkeepPaid"] = value.UpkeepPaid,
                 ["threatsCountered"] = value.ThreatsCountered,
+                ["madnessDread"] = value.MadnessDread,
+                ["quickenedMonths"] = value.QuickenedMonths,
                 ["revelations"] = WriteCounts(value.Revelations),
             };
         }
@@ -288,6 +296,8 @@ namespace Awakening.Core.Rules
                 DreadSpent = (double)Convert.ToDouble(Get(value, "dreadSpent"), System.Globalization.CultureInfo.InvariantCulture),
                 UpkeepPaid = (double)Convert.ToDouble(Get(value, "upkeepPaid"), System.Globalization.CultureInfo.InvariantCulture),
                 ThreatsCountered = (int)Convert.ToDouble(Get(value, "threatsCountered"), System.Globalization.CultureInfo.InvariantCulture),
+                MadnessDread = (double)Convert.ToDouble(Get(value, "madnessDread"), System.Globalization.CultureInfo.InvariantCulture),
+                QuickenedMonths = (int)Convert.ToDouble(Get(value, "quickenedMonths"), System.Globalization.CultureInfo.InvariantCulture),
                 Revelations = ReadCounts(Get(value, "revelations")),
             };
         }

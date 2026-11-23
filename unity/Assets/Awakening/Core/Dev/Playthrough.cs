@@ -9,7 +9,9 @@ namespace Awakening.Core.Dev
     /// Scripted policy from godot/dev/playthrough.gd, one strategy per talent branch and capstone (alignment-6): early is
     /// the public congregation that walks The Great Procession, late the hidden hand that goes public at month 160 and
     /// keeps The world forgets for an emergency, terror the harbinger that never goes public and feeds Dreams of R'lyeh.
-    /// All gains use normal commands.
+    /// From alignment-7 terror also raises Madness where its sites prepare: it sacrifices there while spare followers allow,
+    /// and manifests too where a site would not be ready when the stars align. It answers threats with Dread first while
+    /// it has plenty. Before month 200 every strategy silences only up to 50 world awareness. All gains use normal commands.
     /// </summary>
     public static class Playthrough
     {
@@ -41,6 +43,28 @@ namespace Awakening.Core.Dev
         public const int SaveBelow = 50;
         /// <summary>The public congregation waits for Open worship before going public, unless it is this late.</summary>
         public const int WorshipDeadline = 120;
+        /// <summary>Before the stars align, the policy silences only while world awareness stays at or below this (alignment-7: Madness Dread made 75 spend the finale's margin).</summary>
+        public const int EarlySilenceCeiling = 50;
+        /// <summary>During the alignment, the harbinger (Red altars) silences up to this world awareness: Dread is its currency.</summary>
+        public const int TerrorSilenceCeiling = 85;
+        /// <summary>Terror raises Madness in a preparing site's region up to this.</summary>
+        public const int MadnessTarget = 50;
+        /// <summary>Terror sacrifices for Madness only while the cell keeps this many followers above what its site needs.</summary>
+        public const int MadnessKeep = 160;
+        /// <summary>Terror manifests for Madness only while it keeps this much Dread after paying.</summary>
+        public const int MadnessDreadFloor = 20;
+        /// <summary>Records the Influence each command spent, by action id ("talent" for the tree), when a ledger is given.</summary>
+        static GameState Perform(GameState state, string id, string region, IDictionary<string, double> ledger)
+        {
+            var next = GameEngine.PerformAction(state, id, region).State;
+            Spend(ledger, id, next.Telemetry.InfluenceSpent - state.Telemetry.InfluenceSpent);
+            return next;
+        }
+        static void Spend(IDictionary<string, double> ledger, string id, double amount)
+        {
+            if (ledger == null || amount <= 0) return;
+            ledger[id] = (ledger.TryGetValue(id, out double value) ? value : 0.0) + amount;
+        }
         public static int DreadOwed(GameState state)
         {
             int funded = 0;
@@ -75,19 +99,25 @@ namespace Awakening.Core.Dev
             if (state.Awareness >= 50 && GameEngine.ConcealWorldCooldown(state) == 0 && state.Influence >= GameEngine.ConcealCost(state) + 40) return "awareness";
             return "";
         }
-        public static GameState Respond(GameState state, string id)
+        public static GameState Respond(GameState state, string id, IDictionary<string, double> ledger = null)
         {
             var r = state.Regions[id];
-            if (Targets.Contains(id) && GameEngine.PreviewAction(state, "counter", id).Ok) return GameEngine.PerformAction(state, "counter", id).State;
-            var c = Threats.Consequences(state, r);
             var silence = GameEngine.PreviewAction(state, "silence", id);
             int owed = state.Status == "awakening" ? 0 : DreadOwed(state);
             bool matters = Matters(state, r);
-            if (silence.Ok && state.Dread - silence.Dread >= owed && matters && state.Awareness + silence.Awareness <= SilenceCeiling)
-                return GameEngine.PerformAction(state, "silence", id).State;
+            // alignment-7: the harbinger pays in Dread first while it has plenty, and keeps its Influence.
+            if (GameEngine.HasTalent(state, "red_altars") && matters && silence.Ok && state.Dread - silence.Dread >= owed
+                && state.Awareness + silence.Awareness <= (state.ElapsedMonths < Balance.PreparationMonths ? EarlySilenceCeiling : TerrorSilenceCeiling))
+                return Perform(state, "silence", id, ledger);
+            if (Targets.Contains(id) && GameEngine.PreviewAction(state, "counter", id).Ok) return Perform(state, "counter", id, ledger);
+            var c = Threats.Consequences(state, r);
+            int ceiling = state.ElapsedMonths < Balance.PreparationMonths ? EarlySilenceCeiling
+                : GameEngine.HasTalent(state, "red_altars") ? TerrorSilenceCeiling : SilenceCeiling;
+            if (silence.Ok && state.Dread - silence.Dread >= owed && matters && state.Awareness + silence.Awareness <= ceiling)
+                return Perform(state, "silence", id, ledger);
             double hidingCost = GameEngine.ScatterMonths(state) * Derived.RecruitmentPerMonth(state, r);
             if (!r.Site.Invested && !r.Public && c.Followers > hidingCost && GameEngine.PreviewAction(state, "scatter", id).Ok)
-                return GameEngine.PerformAction(state, "scatter", id).State;
+                return Perform(state, "scatter", id, ledger);
             return state;
         }
         static bool Matters(GameState state, RegionState r)
@@ -104,17 +134,19 @@ namespace Awakening.Core.Dev
             return unanswered >= 2;
         }
         /// <param name="onMonth">Optional observer, called with the state after each month's orders and before the month passes.</param>
-        public static GameState Play(string strategy, string seed, int stopMonth = Balance.Deadline, Action<GameState> onMonth = null, string difficulty = "normal")
+        /// <param name="ledger">Optional: Influence spent by action id, plus "talent" for the tree.</param>
+        public static GameState Play(string strategy, string seed, int stopMonth = Balance.Deadline, Action<GameState> onMonth = null, string difficulty = "normal",
+            IDictionary<string, double> ledger = null)
         {
             var s = GameEngine.PlaceStartingFoothold(GameEngine.CreateGameState(difficulty, seed), Farm).State;
             Action<string, string> act = (id, region) =>
             {
-                if (GameEngine.PreviewAction(s, id, region).Ok) s = GameEngine.PerformAction(s, id, region).State;
+                if (GameEngine.PreviewAction(s, id, region).Ok) s = Perform(s, id, region, ledger);
             };
             Action<string, string> spare = (id, region) =>
             {
                 var preview = GameEngine.PreviewAction(s, id, region);
-                if (preview.Ok && s.Influence - preview.Influence >= Reserve(s) + Saving(s, strategy)) s = GameEngine.PerformAction(s, id, region).State;
+                if (preview.Ok && s.Influence - preview.Influence >= Reserve(s) + Saving(s, strategy)) s = Perform(s, id, region, ledger);
             };
             Action spareBury = () =>
             {
@@ -127,7 +159,7 @@ namespace Awakening.Core.Dev
             for (int step = 0; step < stopMonth; step++)
             {
                 if (GameEngine.IsOver(s)) break;
-                foreach (string id in GameData.RegionIds) if (s.Regions[id].Threat != null) s = Respond(s, id);
+                foreach (string id in GameData.RegionIds) if (s.Regions[id].Threat != null) s = Respond(s, id, ledger);
                 foreach (string id in Targets)
                 {
                     var r = s.Regions[id];
@@ -138,7 +170,10 @@ namespace Awakening.Core.Dev
                 {
                     if (GameEngine.HasTalent(s, talent)) continue;
                     if (GameEngine.TalentReason(s, talent).Length == 0)
+                    {
+                        Spend(ledger, "talent", GameEngine.TalentCost(s));
                         s = GameEngine.TakeTalent(s, talent).State;
+                    }
                     break;
                 }
                 foreach (string id in Targets)
@@ -170,6 +205,22 @@ namespace Awakening.Core.Dev
                     if (needConceal == "evidence") act("conceal", id);
                     else if (needConceal == "awareness") spare("conceal", id);
                     if (s.Dread < owed && r.Population.Followers - Balance.SacrificeFollowers >= need + 120) act("sacrifice", id);
+                }
+                if (strategy == "terror")
+                {
+                    // alignment-7: Madness quickens a preparing site. Terror sacrifices for it where a site prepares and
+                    // spare followers allow, and manifests too where the site would not be ready when the stars align.
+                    foreach (string id in Targets)
+                    {
+                        var r = s.Regions[id];
+                        if (r.Population.Followers <= 0 || !r.Site.Invested || r.Site.Progress >= GameEngine.SiteMonths(s) || !Derived.Supported(r)) continue;
+                        bool late = GameEngine.SiteMonths(s) - r.Site.Progress > Balance.PreparationMonths - s.ElapsedMonths;
+                        if (late && r.Madness < MadnessTarget && s.Dread - GameEngine.PreviewAction(s, "manifest", id).Dread >= MadnessDreadFloor)
+                            act("manifest", id);
+                        if (r.Madness < MadnessTarget
+                            && r.Population.Followers - Balance.SacrificeFollowers >= Derived.SiteRequirement(r) + MadnessKeep)
+                            act("sacrifice", id);
+                    }
                 }
                 if (GameEngine.HasTalent(s, "great_procession"))
                 {

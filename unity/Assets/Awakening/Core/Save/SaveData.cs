@@ -34,7 +34,7 @@ namespace Awakening.Core.Save
     public static class SaveData
     {
         public const int SaveVersion = 2;
-        public static readonly string[] RetiredRulesets = { "alignment-1", "alignment-2", "alignment-3", "alignment-4", "alignment-5" };
+        public static readonly string[] RetiredRulesets = { "alignment-1", "alignment-2", "alignment-3", "alignment-4", "alignment-5", "alignment-6" };
         public static readonly string[] ResultCodes = { "awakened", "world_awareness", "deadline", "conceded" };
         public const string RetiredNotice = "Your unfinished run used older rules (%s) and cannot continue under %s. Settings and playtest records are kept; start a new run.";
         public static SaveEnvelope DefaultSave() => new SaveEnvelope();
@@ -89,7 +89,7 @@ namespace Awakening.Core.Save
                 || !TalentsValid(Get(v, "talents"), Get(v, "difficulty") as string) || !Integer(Get(v, "buryUses"), 1000)
                 || !(Get(v, "riteMonthsRequired") is object riteMonths) || !Integer(riteMonths, Balance.FinalMonths)
                 || N(riteMonths) != Balance.FinalMonths && N(riteMonths) != Balance.ProcessionRiteMonths
-                || !Integer(Get(v, "finalProgress"), N(riteMonths)) || !Integer(Get(v, "nextLogId"))
+                || !Integer(Get(v, "finalProgress"), N(riteMonths)) || !Integer(Get(v, "dreamRiteMonths"), N(v["finalProgress"])) || !Integer(Get(v, "nextLogId"))
                 || !YieldsValid(Get(v, "talentYield"), Get(v, "talents")) || !CapstonesValid(Get(v, "capstonesUsed"), Get(v, "talents"))
                 || !(Get(v, "riteSites") is List<object> riteSites) || riteSites.Count > GameData.RegionIds.Length
                 || riteSites.Any(id => !OneOf(id, GameData.RegionIds)) || riteSites.Distinct().Count() != riteSites.Count
@@ -98,6 +98,7 @@ namespace Awakening.Core.Save
                 || Get(v, "resultCode") != null && !OneOf(v["resultCode"], ResultCodes)) return false;
             string status = (string)v["status"];
             double month = N(v["elapsedMonths"]);
+            int siteMonths = GameData.Difficulties[(string)v["difficulty"]].SiteMonths;
             object code = Get(v, "resultCode");
             if (code != null && (status == "won") != Equals(code, "awakened") || code != null && status != "won" && status != "lost") return false;
             bool conceded = Equals(code, "conceded");
@@ -115,10 +116,11 @@ namespace Awakening.Core.Save
                 if (r == null || Record(Get(r, "population")) == null || !(Get(r, "public") is bool) || !Number(Get(r, "exposure"), 100)
                     || !(Get(r, "revealed") is bool) || !(Get(r, "scattered") is bool) || !Integer(Get(r, "scatteredUntil"), Balance.Deadline + Balance.ScatterMonths)
                     || (bool)r["scattered"] != (month < N(r["scatteredUntil"]))
-                    || !Number(Get(r, "madness"), 100) || !Integer(Get(r, "backlashUntil")) || Record(Get(r, "cooldowns")) == null || site == null
-                    || !(Get(site, "invested") is bool) || !Integer(Get(site, "progress"), Balance.SiteMonths)
+                    || !Number(Get(r, "madness"), 100) || !Integer(Get(r, "threatGraceUntil"), Balance.Deadline + Balance.ThreatGraceMonths) || !Integer(Get(r, "backlashUntil")) || Record(Get(r, "cooldowns")) == null || site == null
+                    || !(Get(site, "invested") is bool) || !Integer(Get(site, "progress"), siteMonths)
                     || !(Get(site, "dormant") is bool) || !(bool)site["invested"] && (N(site["progress"]) != 0 || (bool)site["dormant"])
-                    || !Integer(Get(site, "recoverable"), Balance.SiteMonths) || !(bool)site["invested"] && N(site["recoverable"]) != 0) return false;
+                    || !Integer(Get(site, "recoverable"), siteMonths) || !(bool)site["invested"] && N(site["recoverable"]) != 0
+                    || !Number(Get(site, "quickening"), 1) || !(bool)site["invested"] && N(site["quickening"]) != 0) return false;
                 var population = Record(r["population"]);
                 double sum = 0.0;
                 foreach (string key in new[] { "unaware", "deniers", "believers", "followers", "losses" })
@@ -152,8 +154,9 @@ namespace Awakening.Core.Save
             }
             var telemetry = Record(Get(v, "telemetry"));
             if (telemetry == null || Record(Get(telemetry, "actions")) == null || Record(Get(telemetry, "revelations")) == null) return false;
-            foreach (string key in new[] { "sacrificed", "raidLosses", "influenceEarned", "influenceSpent", "dreadEarned", "dreadSpent", "upkeepPaid", "threatsCountered" })
+            foreach (string key in new[] { "sacrificed", "raidLosses", "influenceEarned", "influenceSpent", "dreadEarned", "dreadSpent", "upkeepPaid", "threatsCountered", "madnessDread" })
                 if (!Number(Get(telemetry, key))) return false;
+            if (!Integer(Get(telemetry, "quickenedMonths"))) return false;
             foreach (var entry in Record(telemetry["actions"]))
                 if (!GameData.ActionIds.Contains(entry.Key) || !Integer(entry.Value)) return false;
             foreach (var entry in Record(telemetry["revelations"]))

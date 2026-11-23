@@ -124,7 +124,7 @@ namespace Awakening.Core.Tests
             }
             var stalled = GameEngine.AdvanceSimulation(broke, 1);
             Assert.True(stalled.Regions["africa"].Site.Dormant);
-            Assert.Equal("Dormant · upkeep unpaid", Derived.SiteLabel(stalled.Regions["africa"]));
+            Assert.Equal("Dormant · upkeep unpaid", Derived.SiteLabel(stalled, stalled.Regions["africa"]));
             Assert.Contains(stalled.Log, e => e.Message.Contains("lies dormant"));
             stalled.Influence = 50.0;
             Assert.False(GameEngine.AdvanceSimulation(stalled, 1).Regions["africa"].Site.Dormant);
@@ -213,7 +213,7 @@ namespace Awakening.Core.Tests
             Assert.Equal(3, Derived.ReadySites(s));
             var hidden = GameEngine.PerformAction(s, "scatter", "europe").State;
             Assert.Equal(2, Derived.ReadySites(hidden)); Assert.NotEmpty(GameEngine.AwakeningReason(hidden));
-            Assert.Equal("Stalled · the flock is scattered", Derived.SiteLabel(hidden.Regions["europe"]));
+            Assert.Equal("Stalled · the flock is scattered", Derived.SiteLabel(hidden, hidden.Regions["europe"]));
             Assert.Equal(40, hidden.Regions["europe"].Exposure);
         }
         [Fact]

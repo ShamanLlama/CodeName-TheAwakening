@@ -66,6 +66,11 @@ namespace Awakening.Core.Rules
         public int BuryStep { get; internal set; }
         /// <summary>Months concealment's world effect rests after it is used.</summary>
         public int ConcealWorldMonths { get; internal set; }
+        /// <summary>Months a funded site needs to be prepared (alignment-7; 24 before for every difficulty).</summary>
+        public int SiteMonths { get; internal set; }
+        /// <summary>Influence the first talent costs, and what each talent taken adds to the next (alignment-7).</summary>
+        public int TalentBaseCost { get; internal set; }
+        public int TalentCostStep { get; internal set; }
         /// <summary>One line for the start screen: the rules this difficulty changes.</summary>
         public string Rule { get; internal set; }
     }
@@ -100,20 +105,24 @@ namespace Awakening.Core.Rules
             });
 
         static string F(string text, params object[] args) => string.Format(CultureInfo.InvariantCulture, text, args);
-        static DifficultyDefinition Difficulty(string name, double recruitment, double pressure, int warning, int[] seals, int occultLoss, int buryStep, int concealMonths) => new DifficultyDefinition
+        static DifficultyDefinition Difficulty(string name, double recruitment, double pressure, int warning, int[] seals, int occultLoss, int buryStep, int concealMonths,
+            int siteMonths, int talentBase, int talentStep) => new DifficultyDefinition
         {
             Name = name, Recruitment = recruitment, Pressure = pressure, Warning = warning, TalentSlotMonths = seals,
             OccultPreparationLoss = occultLoss, BuryStep = buryStep, ConcealWorldMonths = concealMonths,
-            Rule = F("{0} talent seals. An ignored occult society costs a site {1} months. Each burial costs {2} Influence more. Concealment's world effect rests {3} months.",
-                seals.Length, occultLoss, buryStep, concealMonths)
+            SiteMonths = siteMonths, TalentBaseCost = talentBase, TalentCostStep = talentStep,
+            Rule = F("Sites prepare in {4} months. {0} talent seals; talents cost {5} Influence, {6} more for each one taken. An ignored occult society costs a site {1} months. Each burial costs {2} Influence more. Concealment's world effect rests {3} months.",
+                seals.Length, occultLoss, buryStep, concealMonths, siteMonths, talentBase, talentStep)
         };
         public static readonly IReadOnlyDictionary<string, DifficultyDefinition> Difficulties =
             new ReadOnlyDictionary<string, DifficultyDefinition>(new Dictionary<string, DifficultyDefinition>
             {
                 // alignment-6: Easy threatens as often as Normal (0.75 before) and an occult society takes 5 months (4 before).
-                ["easy"] = Difficulty("Easy", 1.2, 1.0, 2, new[] { 24, 44, 64, 104, 144, 176 }, 5, 15, Balance.ConcealWorldMonths),
-                ["normal"] = Difficulty("Normal", 1.0, 1.0, 0, new[] { 24, 64, 104, 144, 176 }, Balance.OccultPreparationLoss, 35, Balance.ConcealWorldMonths), // alignment-6: burial step 25 → 35
-                ["hard"] = Difficulty("Hard", 0.85, 1.25, -1, new[] { 24, 72, 120, 168 }, Balance.OccultPreparationLoss, 40, 9),
+                // alignment-7: Easy sites prepare in 20 months and its talents cost 30 + 20 per talent taken.
+                ["easy"] = Difficulty("Easy", 1.2, 1.0, 2, new[] { 24, 44, 64, 104, 144, 176 }, 5, 15, Balance.ConcealWorldMonths, 20, 30, 20),
+                ["normal"] = Difficulty("Normal", 1.0, 1.45, 0, new[] { 24, 64, 104, 144, 176 }, Balance.OccultPreparationLoss, 35, Balance.ConcealWorldMonths, // alignment-6: burial step 25 → 35
+                    Balance.SiteMonths, Balance.TalentBaseCost, Balance.TalentCostStep),
+                ["hard"] = Difficulty("Hard", 0.85, 1.15, -1, new[] { 24, 72, 120, 168 }, Balance.OccultPreparationLoss, 40, 9, Balance.SiteMonths, Balance.TalentBaseCost, Balance.TalentCostStep),
             });
 
         public static readonly IReadOnlyDictionary<string, ActionDefinition> Actions =
@@ -121,12 +130,12 @@ namespace Awakening.Core.Rules
             {
                 ["recruit"] = new ActionDefinition { Id = "recruit", Name = "Secret gathering", Description = "Recruit up to 35 unaware people or believers.", Influence = 18, Dread = 0, Followers = 0, Cooldown = 12 },
                 ["expand"] = new ActionDefinition { Id = "expand", Name = "Establish a cell", Description = "Send the dream to an adjacent region. Rebuild anywhere if all cells are lost.", Influence = 30, Dread = 0, Followers = 0, Cooldown = 0 },
-                ["sacrifice"] = new ActionDefinition { Id = "sacrifice", Name = "Sacrifice followers", Description = "Consume 40 followers for 25 Dread. Their future income is lost.", Influence = 0, Dread = 0, Followers = 40, Cooldown = 6 },
+                ["sacrifice"] = new ActionDefinition { Id = "sacrifice", Name = "Sacrifice followers", Description = "Consume 40 followers for 25 Dread and +10 Madness here. Their future income is lost.", Influence = 0, Dread = 0, Followers = 40, Cooldown = 6 },
                 ["reveal"] = new ActionDefinition { Id = "reveal", Name = "Begin public worship", Description = "Double ongoing recruitment. Invite scrutiny and backlash. The world notices the first time.", Influence = 10, Dread = 0, Followers = 0, Cooldown = 6 },
                 ["hide"] = new ActionDefinition { Id = "hide", Name = "Return underground", Description = "End public recruitment. Existing evidence and rituals remain visible.", Influence = 0, Dread = 0, Followers = 0, Cooldown = 6 },
                 ["conceal"] = new ActionDefinition { Id = "conceal", Name = "Conceal the evidence", Description = F("Remove up to 25 Exposure. Once every {0} months ({1} on Hard) it also removes 3 world awareness, adding half the world awareness to the 20 Influence cost.", Balance.ConcealWorldMonths, Difficulties["hard"].ConcealWorldMonths), Influence = 20, Dread = 0, Followers = 0, Cooldown = 12 },
-                ["manifest"] = new ActionDefinition { Id = "manifest", Name = "Impossible manifestation", Description = "Turn deniers and unaware people into believers. Belief also fuels resistance.", Influence = 0, Dread = 20, Followers = 0, Cooldown = 18 },
-                ["prepare"] = new ActionDefinition { Id = "prepare", Name = "Prepare a ritual site", Description = "Commit Dread and 40 Influence, then pay 1 Influence/month and keep local support for 24 months. Each further site costs more.", Influence = 40, Dread = 60, Followers = 0, Cooldown = 0 },
+                ["manifest"] = new ActionDefinition { Id = "manifest", Name = "Impossible manifestation", Description = "Turn deniers and unaware people into believers and leave +20 Madness. Belief also fuels resistance.", Influence = 0, Dread = 20, Followers = 0, Cooldown = 18 },
+                ["prepare"] = new ActionDefinition { Id = "prepare", Name = "Prepare a ritual site", Description = F("Commit Dread and 40 Influence, then pay 1 Influence/month and keep local support for {0} months ({1} on Easy). Each further site costs more.", Balance.SiteMonths, Difficulties["easy"].SiteMonths), Influence = 40, Dread = 60, Followers = 0, Cooldown = 0 },
                 ["counter"] = new ActionDefinition { Id = "counter", Name = "Obstruct the investigation", Description = "Burn your local connections to neutralize this region's threat. They take 12 months to rebuild.", Influence = 30, Dread = 0, Followers = 0, Cooldown = 12 },
                 ["scatter"] = new ActionDefinition { Id = "scatter", Name = "Scatter the flock", Description = "The cell goes to ground and the threat finds nobody. For 8 months it neither recruits nor earns, and cannot carry a ritual site.", Influence = 0, Dread = 0, Followers = 0, Cooldown = 24 },
                 ["silence"] = new ActionDefinition { Id = "silence", Name = "Silence the witnesses", Description = "Spend Dread to end this region's threat. The disappearances are noticed.", Influence = 0, Dread = 20, Followers = 0, Cooldown = 12 },
@@ -184,8 +193,8 @@ namespace Awakening.Core.Rules
                     F("Let the hunters find someone else to blame. A threat that lands lowers world awareness by {0} per severity.", Js.Num(Balance.ScapegoatSeverityAwareness)),
                     "mute_witnesses", "red_altars"),
                 ["dreams_of_rlyeh"] = Talent("dreams_of_rlyeh", "harbinger", 3, "Dreams of R'lyeh",
-                    F("The dead priest drinks every death. During the final rite, each sacrifice that leaves three supported sites carries the rite one month forward, at +{0} world awareness.",
-                        Js.Num(Balance.DreamsAwareness)),
+                    F("The dead priest dreams through the mad. Sacrifices leave twice the Madness, and every month each region at {1}+ Madness gives +{2} Madness to each neighbouring region with a cell. During the final rite, each sacrifice that leaves three supported sites carries the rite one month forward, {4} where Madness is {3}+, at +{0} world awareness.",
+                        Js.Num(Balance.DreamsAwareness), Js.Num(Balance.DreamsSpreadFrom), Js.Num(Balance.DreamsSpread), Js.Num(Balance.DreamsRiteMadness), Balance.DreamsMadRiteMonths),
                     null, "red_altars", "mute_witnesses", "scapegoats"),
             });
 

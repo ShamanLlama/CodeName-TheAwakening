@@ -32,6 +32,7 @@ namespace Awakening.Core.Rules
         public static RiteMargin Margin(GameState state)
         {
             int riteMonths = GameEngine.RiteMonthsFor(state);
+            int siteMonths = GameEngine.SiteMonths(state);
             var result = new RiteMargin { LatestStart = Balance.Deadline - riteMonths, EarliestStart = -1, Started = state.Status == "awakening" };
             var best = new List<int>();
             foreach (string id in GameData.RegionIds)
@@ -40,15 +41,15 @@ namespace Awakening.Core.Rules
                 int delay = ScatterDelay(state, r);
                 if (r.Site.Invested)
                 {
-                    int left = Math.Max(0, Balance.SiteMonths - r.Site.Progress);
+                    int left = Math.Max(0, siteMonths - r.Site.Progress);
                     result.Sites.Add(new SiteMargin
                     {
                         Region = id, MonthsLeft = delay + left, Supported = Derived.Supported(r), Scattered = r.Scattered,
                         Followers = (int)Math.Floor(r.Population.Followers), Required = (int)Derived.SiteRequirement(r)
                     });
-                    best.Add(delay + Math.Max(0, left - GameEngine.Acceleration(r)));
+                    best.Add(delay + Quickened(r, Math.Max(0, left - GameEngine.Acceleration(r))));
                 }
-                else best.Add(delay + Balance.SiteMonths - GameEngine.Acceleration(r));
+                else best.Add(delay + Quickened(r, siteMonths - GameEngine.Acceleration(r)));
             }
             result.Sites = result.Sites.OrderBy(site => site.MonthsLeft).ToList();
             if (result.Sites.Count >= Balance.RequiredSites)
@@ -65,6 +66,9 @@ namespace Awakening.Core.Rules
             }
             return result;
         }
+        /// <summary>Optimistic months to prepare if today's Madness stayed: each month counts 1 + Madness/100.</summary>
+        static int Quickened(RegionState r, int months) => r.Madness > 0 && r.Population.Followers > 0
+            ? (int)Math.Ceiling(months / (1.0 + r.Madness / Balance.MadnessQuickenFull)) : months;
         /// <summary>
         /// The final rite as data (alignment-6). Advancing assumes nothing else happens before the month passes: cells whose
         /// scattering ends then count again. Blockers are listed only while the rite is under way and halted: the sites that
@@ -80,7 +84,7 @@ namespace Awakening.Core.Rules
             foreach (string id in GameData.RegionIds)
             {
                 var r = state.Regions[id];
-                bool candidate = state.RiteSites.Contains(id) || r.Site.Invested && r.Site.Progress >= Balance.SiteMonths;
+                bool candidate = state.RiteSites.Contains(id) || r.Site.Invested && r.Site.Progress >= GameEngine.SiteMonths(state);
                 if (!candidate) continue;
                 string reason = BlockReason(state, r);
                 if (reason == null) counting++;
@@ -97,7 +101,7 @@ namespace Awakening.Core.Rules
             if (r.Site.Dormant) return "dormant";
             if (r.Scattered && r.ScatteredUntil > state.ElapsedMonths + 1) return "scattered";
             if (r.Population.Followers < Derived.SiteRequirement(r)) return "unsupported";
-            if (r.Site.Progress < Balance.SiteMonths) return "unprepared";
+            if (r.Site.Progress < GameEngine.SiteMonths(state)) return "unprepared";
             return null;
         }
         static RitualForecast Timetable(GameState state)
@@ -114,7 +118,7 @@ namespace Awakening.Core.Rules
             var sites = new List<RegionState>();
             foreach (string id in GameData.RegionIds) if (state.Regions[id].Site.Invested) sites.Add(state.Regions[id]);
             var remainingPreparations = new List<int>();
-            foreach (var r in sites) remainingPreparations.Add(Balance.SiteMonths - r.Site.Progress);
+            foreach (var r in sites) remainingPreparations.Add(GameEngine.SiteMonths(state) - r.Site.Progress);
             remainingPreparations.Sort();
             if (remainingPreparations.Count >= Balance.RequiredSites)
             {
@@ -130,9 +134,9 @@ namespace Awakening.Core.Rules
                         + F("The final rite needs {0} months and {1} Dread.", riteMonths, Balance.FinalDread) + (unsupported != 0 ? F(" Restore follower support at {0} site(s).", unsupported) : "");
                 return new RitualForecast { Urgent = earliest > Balance.Deadline || unsupported > 0 || state.ElapsedMonths >= Balance.PreparationMonths, Message = message };
             }
-            int monthsLeft = Balance.LatestSiteStart - state.ElapsedMonths;
+            int monthsLeft = GameEngine.LatestSiteStart(state) - state.ElapsedMonths;
             string timing = monthsLeft >= 0 ? (monthsLeft <= 24 ? "Only " : "") + F("{0} months left to start new sites without acceleration. ", monthsLeft) : "New sites now need acceleration to finish in time. ";
-            return new RitualForecast { Urgent = monthsLeft <= 24, Message = F("Fund {0} more ritual site(s). ", Balance.RequiredSites - sites.Count) + timing + "Allow 24 months of preparation plus 12 for the final rite." };
+            return new RitualForecast { Urgent = monthsLeft <= 24, Message = F("Fund {0} more ritual site(s). ", Balance.RequiredSites - sites.Count) + timing + F("Allow {0} months of preparation plus {1} for the final rite.", GameEngine.SiteMonths(state), Balance.FinalMonths) };
         }
     }
 }

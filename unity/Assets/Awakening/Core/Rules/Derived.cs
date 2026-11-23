@@ -44,7 +44,7 @@ namespace Awakening.Core.Rules
             foreach (string id in GameData.RegionIds)
             {
                 var r = state.Regions[id];
-                if (r.Site.Invested && !r.Site.Dormant && r.Site.Progress >= Balance.SiteMonths && Supported(r)) count++;
+                if (GameEngine.SiteReady(state, r)) count++;
             }
             return count;
         }
@@ -95,13 +95,14 @@ namespace Awakening.Core.Rules
             return sum;
         }
         public static double NetInfluencePerMonth(GameState state) => InfluencePerMonth(state) - SiteUpkeep(state);
-        public static string SiteLabel(RegionState r)
+        public static string SiteLabel(GameState state, RegionState r)
         {
+            int siteMonths = GameEngine.SiteMonths(state);
             if (!r.Site.Invested) return "No ritual site";
             if (r.Site.Dormant) return "Dormant · upkeep unpaid";
             if (r.Scattered) return "Stalled · the flock is scattered";
             if (!Supported(r)) return "Interrupted · needs " + Js.Num(SiteRequirement(r)) + " followers";
-            return r.Site.Progress >= Balance.SiteMonths ? "Ritual prepared" : string.Format(CultureInfo.InvariantCulture, "Preparing · {0}/{1} months", r.Site.Progress, Balance.SiteMonths);
+            return r.Site.Progress >= siteMonths ? "Ritual prepared" : string.Format(CultureInfo.InvariantCulture, "Preparing · {0}/{1} months", r.Site.Progress, siteMonths);
         }
         public static void AddLog(GameState state, string message)
         {

@@ -88,7 +88,7 @@ namespace Awakening.Core.Tests
             Assert.Contains("+0.3 world awareness a month", GameData.Talents["great_procession"].Description);
             Assert.Contains("−25 world awareness and every threat dissolves", GameData.Talents["world_forgets"].Description);
             Assert.Contains("for 6 months", GameData.Talents["world_forgets"].Description);
-            Assert.Contains("one month forward, at +2 world awareness", GameData.Talents["dreams_of_rlyeh"].Description);
+            Assert.Contains("one month forward, 2 where Madness is 30+, at +2 world awareness", GameData.Talents["dreams_of_rlyeh"].Description);
             Assert.Contains("the world stops counting their followers", GameData.Talents["open_worship"].Description);
             Assert.Equal("Requires Red altars and Mute witnesses or Scapegoats.", GameEngine.TalentReason(At(200), "dreams_of_rlyeh"));
         }
@@ -245,7 +245,10 @@ namespace Awakening.Core.Tests
             Assert.Equal(1, fed.FinalProgress);
             Assert.Equal(s.Awareness + 2, fed.Awareness);
             Assert.Equal(s.Dread + Balance.RedAltarsSacrificeDread, fed.Dread);
-            Assert.Equal("1 rite months dreamed forward so far", GameEngine.TalentYieldText(fed, "dreams_of_rlyeh"));
+            Assert.Equal(1, fed.DreamRiteMonths);
+            // alignment-7: with the dream a sacrifice leaves +20 Madness, 10 of them the dream's.
+            Assert.Equal(20, fed.Regions["africa"].Madness);
+            Assert.Equal("+10 Madness spread · 1 rite months dreamed forward so far", GameEngine.TalentYieldText(fed, "dreams_of_rlyeh"));
 
             // The dream never carries the rite past its end, and only while three sites stand after the knife.
             var near = s.Clone(); near.FinalProgress = 12;
@@ -411,7 +414,7 @@ namespace Awakening.Core.Tests
             s.Talents.AddRange(GameData.TalentIds);
             foreach (string id in GameData.TalentIds) Assert.NotEqual("", GameEngine.TalentYieldText(s, id));
             Assert.Equal("Not yet invoked", GameEngine.TalentYieldText(s, "world_forgets"));
-            Assert.Equal("0 rite months dreamed forward so far", GameEngine.TalentYieldText(s, "dreams_of_rlyeh"));
+            Assert.Equal("+0 Madness spread so far", GameEngine.TalentYieldText(s, "dreams_of_rlyeh"));
         }
 
         // ---- The final rite as data ----
@@ -500,11 +503,11 @@ namespace Awakening.Core.Tests
             double before = Director.ThreatPressure(s, "africa");
             s.ElapsedMonths = 100;
             double after = Director.ThreatPressure(s, "africa");
-            Assert.Equal(Balance.MidgamePressure * (0.6 + GameData.Regions["africa"].InstitutionalResistance / 150.0), after - before, 9);
+            Assert.Equal(Balance.MidgamePressure * 1.45 * (0.6 + GameData.Regions["africa"].InstitutionalResistance / 150.0), after - before, 9);
             Site(s, "africa", 10);
             double site = Director.ThreatPressure(s, "africa");
             s.ElapsedMonths = 200;
-            Assert.Equal(0.6 * (0.6 + 35 / 150.0), Director.ThreatPressure(s, "africa") - site, 9);
+            Assert.Equal(0.6 * 1.45 * (0.6 + 35 / 150.0), Director.ThreatPressure(s, "africa") - site, 9);
             Assert.Equal(35, GameData.Difficulties["normal"].BuryStep);
             Assert.Equal(1.0, GameData.Difficulties["easy"].Pressure);
             Assert.Equal(5, GameData.Difficulties["easy"].OccultPreparationLoss);
@@ -592,7 +595,7 @@ namespace Awakening.Core.Tests
             var decoded = SaveData.DecodeSave(raw);
             Assert.NotNull(decoded); Assert.Null(decoded.State);
             Assert.Equal(70.0, decoded.Settings.Volume); Assert.Equal(1.25, decoded.Settings.UiScale); Assert.True(decoded.TutorialComplete);
-            Assert.Equal("Your unfinished run used older rules (alignment-5) and cannot continue under alignment-6. Settings and playtest records are kept; start a new run.",
+            Assert.Equal("Your unfinished run used older rules (alignment-5) and cannot continue under alignment-7. Settings and playtest records are kept; start a new run.",
                 SaveData.TakeRetiredNotice(decoded));
             Assert.Contains("alignment-5", SaveData.RetiredRulesets);
         }

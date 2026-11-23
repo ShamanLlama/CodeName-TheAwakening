@@ -24,6 +24,27 @@ static class Program
             Measure.Run(seeds, null, difficulty);
             return 0;
         }
+        if (args.Length >= 3 && args.Length <= 4 && args[0] == "trace")
+        {
+            // trace <strategy> <seed> [difficulty]: every 6th month of one bot run, for tuning.
+            string difficulty = args.Length == 4 ? args[3] : "normal";
+            var end = Playthrough.Play(args[1], args[2], Awakening.Core.Rules.Balance.Deadline, s =>
+            {
+                if (s.ElapsedMonths % 6 != 0 && s.Status != "awakening") return;
+                var parts = new System.Collections.Generic.List<string>();
+                foreach (string id in Awakening.Core.Rules.GameData.RegionIds)
+                {
+                    var r = s.Regions[id];
+                    if (r.Population.Followers <= 0) continue;
+                    parts.Add(string.Format(CultureInfo.InvariantCulture, "{0}:{1:0}f M{2:0} E{3:0}{4}{5}{6}", id.Substring(0, 3), r.Population.Followers, r.Madness, r.Exposure,
+                        r.Site.Invested ? " s" + r.Site.Progress : "", r.Threat != null ? " T" + r.Threat.Kind.Substring(0, 1) + r.Threat.Severity : "", r.Scattered ? " X" : ""));
+                }
+                Console.WriteLine(string.Format(CultureInfo.InvariantCulture, "m{0} {1} I{2:0} D{3:0} A{4:0.0} rite{5} t[{6}] | {7}", s.ElapsedMonths, s.Status, s.Influence, s.Dread, s.Awareness,
+                    s.FinalProgress, string.Join(",", s.Talents), string.Join(" | ", parts)));
+            }, difficulty);
+            Console.WriteLine(string.Format(CultureInfo.InvariantCulture, "END m{0} {1} {2} A{3:0.0} D{4:0} rite{5}/{6} dreams{7}", end.ElapsedMonths, end.Status, end.ResultCode, end.Awareness, end.Dread, end.FinalProgress, end.RiteMonthsRequired, end.DreamRiteMonths));
+            return 0;
+        }
         if (args.Length == 2 && args[0] == "regenerate-goldens")
         {
             GoldenTraces.Regenerate(args[1], Console.Out);
@@ -33,7 +54,7 @@ static class Program
     }
     static int Usage()
     {
-        Console.Error.WriteLine("Usage: measure [--seeds=N] [--difficulty=easy|normal|hard] | regenerate-goldens <dir>");
+        Console.Error.WriteLine("Usage: measure [--seeds=N] [--difficulty=easy|normal|hard] | trace <strategy> <seed> [difficulty] | regenerate-goldens <dir>");
         return 2;
     }
 }

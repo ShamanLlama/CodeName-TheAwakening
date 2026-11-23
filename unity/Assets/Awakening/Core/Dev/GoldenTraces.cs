@@ -44,7 +44,7 @@ namespace Awakening.Core.Dev
                 regions[id] = new Dictionary<string, object>
                 {
                     ["recruitment"] = Derived.RecruitmentPerMonth(state, r), ["income"] = Derived.RegionIncome(r),
-                    ["siteRequirement"] = Derived.SiteRequirement(r), ["siteLabel"] = Derived.SiteLabel(r), ["threat"] = Threats.Describe(state, r),
+                    ["siteRequirement"] = Derived.SiteRequirement(r), ["siteLabel"] = Derived.SiteLabel(state, r), ["threat"] = Threats.Describe(state, r),
                     ["consequences"] = r.Threat != null ? ConsequencesJson(Threats.Consequences(state, r)) : null
                 };
             }

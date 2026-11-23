@@ -116,7 +116,7 @@ namespace Awakening.Core.Tests
                 Assert.DoesNotContain(id, s.Talents);
                 s = next;
             }
-            Assert.Equal(new[] { 40, 70, 100, 130, 160 }, costs);
+            Assert.Equal(new[] { 40, 65, 90, 115, 140 }, costs); // alignment-7: the step is 25, not 30
             Assert.Equal(new[] { "quiet_friends", "sleeper_cells", "world_forgets", "red_altars", "scapegoats" }, s.Talents);
             var poor = At(24, influence: 39.0);
             Assert.Equal("Need 40 Influence.", GameEngine.TalentReason(poor, "red_altars"));
@@ -382,8 +382,8 @@ namespace Awakening.Core.Tests
             var s = At(40);
             var preview = GameEngine.PreviewAction(s, "manifest", "africa");
             Assert.Equal(6, preview.Awareness);
-            Assert.Equal("Up to 78 deniers and 60 unaware people become believers.", preview.Effect);
-            Assert.Equal("+15 Exposure and +6 awareness. New believers can strengthen resistance.", preview.Risk);
+            Assert.Equal("Up to 78 deniers and 60 unaware people become believers. Madness here +20 (20): each month it yields Madness/20 Dread and quickens a preparing site by Madness%.", preview.Effect);
+            Assert.Equal("+15 Exposure and +6 awareness. New believers can strengthen resistance. Madness draws occultists.", preview.Risk);
             var before = s.Regions["africa"].Population;
             var done = GameEngine.PerformAction(s, "manifest", "africa").State.Regions["africa"].Population;
             Assert.Equal(before.Deniers - 78, done.Deniers); Assert.Equal(before.Believers + 78 + 60, done.Believers);
@@ -404,11 +404,12 @@ namespace Awakening.Core.Tests
         [Fact]
         public void EachDifficultyStatesTheRulesItChanges()
         {
-            Assert.Equal("5 talent seals. An ignored occult society costs a site 6 months. Each burial costs 35 Influence more. Concealment's world effect rests 6 months.", GameData.Difficulties["normal"].Rule);
-            Assert.StartsWith("6 talent seals. An ignored occult society costs a site 5 months. Each burial costs 15", GameData.Difficulties["easy"].Rule);
+            Assert.Equal("Sites prepare in 24 months. 5 talent seals; talents cost 40 Influence, 25 more for each one taken. An ignored occult society costs a site 6 months. Each burial costs 35 Influence more. Concealment's world effect rests 6 months.", GameData.Difficulties["normal"].Rule);
+            Assert.StartsWith("Sites prepare in 20 months. 6 talent seals; talents cost 30 Influence, 20 more for each one taken. An ignored occult society costs a site 5 months. Each burial costs 15", GameData.Difficulties["easy"].Rule);
             Assert.EndsWith("Each burial costs 40 Influence more. Concealment's world effect rests 9 months.", GameData.Difficulties["hard"].Rule);
             Assert.Equal(new[] { 1.2, 1.0, 0.85 }, GameData.DifficultyIds.Select(d => GameData.Difficulties[d].Recruitment));
-            Assert.Equal(new[] { 1.0, 1.0, 1.25 }, GameData.DifficultyIds.Select(d => GameData.Difficulties[d].Pressure));
+            // alignment-7: the grace after obstructing or silencing takes rolls away; Normal's and Hard's pressure put the threats back.
+            Assert.Equal(new[] { 1.0, 1.45, 1.15 }, GameData.DifficultyIds.Select(d => GameData.Difficulties[d].Pressure));
         }
 
         // ---- Saves ----
@@ -477,7 +478,7 @@ namespace Awakening.Core.Tests
             var decoded = SaveData.DecodeSave(raw);
             Assert.NotNull(decoded); Assert.Null(decoded.State);
             Assert.Equal(55.0, decoded.Settings.Volume); Assert.Equal(new[] { "first-site" }, decoded.Settings.Hints); Assert.True(decoded.TutorialComplete);
-            Assert.Equal("Your unfinished run used older rules (alignment-4) and cannot continue under alignment-6. Settings and playtest records are kept; start a new run.",
+            Assert.Equal("Your unfinished run used older rules (alignment-4) and cannot continue under alignment-7. Settings and playtest records are kept; start a new run.",
                 SaveData.TakeRetiredNotice(decoded));
         }
 

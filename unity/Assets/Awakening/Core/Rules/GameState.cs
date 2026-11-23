@@ -31,6 +31,8 @@ namespace Awakening.Core.Rules
         /// <summary>Regions whose prepared sites carried the final rite when it began (empty before), so a destroyed one can still be named.</summary>
         public List<string> RiteSites = new List<string>();
         public int FinalProgress;
+        /// <summary>Rite months Dreams of R'lyeh carried forward by sacrifice (alignment-7; its TalentYield counts the Madness it spread).</summary>
+        public int DreamRiteMonths;
         public RegionMap Regions = new RegionMap();
         public List<LogEntry> Log = new List<LogEntry>();
         public int NextLogId;
@@ -64,6 +66,8 @@ namespace Awakening.Core.Rules
         public int ScatteredUntil;
         public double Exposure;
         public double Madness;
+        /// <summary>Month until which the threat rolls pass this region over, after obstructing or silencing here (alignment-7; 0 = none).</summary>
+        public int ThreatGraceUntil;
         public int BacklashUntil;
         public Dictionary<string, int> Cooldowns = new Dictionary<string, int>();
         public Site Site = new Site();
@@ -106,6 +110,8 @@ namespace Awakening.Core.Rules
         public bool Dormant;
         /// <summary>Preparation months the last ignored occult threat took, which Restore the site can still buy back (0 = nothing).</summary>
         public int Recoverable;
+        /// <summary>Extra preparation Madness has gathered toward the next whole month, 0 to 1 (alignment-7).</summary>
+        public double Quickening;
 
         public Site Clone()
         {
@@ -175,6 +181,10 @@ namespace Awakening.Core.Rules
         public double DreadSpent;
         public double UpkeepPaid;
         public int ThreatsCountered;
+        /// <summary>Dread that Madness yielded this run (alignment-7).</summary>
+        public double MadnessDread;
+        /// <summary>Extra preparation months sites gained from high Madness this run (alignment-7).</summary>
+        public int QuickenedMonths;
         public Dictionary<string, int> Revelations = new Dictionary<string, int>();
 
         public Telemetry Clone()

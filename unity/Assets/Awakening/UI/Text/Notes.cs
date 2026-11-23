@@ -576,7 +576,7 @@ namespace Awakening.UI
                 RegionState r = s.Regions[id];
                 if (!r.Site.Invested) continue;
                 bool ready = r.Site.Progress >= Balance.SiteMonths && Derived.Supported(r) && !r.Site.Dormant;
-                result.Checks.Add((ready, GameData.Regions[id].Name, Derived.SiteLabel(r)));
+                result.Checks.Add((ready, GameData.Regions[id].Name, Derived.SiteLabel(s, r)));
             }
             for (int i = 0; i < Math.Max(0, Balance.RequiredSites - sites.Count); i++) result.Checks.Add((false, "Unfunded site", "Never funded"));
             bool started = rite.Started || s.FinalProgress > 0;

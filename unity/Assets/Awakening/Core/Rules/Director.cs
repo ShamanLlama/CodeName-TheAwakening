@@ -20,7 +20,8 @@ namespace Awakening.Core.Rules
             int warning = Balance.ThreatWarningMonths + GameData.Difficulties[state.Difficulty].Warning
                 + (GameEngine.HasTalent(state, "quiet_friends") ? Balance.QuietFriendsWarning : 0)
                 + (r.Figure != null && r.Figure.Kind == "politician" && !r.Figure.Revealed ? 2 : 0);
-            string kind = ritual || r.Site.Invested ? "occult" : r.Public ? "raid" : "investigation";
+            // alignment-7: high Madness draws occultists to a hidden cell that has no site.
+            string kind = ritual || r.Site.Invested ? "occult" : r.Public ? "raid" : GameEngine.MadnessHigh(r) ? "occult" : "investigation";
             int severity = (int)Derived.ClampPct(1 + Math.Floor((r.Exposure + state.Awareness) / 60.0), 1, 3);
             r.Threat = new Threat { Kind = kind, DueMonth = state.ElapsedMonths + warning, Severity = severity };
             Derived.AddLog(state, GameData.ThreatNames[kind] + " in " + GameData.Regions[id].Name + F(". Respond within {0} months. If ignored: ", warning) + Threats.Describe(state, r));
@@ -80,7 +81,7 @@ namespace Awakening.Core.Rules
             bool hunt = SiteHunt(state);
             double believers = r.Population.Believers / Math.Max(1.0, Derived.LivePopulation(r));
             return (0.02 + r.Exposure / 500.0 + (r.Public ? 0.1 : 0.0) + (r.Site.Invested ? 0.12 : 0.0) + (hunt && r.Site.Invested ? Balance.FinaleSitePressure : 0.0)
-                + state.Awareness / 1500.0 + believers * 0.15 + r.Madness / 2000.0 + (state.ElapsedMonths >= Balance.MidgamePressureMonth ? Balance.MidgamePressure : 0.0))
+                + state.Awareness / 1500.0 + believers * 0.15 + r.Madness / Balance.MadnessPressureDivisor + (state.ElapsedMonths >= Balance.MidgamePressureMonth ? Balance.MidgamePressure : 0.0))
                 * GameData.Difficulties[state.Difficulty].Pressure * (0.6 + GameData.Regions[id].InstitutionalResistance / 150.0);
         }
         public static void Tick(GameState state)
@@ -92,7 +93,7 @@ namespace Awakening.Core.Rules
                 foreach (string id in GameData.RegionIds)
                 {
                     var r = state.Regions[id];
-                    if (r.Population.Followers <= 0 || r.Threat != null || r.Scattered) continue;
+                    if (r.Population.Followers <= 0 || r.Threat != null || r.Scattered || state.ElapsedMonths < r.ThreatGraceUntil) continue;
                     double pressure = ThreatPressure(state, id);
                     if (Random(state) < pressure) ScheduleThreat(state, id);
                 }

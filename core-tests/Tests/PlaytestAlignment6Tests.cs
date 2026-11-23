@@ -242,7 +242,7 @@ namespace Awakening.Core.Tests
             var events = Events(game);
             var start = events.First();
             Assert.Equal("capture_started", start["type"]);
-            Assert.Equal("alignment-6", O(start, "data")["ruleset"]);
+            Assert.Equal(Balance.Ruleset, O(start, "data")["ruleset"]);
             Assert.DoesNotContain(events, e => Equals(e["type"], "awakening_started"));
             Assert.Contains(events, e => Equals(e["type"], "rite_month"));
             Export(game, "alignment6-partial-rite");

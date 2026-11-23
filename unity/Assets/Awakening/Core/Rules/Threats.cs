@@ -29,7 +29,7 @@ namespace Awakening.Core.Rules
                 IncomeLost = destroysCell ? Derived.RegionIncome(region) : followers * Balance.InfluencePerFollower,
                 ExposureAdded = has ? Math.Min(5.0, 100.0 - region.Exposure) : 0.0,
                 InterruptsSite = has && region.Site.Invested && (remaining < Derived.SiteRequirement(region)
-                    || region.Site.Progress >= Balance.SiteMonths && region.Site.Progress - preparationLost < Balance.SiteMonths)
+                    || region.Site.Progress >= GameEngine.SiteMonths(state) && region.Site.Progress - preparationLost < GameEngine.SiteMonths(state))
             };
         }
         public static string Describe(GameState state, RegionState region)
