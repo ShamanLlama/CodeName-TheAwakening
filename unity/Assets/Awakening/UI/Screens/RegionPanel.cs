@@ -32,7 +32,7 @@ namespace Awakening.UI
         readonly ScrollView _scroll;
         readonly Label _scrollHint;
         readonly Stack _body;
-        readonly Label _file, _name, _stance;
+        readonly Label _file, _name, _stance, _grace;
         readonly VisualElement _stats;
         readonly Stack _people;
         readonly PopulationBar _population;
@@ -97,9 +97,14 @@ namespace Awakening.UI
             _file = Kit.Caption("", Palette.Faint);
             _name = Kit.Label("", Kit.Compact ? 32 : 36, Palette.Text, Fonts.Display);
             _stance = Kit.Caption("");
+            _grace = Kit.Body("", 12, Palette.Cult, Fonts.TypeBold);
+            _grace.name = "region-threat-grace";
+            _grace.tooltip = "After obstructing or silencing a threat, no new threats roll in this region while the grace lasts.";
+            Kit.SetVisible(_grace, false);
             titles.Add(_file);
             titles.Add(_name);
             titles.Add(_stance);
+            titles.Add(_grace);
             head.Add(titles);
             head.Add(new IconButton("close", "Close  (Esc)", () => _screen.Deselect(), true));
             _body.Add(head);
@@ -349,6 +354,9 @@ namespace Awakening.UI
             if (r.BacklashUntil > s.ElapsedMonths) stance += $"  ·  BACKLASH {r.BacklashUntil - s.ElapsedMonths} MO";
             _stance.text = stance;
             _stance.style.color = stanceColor;
+            int grace = !placing && !over ? GameEngine.ThreatGraceLeft(s, Region) : 0;
+            Kit.SetVisible(_grace, grace > 0);
+            if (grace > 0) _grace.text = $"Quiet for {Format.Months(grace)}";
             FillStats(s, r);
             _population.Population = r.Population;
             FillLegend(r);
@@ -390,7 +398,8 @@ namespace Awakening.UI
                 bool restoreHighlight = id == "restore" && r.Site.Invested && r.Site.Recoverable > 0 && restoreMonths > 0;
                 bool haltsRite = preview.Ok && Notes.RiskHaltsRite(preview);
                 bool dreamsActive = id == "sacrifice" && s.Status == "awakening" && GameEngine.HasTalent(s, "dreams_of_rlyeh") && s.FinalProgress < s.RiteMonthsRequired;
-                bool dreamAdvances = dreamsActive && preview.Ok && GameEngine.DreamAdvances(s, Region);
+                int dreamMonths = dreamsActive && preview.Ok ? GameEngine.DreamMonths(s, Region) : 0;
+                bool dreamAdvances = dreamMonths > 0;
                 row.button.EnableInClassList("aw-restore-ready", restoreHighlight);
                 row.button.EnableInClassList("aw-dream-ready", dreamAdvances);
                 row.button.EnableInClassList("aw-halts-rite", haltsRite);
@@ -437,14 +446,19 @@ namespace Awakening.UI
                 row.aware.style.color = showAware ? Palette.Danger : (showBuryGain || restoreHighlight) ? Palette.Cult : Palette.Warn;
                 row.aware.style.fontSize = !showAware && concealStamp != "" ? (Kit.Compact ? 12 : 11) : (Kit.Compact ? 14 : 12);
                 Kit.SetVisible(row.aware, subText != "");
-                string noteText = haltsRite ? "HALTS FINAL RITE"
-                    : dreamAdvances ? "+1 RITE MONTH"
-                    : dreamsActive && preview.Ok ? "NO RITE ADVANCE"
+                string madNote = preview.Ok && id == "manifest" ? $"+{Js.Num(Balance.ManifestMadness)} MADNESS"
+                    : preview.Ok && id == "sacrifice" ? $"+{Js.Num(GameEngine.SacrificeMadness(s))} MADNESS"
                     : "";
+                string noteText = haltsRite ? "HALTS FINAL RITE"
+                    : dreamAdvances ? $"+{dreamMonths} RITE {(dreamMonths == 1 ? "MONTH" : "MONTHS")}"
+                    : dreamsActive && preview.Ok ? "NO RITE ADVANCE"
+                    : madNote;
                 row.note.text = noteText;
-                row.note.style.color = haltsRite ? Palette.Danger : dreamAdvances ? Palette.Omen : Palette.Warn;
+                row.note.style.color = haltsRite ? Palette.Danger : (dreamAdvances || madNote != "") ? Palette.Omen : Palette.Warn;
                 row.note.style.fontSize = Kit.Compact ? 12 : 11;
                 Kit.SetVisible(row.note, noteText != "");
+                bool threeLines = subText != "" && noteText != "";
+                row.button.style.height = threeLines ? (Kit.Touch ? 62 : 52) : StyleKeyword.Null;
                 row.cost.style.color = !preview.Ok ? Palette.Warn : preview.Dread > 0 ? Palette.Omen : Palette.Text;
             }
             RefreshDetail();
@@ -465,7 +479,7 @@ namespace Awakening.UI
             var hints = new Dictionary<string, string>
             {
                 ["Exposure"] = "Evidence of the cult here. Raises threat severity. Public worship keeps it above 20%, a ritual site above 40%.",
-                ["Madness"] = "Left by manifestations. Speeds recruitment slightly and draws opposition. Fades over time.",
+                ["Madness"] = $"Raised by manifestations (+{Js.Num(Balance.ManifestMadness)}) and sacrifices (+{Js.Num(Balance.SacrificeMadness)}, ×{Js.Num(Balance.DreamsSacrificeMadness)} with Dreams of R'lyeh); fades {Js.Num(Balance.MadnessDecay)}/month.\nYields Madness/{Js.Num(Balance.MadnessDreadDivisor)} Dread/month and quickens a preparing site by Madness%.\nRaises threat pressure; at {Js.Num(Balance.MadnessHigh)}%+ draws occultists and +{Js.Num(Balance.MadnessAwareness)} world awareness/month.",
                 ["Site needs"] = "Followers a ritual site here must keep: a quarter of the region's people.",
                 ["Recruits"] = "Automatic recruitment each month.",
             };
@@ -475,9 +489,31 @@ namespace Awakening.UI
                 cell.style.width = Length.Percent(33.33f);
                 if (i >= 3) cell.style.marginTop = 6;
                 cell.tooltip = hints.TryGetValue(items[i].name, out string hint) ? hint : "";
+                if (items[i].name == "Madness") cell.name = "stat-madness";
                 cell.Add(Kit.Caption(items[i].name));
-                cell.Add(Kit.Label(items[i].value, 19, items[i].color, Fonts.BodyBold));
+                Label val = Kit.Label(items[i].value, 19, items[i].color, Fonts.BodyBold);
+                if (items[i].name == "Madness") val.name = "stat-madness-value";
+                cell.Add(val);
                 _stats.Add(cell);
+            }
+            string madnessText = GameEngine.MadnessText(s, Region);
+            if (!string.IsNullOrEmpty(madnessText))
+            {
+                bool high = GameEngine.MadnessHigh(r);
+                Stack madBox = Kit.VBox(0);
+                madBox.name = "madness-summary";
+                madBox.style.width = Length.Percent(100);
+                madBox.style.marginTop = 6;
+                madBox.style.backgroundColor = Palette.Alpha(Palette.Omen, high ? 0.12f : 0.07f);
+                madBox.style.borderLeftWidth = 3;
+                madBox.style.borderLeftColor = Palette.Omen;
+                madBox.style.paddingLeft = madBox.style.paddingRight = 8;
+                madBox.style.paddingTop = madBox.style.paddingBottom = 4;
+                madBox.tooltip = hints["Madness"];
+                Label madLine = Kit.Body("Madness · " + madnessText, Kit.Compact ? 12 : 13, high ? Palette.Omen : Palette.Text, Fonts.Italic);
+                madLine.name = "madness-text";
+                madBox.Add(madLine);
+                _stats.Add(madBox);
             }
         }
 
@@ -573,16 +609,26 @@ namespace Awakening.UI
             }
             if (r.Site.Invested)
             {
-                string state = Notes.SiteState(r);
+                int siteMonths = GameEngine.SiteMonths(s);
+                string state = Notes.SiteState(s, r);
                 Color accent = state == "ready" ? Palette.Cult : state == "preparing" ? Palette.Omen : Palette.Danger;
                 Stack box = Card(accent);
                 Stack head = Kit.HBox(8);
                 Label title = Kit.Label("Ritual Site", 21, accent, Fonts.DisplaySc);
                 title.style.flexGrow = 1;
                 head.Add(title);
-                head.Add(Kit.Label($"{r.Site.Progress} / {Balance.SiteMonths} MO", 15, accent, Fonts.TypeBold));
+                Label siteProg = Kit.Label($"{r.Site.Progress} / {siteMonths} MO", 15, accent, Fonts.TypeBold);
+                siteProg.name = "site-progress-label";
+                head.Add(siteProg);
                 box.Add(head);
-                box.Add(new Bar(Balance.SiteMonths, accent) { Value = r.Site.Progress });
+                box.Add(new Bar(siteMonths, accent) { Value = r.Site.Progress });
+                if (state == "preparing" && GameEngine.MadnessQuickens(s, Region))
+                {
+                    string haste = Js.Num(Js.RoundHalfUp(GameEngine.MadnessHaste(r) * 100));
+                    Label quick = Kit.Body($"Quickened by Madness (+{haste}% preparation speed).", 14, Palette.Omen, Fonts.Italic);
+                    quick.name = "site-madness-quickened";
+                    box.Add(quick);
+                }
                 if (state == "dormant")
                     box.Add(Kit.Body($"Dormant. Upkeep of {Js.Num(Balance.SiteUpkeep)} Influence a month is unpaid; it does not count for the rite.", 15, Palette.Danger, Fonts.Italic));
                 else if (r.Scattered)
@@ -629,7 +675,7 @@ namespace Awakening.UI
             if (opt.Ok)
             {
                 string detail = opt.Response == "silence"
-                    ? opt.Cost + " · +" + Js.Num(Balance.SilenceExposure) + " Exposure"
+                    ? opt.Cost + " · +" + Js.Num(Balance.SilenceExposure) + " Exposure · quiet " + Balance.ThreatGraceMonths + " mo"
                     : opt.Cost + " · " + Notes.ResponseNote(r, preview, opt.Response);
                 column.Add(Kit.Body(detail, 13, opt.Response == "silence" ? Palette.Danger : Palette.Muted, Fonts.Italic));
                 if (Notes.RiskHaltsRite(preview))
@@ -830,10 +876,13 @@ namespace Awakening.UI
             int recoverableMonths = _detailId == "restore" && _game.State != null ? GameEngine.RestoreMonths(_game.State, Region) : 0;
             int buryUses = _detailId == "bury" && _game.State != null ? _game.State.BuryUses : 0;
             bool hasDreams = _detailId == "sacrifice" && _game.State != null && GameEngine.HasTalent(_game.State, "dreams_of_rlyeh");
-            bool dreamAdvances = hasDreams && GameEngine.DreamAdvances(_game.State, Region);
+            int dreamMonths = hasDreams ? GameEngine.DreamMonths(_game.State, Region) : 0;
+            bool dreamAdvances = dreamMonths > 0;
+            int regMadness = _game.State != null && _game.State.Regions.ContainsKey(Region) ? (int)Math.Round(_game.State.Regions[Region].Madness, MidpointRounding.AwayFromZero) : 0;
+            double sacMadness = _game.State != null ? GameEngine.SacrificeMadness(_game.State) : Balance.SacrificeMadness;
             string shown = preview == null ? "" : string.Join("|", _detailId, Region, preview.Ok, preview.Reason, preview.Influence, preview.Dread,
                 preview.Followers, preview.Awareness, preview.Effect, preview.Risk, worldConcealCd, recoverableMonths, buryUses,
-                _game.State.Status, _game.State.FinalProgress, _game.State.RiteMonthsRequired, hasDreams, dreamAdvances);
+                _game.State.Status, _game.State.FinalProgress, _game.State.RiteMonthsRequired, hasDreams, dreamMonths, regMadness, sacMadness);
             if (shown == _detailShown && _detail.childCount > 0) return;
             _detailShown = shown;
             _detail.Clear();
@@ -861,6 +910,8 @@ namespace Awakening.UI
             if (price != "") _detail.Add(Kit.Label("COST  " + price, 13, preview.Dread > 0 ? Palette.Omen : Palette.Text, Fonts.TypeBold));
             // World awareness is a price too; it gets its own line so a long price never widens the file.
             if (preview.Awareness > 0) _detail.Add(Kit.Label(AwarenessText(preview).Replace("AWARENESS", "WORLD AWARENESS"), 13, Palette.Danger, Fonts.TypeBold));
+            if (_detailId == "manifest") _detail.Add(Kit.Label($"+{Js.Num(Balance.ManifestMadness)} MADNESS", 13, Palette.Omen, Fonts.TypeBold));
+            if (_detailId == "sacrifice") _detail.Add(Kit.Label($"+{Js.Num(sacMadness)} MADNESS", 13, Palette.Omen, Fonts.TypeBold));
             if (_detailId == "bury" && preview.Ok) _detail.Add(Kit.Label($"−{GameEngine.BuryAwareness(_game.State)} WORLD AWARENESS", 13, Palette.Cult, Fonts.TypeBold));
             if (_detailId == "restore" && recoverableMonths > 0) _detail.Add(Kit.Label($"+{recoverableMonths} PREPARATION MONTHS", 13, Palette.Cult, Fonts.TypeBold));
             if (_detailId == "conceal" && worldConcealCd > 0) _detail.Add(Kit.Label(Notes.ConcealGlobalStamp(_game.State), 13, Palette.Warn, Fonts.TypeBold));
@@ -875,10 +926,10 @@ namespace Awakening.UI
                 dreamBox.style.borderTopColor = dreamBox.style.borderBottomColor = dreamBox.style.borderRightColor = dreamBox.style.borderLeftColor = accent;
                 dreamBox.style.paddingLeft = dreamBox.style.paddingRight = 9;
                 dreamBox.style.paddingTop = dreamBox.style.paddingBottom = 6;
-                dreamBox.Add(Kit.Label(dreamAdvances ? "DREAMS OF R'LYEH · ADVANCES RITE +1 MO" : "DREAMS OF R'LYEH · DOES NOT ADVANCE", 12, accent, Fonts.TypeBold));
+                dreamBox.Add(Kit.Label(dreamAdvances ? $"DREAMS OF R'LYEH · ADVANCES RITE +{dreamMonths} MO" : "DREAMS OF R'LYEH · DOES NOT ADVANCE", 12, accent, Fonts.TypeBold));
                 dreamBox.Add(Kit.Body(
                     dreamAdvances
-                        ? $"Carries the final rite to {_game.State.FinalProgress + 1}/{_game.State.RiteMonthsRequired} months (+{Js.Num(Balance.DreamsAwareness)} world awareness)."
+                        ? $"Carries the final rite to {_game.State.FinalProgress + dreamMonths}/{_game.State.RiteMonthsRequired} months (+{Js.Num(Balance.DreamsAwareness)} world awareness)."
                         : "Three supported sites must stand after this sacrifice for the dream to carry the rite.",
                     14, Palette.Text, dreamAdvances ? Fonts.BodyBold : Fonts.Italic));
                 _detail.Add(dreamBox);

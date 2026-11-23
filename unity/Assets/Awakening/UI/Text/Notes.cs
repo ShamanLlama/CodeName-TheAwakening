@@ -51,8 +51,9 @@ namespace Awakening.UI
         };
 
         static int RiteMonths(GameState s) => s != null ? GameEngine.RiteMonthsFor(s) : Balance.FinalMonths;
+        static int SiteMonths(GameState s) => s != null ? GameEngine.SiteMonths(s) : Balance.SiteMonths;
         static int LatestStartFor(GameState s) => Balance.Deadline - RiteMonths(s);
-        static int LatestSiteStartFor(GameState s) => LatestStartFor(s) - Balance.SiteMonths;
+        static int LatestSiteStartFor(GameState s) => LatestStartFor(s) - SiteMonths(s);
         static bool IsRiteStartLog(LogEntry e) =>
             e.Message.StartsWith("The final rite begins.", StringComparison.Ordinal)
             || e.Message.StartsWith("The Great Procession begins:", StringComparison.Ordinal);
@@ -111,7 +112,7 @@ namespace Awakening.UI
             if (s == null || s.Status == "placing" || GameEngine.IsOver(s)) return "none";
             if (margin.Started) return "rite";
             if (!margin.Fits) return "doomed";
-            int latestSite = margin.LatestStart - Balance.SiteMonths;
+            int latestSite = margin.LatestStart - SiteMonths(s);
             bool tightMargin = margin.EarliestStart >= 0 && margin.Margin <= 6;
             bool tightUnfunded = margin.EarliestStart < 0 && latestSite - s.ElapsedMonths <= 24;
             bool anyStalled = margin.Sites.Any(site => !site.Supported || site.Scattered || s.Regions[site.Region].Site.Dormant);
@@ -165,7 +166,7 @@ namespace Awakening.UI
                     return $"{head}: {fmt(margin.EarliestStart)} · latest: {fmt(margin.LatestStart)} · margin −{-margin.Margin} mo (needs acceleration)";
                 return $"{head}: {fmt(margin.EarliestStart)} · latest: {fmt(margin.LatestStart)} · margin {mo(margin.Margin)}";
             }
-            int latestSite = margin.LatestStart - Balance.SiteMonths;
+            int latestSite = margin.LatestStart - SiteMonths(s);
             if (!margin.Fits)
                 return $"{head}: none ({margin.Sites.Count}/{Balance.RequiredSites} sites) · latest: {fmt(margin.LatestStart)} · window closed";
             if (s.ElapsedMonths > latestSite)
@@ -195,7 +196,12 @@ namespace Awakening.UI
             else if (!site.Supported) support = $"Unsupported (needs {Math.Max(1, site.Required - site.Followers)} more)";
             else support = "Supported";
             string prep = site.MonthsLeft == 0 ? "Prepared" : $"{Format.Months(site.MonthsLeft)} left";
-            return $"{regionName} · {Format.Count(site.Followers)}/{Format.Count(site.Required)} followers · {support} · {prep}";
+            string extra = "";
+            if (site.MonthsLeft > 0 && GameEngine.MadnessQuickens(s, site.Region))
+                extra += $" · quickened +{Js.Num(Js.RoundHalfUp(GameEngine.MadnessHaste(r) * 100))}%";
+            int grace = GameEngine.ThreatGraceLeft(s, site.Region);
+            if (grace > 0) extra += $" · quiet for {Format.Months(grace)}";
+            return $"{regionName} · {Format.Count(site.Followers)}/{Format.Count(site.Required)} followers · {support} · {prep}{extra}";
         }
 
         /// <summary>Detail text for an unfunded required site slot.</summary>
@@ -205,7 +211,7 @@ namespace Awakening.UI
         public static readonly Dictionary<string, string> TabDescriptions = new Dictionary<string, string>
         {
             ["CULT"] = "Grow cells, conceal or bury evidence, and answer threats.",
-            ["RITES"] = "Sacrifice for Dread, manifestations, and ritual sites.",
+            ["RITES"] = "Sacrifice for Dread, manifestations for Madness, and ritual sites.",
             ["OMENS"] = "Passing nightmares, eclipses, and prominent figures.",
         };
 
@@ -216,9 +222,10 @@ namespace Awakening.UI
             ["threat"] = ("A threat is coming", "The clipping on the left counts down to a strike. Obstruct it with Influence, scatter the cell for a few months, silence the witnesses with Dread, or accept the losses."),
             ["omen"] = ("An omen appeared", "The violet eye marks a short-lived opportunity. Open that region to use it before it fades."),
             ["talents"] = ("A talent seal has opened", ""),
-            ["sacrifice"] = ("Ritual sites take two years", "Sacrifice followers in the Rites tab for Dread, then Prepare a site in a region you hold firmly."),
+            ["sacrifice"] = ("Ritual sites take time", "Sacrifice followers in the Rites tab for Dread, then Prepare a site in a region you hold firmly."),
             ["awareness"] = ("The world is noticing", "World awareness slows you and ends the run at 100%. Conceal the evidence or Bury the record to lower it."),
             ["unsupported"] = ("A site stopped counting", "A struck seal stalls: its region needs more followers, its flock is scattered, or its upkeep went unpaid. Open the region to see which."),
+            ["madness"] = ("Madness takes hold", $"Each month Madness yields Madness/{Js.Num(Balance.MadnessDreadDivisor)} Dread and quickens a preparing site, fading {Js.Num(Balance.MadnessDecay)}/month. At {Js.Num(Balance.MadnessHigh)}% it draws occultists and raises world awareness."),
         };
 
         /// <summary>Dynamic wording for a contextual note; reads live numbers from state and GameData.</summary>
@@ -236,6 +243,12 @@ namespace Awakening.UI
                 int total = GameData.Difficulties[s.Difficulty].TalentSlots;
                 int cost = GameEngine.TalentCost(s);
                 return ("A talent seal has opened", $"Only {total} seals open in this run — the tree cannot be completed, and each middle pair closes the other. Open Talents in the ledger; the first costs {cost} Influence.");
+            }
+            if (id == "sacrifice")
+            {
+                int sm = SiteMonths(s);
+                string span = sm == 24 ? "two years" : Format.Months(sm);
+                return ($"Ritual sites take {span}", "Sacrifice followers in the Rites tab for Dread, then Prepare a site in a region you hold firmly. Madness also yields monthly Dread and quickens preparing sites.");
             }
             return Hints[id];
         }
@@ -325,12 +338,13 @@ namespace Awakening.UI
                 ["first_cell"] = true,
                 ["threat"] = regions.Any(r => r.Threat != null),
                 ["omen"] = regions.Any(r => r.Opportunity != null),
-                ["unsupported"] = regions.Any(r => r.Site.Invested && IsStalled(r)),
+                ["unsupported"] = regions.Any(r => r.Site.Invested && IsStalled(s, r)),
                 ["awareness"] = s.Awareness >= 30,
                 ["sacrifice"] = s.ElapsedMonths >= 24 && !regions.Any(r => r.Site.Invested),
                 ["talents"] = s.Talents.Count == 0 && GameEngine.TalentSlotsUnused(s) > 0,
+                ["madness"] = regions.Any(r => r.Population.Followers > 0 && r.Madness > 0),
             };
-            foreach (string id in new[] { "first_cell", "threat", "unsupported", "awareness", "sacrifice", "omen", "talents" })
+            foreach (string id in new[] { "first_cell", "threat", "unsupported", "awareness", "sacrifice", "omen", "talents", "madness" })
                 if (checks[id] && !seen(id)) return id;
             return "";
         }
@@ -339,16 +353,16 @@ namespace Awakening.UI
         /// One reading of a funded site for every place that shows it (card, map, seals, checklists):
         /// "dormant" (upkeep unpaid), "unsupported", "ready" or "preparing". Matches Derived.ReadySites.
         /// </summary>
-        public static string SiteState(RegionState r)
+        public static string SiteState(GameState s, RegionState r)
         {
             if (r.Site.Dormant) return "dormant";
             if (!Derived.Supported(r)) return "unsupported";
-            return r.Site.Progress >= Balance.SiteMonths ? "ready" : "preparing";
+            return r.Site.Progress >= SiteMonths(s) ? "ready" : "preparing";
         }
 
-        public static bool IsStalled(RegionState r)
+        public static bool IsStalled(GameState s, RegionState r)
         {
-            string state = SiteState(r);
+            string state = SiteState(s, r);
             return state == "dormant" || state == "unsupported";
         }
 
@@ -367,7 +381,7 @@ namespace Awakening.UI
             RiteMargin margin = Forecast.Margin(s);
             if (!margin.Fits) return RiteDoomedHeadline;
             var sites = AllRegions(s).Where(r => r.Site.Invested).ToList();
-            int unsupported = sites.Count(IsStalled);
+            int unsupported = sites.Count(r => IsStalled(s, r));
             if (Derived.NetInfluencePerMonth(s) < 0) return "Upkeep exceeds income";
             if (margin.EarliestStart >= 0)
             {
@@ -378,7 +392,7 @@ namespace Awakening.UI
             }
             if (unsupported > 0) return $"{unsupported} site{(unsupported == 1 ? "" : "s")} stopped counting";
             int missing = Balance.RequiredSites - sites.Count;
-            int latestSite = margin.LatestStart - Balance.SiteMonths;
+            int latestSite = margin.LatestStart - SiteMonths(s);
             if (latestSite - s.ElapsedMonths < 0) return "Too late for new sites without help";
             return $"Fund {missing} more site{(missing == 1 ? "" : "s")} soon";
         }
@@ -428,7 +442,7 @@ namespace Awakening.UI
         {
             switch (id)
             {
-                case "counter": return $"No obstruction here for {GameData.Actions["counter"].Cooldown} months";
+                case "counter": return $"No obstruction here for {GameData.Actions["counter"].Cooldown} months; quiet {Balance.ThreatGraceMonths} mo";
                 case "scatter": return "No growth or income" + (r.Site.Invested ? "; the site stalls" : "") + (r.Public ? "; worship goes underground" : "");
                 default: return "+" + Js.Num(preview.Awareness) + " world awareness";
             }
@@ -480,7 +494,7 @@ namespace Awakening.UI
                     case "exploit":
                         if (r.Opportunity == null || (r.Opportunity.Kind != "nightmare" && r.Opportunity.Kind != "eclipse"))
                             found = ("NEEDS AN OMEN", "Requires an active nightmare or eclipse.");
-                        else if (r.Opportunity.Kind == "eclipse" && (!r.Site.Invested || r.Site.Progress >= Balance.SiteMonths))
+                        else if (r.Opportunity.Kind == "eclipse" && (!r.Site.Invested || r.Site.Progress >= SiteMonths(s)))
                             found = ("NEEDS A SITE", "An eclipse needs an unfinished ritual site.");
                         break;
                     case "convert":
@@ -555,7 +569,8 @@ namespace Awakening.UI
             var result = new Ending { Fact = DatedFact(s) };
             RiteStatus rite = Forecast.Rite(s);
             int req = rite.Started ? rite.Required : RiteMonths(s);
-            int latestSite = Balance.Deadline - req - Balance.SiteMonths;
+            int siteMonths = SiteMonths(s);
+            int latestSite = Balance.Deadline - req - siteMonths;
             if (s.Status == "won")
             {
                 result.Cause = s.RiteMonthsRequired < Balance.FinalMonths
@@ -575,7 +590,7 @@ namespace Awakening.UI
             {
                 RegionState r = s.Regions[id];
                 if (!r.Site.Invested) continue;
-                bool ready = r.Site.Progress >= Balance.SiteMonths && Derived.Supported(r) && !r.Site.Dormant;
+                bool ready = r.Site.Progress >= siteMonths && Derived.Supported(r) && !r.Site.Dormant;
                 result.Checks.Add((ready, GameData.Regions[id].Name, Derived.SiteLabel(s, r)));
             }
             for (int i = 0; i < Math.Max(0, Balance.RequiredSites - sites.Count); i++) result.Checks.Add((false, "Unfunded site", "Never funded"));
@@ -589,17 +604,17 @@ namespace Awakening.UI
             {
                 int nextCost = Balance.SiteDreadCosts[Math.Min(sites.Count, Balance.SiteDreadCosts.Length - 1)];
                 issues.Add(($"Only {sites.Count} of 3 ritual sites were funded.",
-                    $"Fund sites earlier. Each needs 24 months, then the rite needs {req}; the last safe start is {Format.Date(latestSite)}."
+                    $"Fund sites earlier. Each needs {Format.Months(siteMonths)}, then the rite needs {req}; the last safe start is {Format.Date(latestSite)}."
                     + (s.Dread < nextCost ? $" Bank Dread by sacrifice: the next site costs {nextCost}." : "")));
             }
             if (sites.Any(r => !Derived.Supported(r)))
                 issues.Add(($"{Derived.ReadySites(s)} of 3 sites were ready; others lost the followers they need.",
                     "Build sites in small regions, where a quarter of the people is easier to hold, and obstruct threats there."));
-            if (sites.Any(r => Derived.Supported(r) && r.Site.Progress < Balance.SiteMonths))
+            if (sites.Any(r => Derived.Supported(r) && r.Site.Progress < siteMonths))
                 issues.Add(("The sites were not finished in time.",
-                    $"Start preparation by {Format.Date(latestSite)}, or speed it with eclipses and revealed figures."));
+                    $"Start preparation by {Format.Date(latestSite)}, or speed it with Madness, eclipses and revealed figures."));
             if (!started && s.Dread < Balance.FinalDread)
-                issues.Add(("The rite needed 100 Dread.", "Bank 100 Dread before September 1924; sacrifice and nightmares give Dread."));
+                issues.Add(("The rite needed 100 Dread.", "Bank 100 Dread before September 1924; sacrifice, Madness and nightmares give Dread."));
             if (issues.Count == 0)
                 issues.Add(("The sites were ready, but the rite was not begun in time.", $"Begin the final rite as soon as the stars are right; it needs {req} months."));
             result.Cause = s.ResultCode == "conceded"
@@ -615,7 +630,7 @@ namespace Awakening.UI
             RiteStatus rite = Forecast.Rite(s);
             int req = rite.Started ? rite.Required : RiteMonths(s);
             int latestStart = Balance.Deadline - req;
-            int latestSite = latestStart - Balance.SiteMonths;
+            int latestSite = latestStart - SiteMonths(s);
 
             if (s.Status == "won")
             {

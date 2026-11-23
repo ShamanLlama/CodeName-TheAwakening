@@ -107,9 +107,10 @@ namespace Awakening.UI
             var rank = new Dictionary<string, int> { ["ready"] = 3, ["preparing"] = 2, ["unsupported"] = 1, ["dormant"] = 0 };
             sites.Sort((a, b) =>
             {
-                int ra = rank[Notes.SiteState(a)], rb = rank[Notes.SiteState(b)];
+                int ra = rank[Notes.SiteState(_state, a)], rb = rank[Notes.SiteState(_state, b)];
                 return ra != rb ? rb.CompareTo(ra) : b.Site.Progress.CompareTo(a.Site.Progress);
             });
+            int siteMonths = _state != null ? GameEngine.SiteMonths(_state) : Balance.SiteMonths;
             for (int i = 0; i < Balance.RequiredSites; i++)
             {
                 var c = new Vector2(16 + i * 38, contentRect.height * 0.5f);
@@ -120,7 +121,7 @@ namespace Awakening.UI
                     continue;
                 }
                 RegionState r = sites[i];
-                string state = Notes.SiteState(r);
+                string state = Notes.SiteState(_state, r);
                 bool ready = state == "ready";
                 Color color = state == "ready" ? Palette.Cult : state == "preparing" ? Palette.Omen : Palette.Danger;
                 if (ready)
@@ -130,7 +131,7 @@ namespace Awakening.UI
                 }
                 else
                 {
-                    float fill = (float)r.Site.Progress / Balance.SiteMonths;
+                    float fill = (float)r.Site.Progress / siteMonths;
                     float level = c.y + 13 - 26 * fill;
                     List<Vector2> below = Draw2D.ClipBelow(seal, level);
                     if (below.Count >= 3) Draw2D.Polygon(p, below, Palette.Alpha(color, 0.6f));

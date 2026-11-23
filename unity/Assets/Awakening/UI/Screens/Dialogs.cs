@@ -171,11 +171,12 @@ namespace Awakening.UI
         {
             _width = 620;
             Title("How the Awakening Works");
+            int siteMonths = _game.State != null ? GameEngine.SiteMonths(_game.State) : Balance.SiteMonths;
             var steps = new[]
             {
                 ("Grow", "Cells recruit and earn Influence. Spread to neighbouring regions."),
-                ("Sacrifice", "Followers become Dread, which pays for the rites."),
-                ("Build three sites", "Each takes 24 months and needs a quarter of its region as followers."),
+                ("Sacrifice", "Followers become Dread for the rites. Sacrifices and manifestations leave Madness: monthly Dread and faster sites, but occultists notice."),
+                ("Build three sites", $"Each takes {Format.Months(siteMonths)} and needs a quarter of its region as followers."),
                 ("Stay hidden", "Answer each threat: obstruct it, scatter the cell or silence the witnesses. Conceal evidence or bury the record. At 100% world awareness the run is lost."),
                 ("Awaken", "From September 1924, spend 100 Dread and hold three sites for 12 months."),
             };
@@ -533,9 +534,9 @@ namespace Awakening.UI
                     );
                 case "dreams_of_rlyeh":
                     return (
-                        "Sacrifice during final rite with 3 supported sites left",
-                        "+1 month final rite progress per sacrifice",
-                        $"+{Js.Num(Balance.DreamsAwareness)} world awareness per advancing sacrifice"
+                        $"Passive from {Js.Num(Balance.DreamsSpreadFrom)}+ Madness; sacrifice in final rite with 3 sites left",
+                        $"Sacrifices leave ×{Js.Num(Balance.DreamsSacrificeMadness)} Madness; +{Js.Num(Balance.DreamsSpread)}/mo to neighbouring cells; +1 rite mo ({Balance.DreamsMadRiteMonths} at {Js.Num(Balance.DreamsRiteMadness)}+ Madness)",
+                        $"+{Js.Num(Balance.DreamsAwareness)} world awareness per rite sacrifice; spreading Madness draws occultists"
                     );
                 default:
                     return ("", "", "");
