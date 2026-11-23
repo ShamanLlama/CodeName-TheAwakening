@@ -32,6 +32,72 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
 | 0.3.0 | 2026-11-02 | `85f5905`; exportada desde `dbfb07f` | `alignment-2` | `awakening-1` | «0.3.0 playtest por invitación · decisiones económicas», cerrada el mismo día sin partidas | Reemplazada por 0.3.1 |
 | 0.2.0 | 2026-10-30 / 2026-10-31 | `ae38ec0`; adaptador E4–E6 en `6aa2419` | `alignment-1` | `awakening-1` | QA técnica E7 y «E7 piloto interno de gameplay» (abierta hasta 2026-11-09) | Reemplazada en itch.io por 0.3.0 el 2026-11-02 |
 
+### 0.9.0 — Madness como recurso, respiro tras responder y Easy con margen
+
+- **Commit:** integra en `main` las ramas `t3/madness-dreams-threat-grace` (`c93d5e4`), `t3/awakening-6-alignment-7` (`39f3021`) y `t3/surface-madness-ui` (`2692fdd`, merge `e6fc19b`).
+  - La hicieron tres agentes: Claude Opus 5.5 (reglas y bot), GPT‑6.1 Sol (telemetría y Lab) y Gemini 4 Neon (interfaz). Claude integró y verificó.
+- **Motivo:** dos partidas humanas con 0.8.0 (2026-11-22), una en Normal y otra en Easy, las dos con Harbinger.
+  - El jugador se rindió en los meses 199 y 200 sin empezar el rito: no le alcanzaba para tener tres sitios listos. Sabía del límite de financiación del mes 188.
+  - El Dread se fue en silenciar y no en sitios. En Easy la Influence no alcanzó para talentos: tomó uno y dejó cinco sellos sin usar.
+  - Cinco amenazas ocultistas cayeron sobre regiones con sitio entre 2 y 12 meses después de contrarrestar o silenciar ahí. Con las dos respuestas en espera, solo quedaba dispersar, y cada dispersión frenó el sitio 8 meses.
+  - Dreams of R'lyeh rindió 0 porque solo actuaba durante el rito.
+  - El jugador señaló que Madness se mostraba pero no hacía nada: +4 % de reclutamiento y +0,01 de presión con 20 de Madness.
+- **Reglas (`alignment-7`):**
+  - **Madness como recurso regional (0–100):**
+    - Manifestar suma +20 y sacrificar +10. Baja 1 por mes (antes 0,3).
+    - Cada mes la región rinde Madness/20 de Dread, dentro del tope de Dread.
+    - Un sitio en preparación gana Madness/100 meses extra por mes; con 50, un mes cada dos.
+    - Precio: la presión de amenaza suma Madness/400 (antes /2000). Desde 50, las amenazas nuevas contra una célula oculta sin sitio son ocultistas y la región suma +0,05 de awareness mundial por mes.
+  - **Dreams of R'lyeh rehecho:** los sacrificios dejan el doble de Madness, y cada mes cada región con 30 o más da +2 de Madness a cada vecina con célula. Durante el rito, cada sacrificio que deja tres sitios con apoyo adelanta el rito un mes, o dos donde la Madness es 30 o más.
+  - **Respiro:** después de contrarrestar o silenciar, la región no recibe amenazas nuevas durante 5 meses.
+  - **Dificultad:**
+    - Normal: presión ×1,45 (antes ×1,0), para compensar el respiro; las amenazas por partida vuelven al nivel de `alignment-6`.
+    - Hard: presión ×1,15 (antes ×1,25). Queda por debajo de Normal a propósito, porque con ×1,25 el culto público ganaba 2/48; Hard sigue siendo más difícil por sus sellos, recursos y avisos.
+    - Easy: sitios de 20 meses (antes 24) y talentos de 30 + 20 por talento tomado.
+    - Normal y Hard: el paso del costo de talentos baja de 30 a 25 (40, 65, 90…).
+  - Las partidas sin terminar de `alignment-6` se retiran con aviso; los ajustes se conservan.
+- **Playtest (`awakening-6`):**
+  - `month_snapshot` suma `madness` (por región con culto), `madness_dread` y `quickened_sites`.
+  - `action_performed` de `manifest` y `sacrifice` suma `madness_after`.
+  - `threat_resolved` suma `grace_months` (0 salvo al contrarrestar o silenciar).
+  - `first_site_ready` usa los meses de sitio de la dificultad, así que ahora también se emite en Easy.
+  - Contrato en `GTC-page/gtc-web/contracts/playtests/awakening-6/` (migración `0013`). Los resúmenes del Lab muestran Madness media y máxima, Dread de Madness, sitios acelerados y respiros.
+- **Interfaz:**
+  - **Mapa:** las regiones con Madness muestran «MAD N%» y un tinte violeta; los sitios acelerados llevan un sello «>>».
+  - **Libro mayor:** bajo el Dread, «+N/mo from Madness».
+  - **Expediente de región:** una línea que dice qué hace la Madness ahí (Dread por mes, sitio más rápido, ocultistas, awareness), «Quiet for N months» durante el respiro y «Quickened by Madness» en la tarjeta del sitio.
+  - **Acciones:** manifestar y sacrificar muestran la Madness que dejan; en el rito, sacrificar muestra si adelanta uno o dos meses.
+  - Todos los textos de meses de sitio usan el valor de la dificultad.
+- **Medición:**
+  - `dotnet test core-tests/Tests`: 310/310, antes 271.
+  - `UiChecks`: `UI_CHECKS_PASSED`, con Madness, respiro y sitios de 20 meses en Easy.
+  - `unity/layout-check.sh`: 60/60.
+  - GTC: 706 pruebas aprobadas y 16 omitidas por requerir PostgreSQL; playtests 165 aprobadas y 9 omitidas. Validador: 91 lotes válidos (12 exportados del juego real) y 175 rechazos comprobados.
+  - **Bot, 48 semillas por política:**
+
+    | Dificultad | `alignment-6` → `alignment-7` | early (Congregation) | late (Hidden hand) | terror (Harbinger, Madness) |
+    | --- | --- | --- | --- | --- |
+    | Normal | 80 → 83/144 | 22 → 27 | 31 → 35 | 27 → 21 |
+    | Easy | 135 → 142/144 | 44 → 48 | 47 → 48 | 44 → 46 |
+    | Hard | 17 → 47/144 | 0 → 4 | 14 → 31 | 3 → 12 |
+
+    Con 144 semillas por política, Normal da 76, 107 y 65, unos 83 de 144.
+  - **Remates en Normal:** The Great Procession en 32 partidas (27 ganadas), The world forgets en 22 (17), Dreams of R'lyeh en 25 con 110 meses de rito adelantados (21).
+  - **Meses de sitio ganados por Madness** (total en 48 partidas, early/late/terror): Normal 112/1/87, Easy 92/0/448, Hard 94/2/84.
+  - Todas las políticas del bot silencian solo hasta 50 de awareness antes del mes 200 (antes 75). La política terror sacrifica y manifiesta en las regiones de sus sitios.
+- **Riesgos:**
+  - El respiro es la palanca más fuerte de esta build: con 4 meses Normal daba 50/144 y con 6, 93/144.
+  - Hard subió de 17 a 47/144; la política late gana casi lo mismo que en Normal (31 contra 35).
+  - En Easy, la Madness de terror se dispara: Dread al tope y awareness mediana de 93.
+  - Hidden hand sigue siendo la rama más fuerte para el bot.
+  - Falta ver si los jugadores usan la Madness a propósito.
+- **Qué mirar en esta ronda:**
+  - Si el jugador manifiesta o sacrifica para subir la Madness cerca de sus sitios.
+  - Cuántos meses de sitio da la Madness y cuántas amenazas ocultistas atrae.
+  - Si el respiro evita las dispersiones encadenadas sobre los sitios.
+  - Si Easy se siente fácil y si alcanza la Influence para talentos.
+- **Límites:** sin jugadores externos ni teléfono físico todavía; las capturas son del ejecutable de desarrollo Linux.
+
 ### 0.8.0 — remates que cambian la partida, rito detenido visible y Normal más exigente
 
 - **Commit:** `a72528e`. Integra en `main` las ramas `t3/alignment-6-ruleset-bot`, `t3/awakening-5-game-telemetry` y `t3/talent-ui-capstones-rite`.
