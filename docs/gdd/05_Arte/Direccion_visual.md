@@ -1,62 +1,58 @@
 # Dirección visual
 
-**Versión:** 0.3 · **Fecha:** 2026-11-18 · **Estado:** dirección de época confirmada; legibilidad por validar.
+**Versión:** 0.4 · **Fecha:** 2026-11-25 · **Estado:** dirección de época confirmada (D09); arte procedural actual marcado explícitamente como **temporal** (D06).
 
-## Lenguaje visual actual
+## Dirección estética confirmada (D09)
 
-Dirección confirmada el 2026-10-30: el archivo secreto de un culto sobre un escritorio
-iluminado por una lámpara, entre 1908 y 1926. El mapa es una carta de navegación antigua:
-mar oscuro dentro de un marco con doble filete, tierra en pergamino manchado, rosa de los
-vientos y la marca de R'lyeh en el Pacífico Sur. Cada panel es un documento: expediente
-(región), recortes de prensa (amenazas), telegramas (avisos), libro mayor (barra inferior)
-y hojas impresas con marco (diálogos). Todo se dibuja mediante código, sin texturas
-incluidas en la build: en Unity el mapa se traza con `Painter2D`, y el grano del papel y la
-luz de la lámpara se generan al iniciar como texturas en memoria. En Godot (0.2.0–0.4.0)
-eran shaders; el aspecto es el mismo, con métrica de fuentes y textura del papel algo
-distintas.
+El archivo secreto de un culto sobre un escritorio iluminado por una lámpara entre **1908 y
+1926**. El mapa es una carta de navegación antigua (mar oscuro, doble filete, pergamino,
+rosa de los vientos y marca de R'lyeh en el Pacífico Sur) y cada panel funciona como un
+documento físico: expediente (región), recortes de prensa (amenazas), telegramas (avisos),
+libro mayor (barra inferior) y hojas impresas (diálogos y árbol de talentos).
 
-El calendario muestra fechas reales: la partida empieza en enero de 1908, la alineación
-se abre en septiembre de 1924 y se cierra en septiembre de 1926, alrededor del 23 de marzo
-de 1925, la noche en que R'lyeh emerge en *The Call of Cthulhu*. Solo cambia la
-presentación; las reglas cuentan meses como antes.
+El tono de época vive en el marco; los nombres de las mecánicas no cambian. La paleta asigna
+un acento semántico por función (verdín para el culto, sangre de buey para peligro, violeta
+para presagios/Dread/Madness, ocre para advertencias) en
+[Palette.cs](../../../unity/Assets/Awakening/UI/Kit/Palette.cs). Tipografía actual:
+IM Fell English, Old Standard TT y Courier Prime.
 
-El tono de época se limita al marco: los nombres de las mecánicas (Influence, Dread,
-Followers, Obstruct) no cambian. Tipografía: IM Fell English para títulos, Old Standard TT
-para el texto y Courier Prime para los datos mecanografiados.
+## Base temporal implementada (0.5.0–0.9.0)
 
-La paleta asigna un acento por significado, con una tinta para el papel y un tono claro
-para lo oscuro: verdín para el culto, sangre de buey para el peligro, violeta para
-presagios y Dread, ocre para advertencias. Los valores exactos pertenecen a
-[Palette](../../../unity/Assets/Awakening/UI/Kit/Palette.cs).
+Todo el prototipo actual se dibuja mediante código en Unity UI Toolkit (`Painter2D` para el
+mapa, grano de papel y luz de lámpara generados en memoria al iniciar), sin ilustraciones ni
+assets artísticos dedicados. Incluye indicadores legibles en mapa para seguidores, alertas,
+regiones con `Madness` (`MAD N%`, velado violeta) y sitios acelerados (anillo y `>>`).
 
-Legibilidad (0.5.1): los nombres y cuentas atrás del mapa llevan una copia de papel
-detrás de la tinta, y los seguidores, fichas de papel opaco; las manchas grandes del papel
-se atenuaron. Los botones y las cifras usan Old Standard o Courier Prime.
+## Plan de arte final (D06 y D26 — futuro)
 
-## Función visual propuesta
+**Decisión confirmada el 2026-11-25:** el arte procedural actual es **temporal**. El objetivo
+es contratar artistas profesionales para llevar la identidad visual a calidad de lanzamiento:
 
-- Hacer reconocible la región seleccionada, su situación y sus amenazas.
-- Separar evidencia local, conocimiento global y preparación ritual mediante
-  etiquetas y señales además del color.
-- Mantener visibles los plazos mientras los efectos del mapa aportan atmósfera.
+- **En Camino 2 (Unity Fellowship de 50.000 USD):** contratar **1 diseñador gráfico /
+  ilustrador** (equipo en Ecuador: **$3.000 USD · 2 meses**) para cubrir con una sola línea
+  visual coherente tanto la UI como las ilustraciones del juego, con alcance cerrado para no
+  salirse del presupuesto:
+  1. **UI del archivo 1908–1926:** piezas reutilizables 9-slice para expedientes, libro mayor,
+     recortes de amenazas, marco del árbol de talentos, 16 iconos de acciones, 12+ iconos y
+     sellos de talentos, estampas de amenazas/presagios y medidores, conservando el layout ya
+     validado (60/60 combinaciones escritorio/táctil).
+  2. **Arte e ilustraciones del juego:** carta cartográfica ilustrada, emblemas/presencias de
+     los **3 Old Gods** (Cthulhu, Nyarlathotep y Shub-Niggurath), **feedback visual progresivo
+     de horror** (capas/viñetas al subir `Awareness` y `Madness`), 4–6 ilustraciones de
+     finales/despertar y viñetas para eventos escritos futuros (D13).
+- **En Camino 1 (sin grant):** mantener la base visual actual pulida (o con mejoras puntuales
+  de bajo coste) para cerrar una experiencia completa de Cthulhu en itch.io.
 
-Estas son prioridades propuestas para revisión; no constituyen una auditoría de
-legibilidad ni de accesibilidad ya superada.
+## Principios que el arte final debe preservar
 
-## Producción y decisiones abiertas
+- Reconocer de un vistazo la región seleccionada, sus amenazas, su `Madness` y los sitios
+  detenidos o acelerados.
+- No depender únicamente del color para estados críticos (etiquetas, símbolos y jerarquía).
+- Mantener legibles todos los plazos a 1280×720, 1600×900 y pantallas compactas.
 
-Confirmar si el dibujo procedural es una elección final o temporal, qué identidad
-debe tener el culto y cómo representar el despertar. Ilustraciones, retratos,
-animaciones y cinemáticas requieren una decisión de alcance antes de abrir fichas.
-No se hereda como requisito artístico la dirección de la marca GTC: GTC aporta
-la plantilla documental y este juego pertenece a Lucid Labworks Studio.
-
-**Propuesta de revisión:** comparar inicio, desarrollo y rito a 1280×720 y 1600×900.
-Pedir a una persona que localice el peligro más urgente y un sitio interrumpido.
-Revisar color, tamaño y animación según el resultado.
-
-Fuentes: [mapa](../../../unity/Assets/Awakening/UI/Map/WorldMap.cs), [paleta](../../../unity/Assets/Awakening/UI/Kit/Palette.cs),
-[papel](../../../unity/Assets/Awakening/UI/Kit/PaperGrain.cs), [README de Unity](../../../unity/README.md) y licencias
-tipográficas en [Licenses](../../../unity/Assets/Awakening/Licenses/).
+Fuentes: [WorldMap.cs](../../../unity/Assets/Awakening/UI/Map/WorldMap.cs),
+[Palette.cs](../../../unity/Assets/Awakening/UI/Kit/Palette.cs),
+[PaperGrain.cs](../../../unity/Assets/Awakening/UI/Kit/PaperGrain.cs) y licencias en
+[Licenses](../../../unity/Assets/Awakening/Licenses/).
 
 [Volver al índice](../README.md)

@@ -1,99 +1,81 @@
-# 04 — Visibility and awareness
+# 04. Visibilidad, exposición y awareness
 
-> **`alignment-6` (2026-11-22, juego 0.8.0):** salen Bought press y A faith among faiths. El efecto de A faith among faiths pasa a **Open worship**, solo para las células públicas: el mundo deja de contar a sus seguidores al sumar awareness por el tamaño del culto. **The world forgets** (remate de Hidden hand, una vez por partida) baja 25 de awareness mundial. **The Great Procession** suma +0,3 de awareness por región pública y por mes mientras dura el rito acortado. **Dreams of R'lyeh** suma +2 por cada sacrificio que adelanta el rito. Siguen bajando la awareness Scapegoats, The world forgets, enterrar y ocultar. Véase [Experiencia y loops](02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-6--2026-11-22).
+**Estado:** consolidado sobre `alignment-7` (Unity `0.9.0` / `0.9.1`). Fuente de verdad en código: `Balance.cs`, `Derived.cs`, `GameEngine.cs`.
 
-> **`alignment-5` (2026-11-21, juego 0.7.0):** hay un segundo freno: **enterrar el registro** (`bury`) baja 5 de awareness al momento, en cualquier región con célula, por 50 de Influence + 25 por cada uso anterior, con +8 de exposición local y 6 meses de cooldown regional. No comparte el descanso mundial de ocultar, que en Hard es de 9 meses. Nodos del árbol: Bought press (enterrar baja 8 y sube la mitad de rápido), Scapegoats (una amenaza que cae baja 1 de awareness por severidad), A faith among faiths (el tamaño del culto suma la mitad) y Mute witnesses (silenciar suma 2 por severidad). **Open worship** cambia el culto público: hacerse público no suma awareness, las células públicas no suman awareness mensual, reclutan ×2,5 y el lastre no las frena. **Mysticism** cambia lo que cuesta manifestar: `8 × (1 − (Mysticism − 50)/100)` de awareness, de 6 en África a 10 en Europa. Véase [Experiencia y loops](02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-5--2026-11-21).
->
-> **`alignment-4` (2026-11-21):** `conceal` sigue quitando hasta 25 de exposición en su región, con 12 meses de cooldown regional, pero su −3 de awareness mundial descansa 6 meses en todo el mundo después de usarse (`WorldConcealReadyAt`). Mientras descansa, ocultar cuesta solo las 20 de Influence base y limpia solo la evidencia local. El freno de la sección "The only brake" ya no escala con el número de células: como mucho, 6 puntos de awareness por año en lugar de 24 con 8 células. Véase [Experiencia y loops](02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-4--2026-11-21).
->
-> **`alignment-3` (2026-11-12):** `reveal` suma +5 de awareness solo la primera vez que una región se hace pública, `silence` suma +3 por severidad y toda acción informa la awareness que suma como parte de su precio. Véase [Experiencia y loops](02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-3--2026-11-12).
->
-> **`alignment-2` (2026-11-02):** `conceal` quita 3 de awareness por 20 + la mitad de la awareness actual, y se puede usar en el mínimo de exposición si hay awareness. "The only brake" ya no tiene un techo fijo: el límite es la Influence. Véase [Experiencia y loops](02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-2--2026-11-02). El resto de este capítulo describe `alignment-1`.
+El juego separa dos medidores distintos. Confundirlos es el error de lectura más frecuente:
 
-Two separate meters. Confusing them is the most common way to misread the game.
-
-| | **Exposure** | **Awareness** |
+| | **Exposure (Exposición)** | **Awareness (Conocimiento global)** |
 | --- | --- | --- |
-| Scope | Per region | Global |
-| Represents | Local evidence | What humanity collectively knows |
-| Range | 0–100 | 0–100 |
-| Drives | Threat frequency and severity in that region | Income, recruitment, threat severity — and defeat |
-| Reduced by | `conceal` and hidden-cell drift toward its floor | `conceal`; shrinking the cult reduces future growth only |
-| Fatal? | No | **Yes, at 100** |
+| Alcance | Por región | Global (todo el mundo) |
+| Qué representa | Evidencia local | Cuánto sabe la humanidad sobre el culto |
+| Rango | 0–100 | 0–100 |
+| Efecto | Frecuencia y severidad de amenazas locales | Frena ingresos y reclutamiento (`AwarenessDrag`), eleva severidad y **causa derrota** |
+| Cómo baja | `conceal`, `scatter` (−10) y deriva natural de células ocultas hasta su piso | `conceal` (con descanso mundial), `bury`, *Scapegoats* y *The world forgets*. Sacrificar solo reduce su crecimiento futuro |
+| ¿Es fatal? | No | **Sí, derrota inmediata al llegar a 100** |
 
-## Exposure
+## Exposición regional (`Exposure`)
 
-Regional evidence. It rises with what you do there and drifts with what you are.
+Sube con tus acciones en la región (reclutar poco, enterrar +8, silenciar +6, restaurar +10,
+sacrificar +12, manifestar/hacerse público/sitios y revelar figuras mucho) y deriva cada mes:
+las células públicas acumulan exposición; las ocultas la pierden lentamente hasta su **piso**.
 
-**Floors.** Exposure cannot be concealed below a floor set by what is visibly happening:
-a funded ritual site imposes a high floor, public worship a lower one, and an underground
-cell none. This is why `conceal` reports "public worship and rituals retain an evidence
-floor" — **a ritual site is permanently conspicuous** and there is no way to hide one.
+**Pisos de evidencia:** una célula clandestina sin sitio puede bajar hasta 0; el culto público
+impone un piso intermedio y un **sitio ritual financiado impone un piso alto permanente** (un
+sitio nunca puede ocultarse por completo). La exposición alimenta tanto la probabilidad de
+amenaza como su **severidad (1–3)**.
 
-**Drift.** A public cell accumulates exposure every month; a hidden one slowly sheds it,
-down to its floor (`advanceSimulation`, `src/game/engine.ts:186`).
+## Awareness mundial (condición de derrota)
 
-**Actions add exposure** roughly in proportion to how brazen they are: recruiting a little,
-sacrifice more, manifesting and revealing a lot, unmasking a converted figure most.
+Es la condición de derrota contra el crecimiento codicioso. Sube por tres vías:
 
-Exposure feeds two things: the director's per-region threat pressure, and **threat
-severity**, which is what sets the price of obstructing it.
+1. **Tamaño del culto (`Derived.CultShare`):** cada mes suma `cultShare × 1,5`
+   (`Balance.AwarenessPerCapita`). Con el talento **Open worship**, los seguidores de las
+   células públicas dejan de contarse en este término (`Derived.OpenWorshipShare`).
+2. **Actos llamativos (mostrados como precio rojo en la UI vía `GameEngine.AwarenessCost`):**
+   - `reveal` (hacerse público): **+5 solo la primera vez** en cada región (0 con *Open
+     worship*).
+   - `manifest`: **6 a 10** según el `Mysticism` de la región.
+   - `prepare` (financiar sitio) y `reveal_figure`: **+8**.
+   - `silence` (silenciar amenaza): **+3 por severidad** (**+2** con *Mute witnesses*).
+   - `sacrifice` durante el rito con *Dreams of R'lyeh* (cuando adelanta el rito): **+2**.
+3. **Visibilidad sostenida mensual:** sitios financiados, células públicas (0 con *Open
+   worship*), regiones con célula y `Madness ≥ 50` (**+0,05/mes** cada una), y regiones
+   públicas durante *The Great Procession* (**+0,3/mes** cada una).
 
-## Awareness — the losing clock
+### Consecuencias
 
-Global, and the run's second failure condition. It has three inputs:
+- **Lastre (`Derived.AwarenessDrag`):** `max(0, 1 − awareness / 150)`. Multiplica a la vez los
+  ingresos de Influence y el reclutamiento (salvo células públicas con *Open worship*). Crea
+  una espiral palpable mucho antes de llegar a 100.
+- **Derrota (`world_awareness`):** al alcanzar `100`, la partida termina inmediatamente ese mes.
 
-1. **Your share of humanity.** Every month awareness rises by
-   `cultShare × BALANCE.awarenessPerCapita`, where `cultShare` is total followers over
-   world population (`src/game/engine.ts:196`, `cultShare` at `derived.ts:15`). **This is
-   the dominant term in any large cult** and it cannot be avoided by being careful. A cult
-   holding half the world is loudly, structurally visible.
-2. **Conspicuous acts.** Revealing, manifesting, funding a site, and unmasking a figure
-   each add a one-off amount.
-3. **Standing visibility.** Each region that is public or hosts a site adds a small amount
-   every month.
+## Herramientas para gestionar y bajar la awareness
 
-### Effects
+A diferencia de las primeras versiones, hoy existen varias palancas con costes distintos:
 
-**The drag** (`awarenessDrag`, `src/game/derived.ts:16`) multiplies **both Influence income
-and recruitment**:
+1. **Ocultar evidencia (`conceal`):** limpia hasta 25 de exposición local (12 meses de cooldown
+   regional). Además quita **−3 de awareness mundial**, pero ese efecto mundial tiene un
+   **descanso global de 6 meses** (`9` en Hard, `GameEngine.ConcealWorldCooldown`). Cuando el
+   efecto mundial está listo y hay awareness, cuesta `20 + awareness/2` Influence; mientras
+   descansa, cuesta solo `20` y limpia únicamente exposición local.
+2. **Enterrar el registro (`bury`):** quita **−5 de awareness mundial** al instante desde
+   cualquier célula, sin compartir el descanso de `conceal`. Cuesta `50 + BuryStep × usos`
+   (`+15` Easy, `+35` Normal, `+40` Hard), suma +8 exposición y tiene 6 meses de cooldown
+   regional.
+3. **Talentos:**
+   - **Open worship** (*Congregation*): evita el goteo y el conteo por tamaño de las células
+     públicas y elimina el +5 al revelarse.
+   - **Scapegoats** (*Harbinger*): cada amenaza que golpea baja la awareness en `1 × severidad`.
+   - **The world forgets** (*Hidden hand*, remate invocable una vez): quita **−25 de awareness**
+     y disuelve todas las amenazas activas, dispersando toda la red durante 6 meses.
+4. **Reducir el culto (`sacrifice`):** no resta awareness acumulada, pero reduce el goteo futuro.
 
-```
-drag = max(0, 1 − awareness / BALANCE.awarenessDrag)
-```
+## Culto público (`reveal` / `hide`)
 
-The constant is above 100, so the drag at maximum awareness is severe but not total — a
-dying run still functions, it just cannot grow out of trouble. Because the drag hits income
-and recruitment together, a noticed cult gets poorer and smaller at the same time. It is a
-soft spiral, and it is meant to be felt well before it is fatal.
+Hacerse público duplica el reclutamiento automático (`×2,5` con *Open worship*), pero suma
+exposición, impone un piso de evidencia, aplica `backlash` temporal y convierte futuras
+amenazas en redadas (`raid`, con más bajas). `hide` termina el culto público pero deja la
+exposición ya generada para que decaiga sola. Durante *The Great Procession*, ninguna célula
+pública puede volver a la clandestinidad.
 
-**The loss.** At 100, the run ends immediately: *"The world knows. Every cell is hunted and
-the rite dies with them."* Checked every month, before the calendar deadline
-(`src/game/engine.ts:202`).
-
-### The only brake
-
-`conceal` removes a small fixed amount of awareness in addition to regional exposure. It
-has a long per-region cooldown, so with eight regions there is a hard ceiling on how much
-awareness you can scrub per month.
-
-**That ceiling is the design.** Below a certain cult size your concealment capacity
-outpaces the per-capita gain and awareness is manageable. Above it, awareness wins no
-matter how diligently you play. The game is asking: *how much of humanity can you afford to
-own?*
-
-## Public worship
-
-`reveal` doubles the region's automatic recruitment. It also raises exposure sharply, adds
-awareness, sets an exposure floor, upgrades that region's future threats from
-investigations to raids, and applies a recruitment **backlash** penalty for a window
-afterwards.
-
-`hide` ends public worship. It does **not** remove the evidence already created — exposure
-stays where it is and decays naturally.
-
-The intended pattern is **public worship as a growth phase, not a resting state**: reveal
-to climb toward a site's support requirement, then go underground and let exposure decay.
-Staying public indefinitely feeds exposure, severity, and awareness simultaneously. Both AI
-playtest harnesses model it this way, with hysteresis so they do not thrash the toggle
-(`src/tests/playthrough.ts`) — each toggle costs awareness.
+[Volver al índice](README.md)

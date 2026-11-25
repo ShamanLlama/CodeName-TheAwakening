@@ -1,146 +1,156 @@
 # Decisiones pendientes
 
-**Versión:** 0.9 · **Fecha:** 2026-11-23 · **Estado:** D01–D05 y D08–D17 confirmadas; D05 y D15 implementadas en `alignment-5` (juego 0.7.0); remates de D05 y D18–D20 tomadas en `alignment-6` (juego 0.8.0) y D21–D24 en `alignment-7` (juego 0.9.0), pendientes de revisión de dirección; D07 con respuesta parcial; D06 pendiente.
+**Versión:** 1.1 · **Fecha:** 2026-11-25 · **Estado:** D01–D06, D08–D26 confirmadas (todo lo implementado hasta `0.9.0` queda ratificado en el GDD); D07 parcial (cierre de tienda/idiomas aplazado al tramo final); mejoras y expansiones registradas como futuras features.
 
-Este registro distingue las decisiones confirmadas de las preguntas abiertas.
-La primera etapa del GDD documenta la implementación; los objetivos futuros
-se registran sin presentarlos como características ya disponibles.
+Este registro distingue las decisiones confirmadas de las preguntas abiertas y separa lo ya
+implementado de lo planeado para etapas futuras.
+
+## Decisiones confirmadas por dirección — 2026-11-25
+
+1. **D06 — El arte procedural es temporal.** La dirección visual de archivo 1908–1926 se
+   conserva como base, pero el dibujo procedural actual es temporal: el objetivo es contratar
+   artistas para la UI y las artes del juego (y músico/diseñador de sonido con el grant).
+2. **D13 — Eventos escritos quedan como característica futura.** Se mantienen en el diseño
+   objetivo (pausan el juego, voz lovecraftiana y sucesos ficticios de 1908–1926), pero salen
+   del hito vencido de 0.8.0 para diseñarse e implementarse más adelante.
+3. **D12 / D07 (ampliación) — Beta pública abierta y preparación de Steam aplazada.** Desde el
+   2026-11-24 el juego está abierto en itch.io para todo el público para hacer beta testing
+   durante los próximos meses. Los trabajos específicos de publicación en Steam (build de
+   Windows, Steamworks, soporte de mando, lector de pantalla e idiomas) se dejan para cuando
+   el juego esté cerca de terminar.
+4. **D25 — Filosofía de balance single-player.** El ajuste fino de balance se deja para una
+   fase tardía. Al ser un juego para un jugador, no se busca simetría matemática perfecta
+   («el balance es una ilusión»), sino que **el juego se sienta bien, dé opciones reales para
+   elegir y haga que el jugador se sienta inteligente resolviéndolo**.
+5. **D26 — Dos caminos de producción y lanzamiento.**
+   - **Camino 1 (Sin grant / base propia):** completar el juego solo con **Cthulhu** (un solo
+     Dios Antiguo), con la experiencia completa y probada, y publicarlo en itch.io
+     (posiblemente sin precio / gratuito).
+   - **Camino 2 (Con Unity Fellowship de 50.000 USD — en postulación, 12 meses desde marzo 2027, operando vía Shaman Llama SAS en Régimen General, Ecuador):**
+     - contratar **1 diseñador gráfico / ilustrador** (UI + artes del juego + feedback visual,
+       **$3.000 USD · 2 meses**);
+     - contratar **1 ingeniero de audio** (banda sonora + SFX + feedback auditivo de horror,
+       **$3.000 USD · 2 meses**);
+     - incorporar **Nyarlathotep** (2.º Dios Antiguo) y **Shub-Niggurath** (3.er Dios Antiguo)
+       como futuras features de alto nivel junto a **Cthulhu** (1.º, ya implementado);
+     - realizar campaña en redes con contenido orgánico y asistir a **gamescom latam 2027**
+       (22–25 abr 2027, ~$2.150 USD) y **gamescom Alemania 2027** (23–29 ago 2027, ~$3.950 USD
+       como asistente Business, +$3.670 opcional si Indie Arena Booth);
+     - registrar el juego en Ecuador (≤$1.000 USD) y Estados Unidos / LLC en EE. UU. (~$2.500
+       USD) para cobrar en Steam y cubrir Steam Direct ($100).
+   - **Pre-Grant (nov 2026 – feb 2027):** el estudio continúa trabajando y recogiendo feedback
+     de la beta pública en itch.io; la contratación del equipo creativo y la producción a escala
+     dependen de obtener el financiamiento.
+   - El desglose vivo de presupuesto, alcance y cronograma de 12 meses se trabaja en
+     [The_Awakening_Scope_Budget_Timeline.ods](../../../Grant-Unity/The_Awakening_Scope_Budget_Timeline.ods)
+     (y su copia `.xlsx`).
+6. **D04 (cierre de identidad) — El jugador juega como el Old God (Dios Antiguo).** El Dios
+   Antiguo es quien decide qué hacer con sus cultistas, si aparecer/manifestarse y a quién
+   controlar. Los eventos escritos (D13), los epílogos diferenciados y los ítems A–H de
+   [09 — Open problems](../09-open-problems.md) quedan registrados como **futuras features**
+   para analizar conforme avancen el diseño y la beta.
+7. **Regla de trabajo del GDD y ratificación de D18–D24.** Todo lo que ya está implementado en
+   `0.9.0` (incluidas D18–D24) queda ratificado como estado implementado en el GDD; las ideas
+   de cambios o ampliaciones se manejan aparte como **futuras mejoras / features**.
 
 ## Decisiones confirmadas por dirección — 2026-10-28
 
-1. **D01 — Documentar primero lo implementado.** Describir `alignment-1` y la interfaz
-   Godot (la base de entonces) antes de proponer cambios. Documentar algo existente no obliga a conservarlo
-   en una versión posterior.
-2. **D02 — Partidas de 15–30 minutos.** Es el objetivo de experiencia, no la duración
-   comprobada del prototipo. Hoy hay unos siete minutos de simulación a 1× más pausas.
-   El 2026-11-21 dirección precisó que el rango **incluye la pausa** y la planificación.
-   Falta medir sesiones reales.
-3. **D03 — Mezcla de estrategia, narrativa y horror.** Las tres dimensiones forman
-   parte de la experiencia buscada, sin prioridad relativa fijada. La forma narrativa,
-   el tono y la profundidad de cada dimensión siguen pendientes. La respuesta no
-   compromete nuevos sistemas, eventos escritos ni cinemáticas.
+1. **D01 — Documentar primero lo implementado.** Describir primero la base real antes de
+   abrir rediseños. Documentar algo existente no obliga a conservarlo en versiones futuras.
+2. **D02 — Partidas de 15–30 minutos.** Objetivo de experiencia que **incluye la pausa y la
+   planificación** (precisado el 2026-11-21). Hoy hay unos 7 minutos de simulación a 1× más
+   pausas; falta medir con jugadores externos de la beta abierta.
+3. **D03 — Mezcla de estrategia, narrativa y horror.** Las tres dimensiones forman parte de la
+   experiencia buscada.
 
 ## Decisiones confirmadas por dirección — 2026-11-21
 
-Respuestas a la revisión de gameplay del 2026-11-20 (síntesis de siete revisores). Fijan la
-dirección de las builds 0.6.0–0.8.0; no describen funciones ya disponibles salvo donde se
-indica.
+Respuestas a la revisión de gameplay del 2026-11-20:
 
-1. **D05 — El árbol de talentos vive dentro de cada partida.** No hay poder que persista
-   entre partidas. **Cerrada en 0.7.0 (`alignment-5`):** reemplaza la doctrina; tres ramas
-   (Congregation, Hidden hand, Harbinger) de raíz, dos nodos medios excluyentes y remate, 12
-   nodos; sellos que se abren con el tiempo (6, 5 y 4 según la dificultad) y precio creciente
-   en Influence, así que una partida no lo completa. Detalle en
-   [Experiencia y loops](../02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-5--2026-11-21).
-2. **D04 — Voz lovecraftiana y sucesos ficticios.** El horror habla con registro
-   lovecraftiano. Los eventos escritos usan sucesos ficticios con sabor de 1908–1926, no
-   hechos históricos reales.
-3. **D02 — La duración incluye la pausa.** Los 15–30 minutos cuentan la pausa y la
-   planificación.
-4. **D13 — Los eventos escritos pausan el juego.** Llegan en 0.8.0.
-5. **D14 — Se puede cerrar la partida cuando el rito ya no cabe.** Termina como derrota.
-   Entra en 0.6.0 con `alignment-4`.
-6. **D15 — Mysticism tiene efecto.** **Cerrada en 0.7.0 (`alignment-5`):** es un rasgo
-   regional que actúa sobre manifestar. En una región de Mysticism m, manifestar suma
-   `8 × (1 − (m − 50)/100)` de awareness y convierte un `(m − 50)` % más (o menos) de negadores
-   y desprevenidos. Va de 6 de awareness en África a 10 en Europa. Se eligió manifestar porque
-   es la acción que describe el rasgo («apertura a lo imposible») y porque no toca el
-   reclutamiento, ya cargado por el árbol. El panel lo explica en una línea
-   (`Derived.MysticismNote`).
-7. **D16 — Easy no tiene que ganarse a la primera, pero no debe abrumar.**
-8. **D17 — Definición de «completo».** Árbol probado, gente externa jugando, balance
-   sentido, varios caminos para ganar y varias formas de perder.
+1. **D05 — El árbol de talentos vive dentro de cada partida.** Sin poder permanente entre
+   partidas. **Implementada en `alignment-5` (0.7.0)** con 12 nodos en 3 ramas y remates
+   actualizados en `alignment-6` (0.8.0).
+2. **D04 — Voz lovecraftiana y sucesos ficticios.** El horror habla con registro lovecraftiano.
+   Los eventos escritos usan sucesos ficticios con sabor de 1908–1926, no hechos históricos
+   reales.
+3. **D14 — Se puede cerrar la partida cuando el rito ya no cabe.** Termina como derrota
+   (`conceded`). Implementada en 0.6.0 (`alignment-4`).
+4. **D15 — Mysticism tiene efecto.** **Implementada en `alignment-5` (0.7.0):** modifica la
+   awareness y conversiones de `manifest` según la región.
+5. **D16 — Easy no tiene que ganarse a la primera, pero no debe abrumar.**
+6. **D17 — Definición de «completo».** Árbol probado, gente externa jugando, balance sentido
+   como justo y entretenido, varios caminos para ganar y varias formas de perder.
 
-## Decisiones de diseño de `alignment-6` — 2026-11-22
+## Decisiones de `alignment-6` y `alignment-7` (ratificadas como implementadas — 2026-11-25)
 
-Las tomó el agente de reglas de 0.8.0 dentro del plan de la build. Responden a la primera
-partida humana con 0.7.0: «el último nodo del árbol debería ser más game changer». Dirección
-puede revisarlas.
+Tomadas durante las builds `0.8.0` (2026-11-22) y `0.9.0` (2026-11-23) en respuesta a las
+partidas internas; quedan ratificadas como implementación vigente. Cualquier ajuste posterior
+se tratará como mejora futura (bajo D25):
 
-1. **D05 (ampliación) — Cada remate abre otra forma de ganar.** The Great Procession (rito de 8
-   meses con 5 regiones públicas), The world forgets (una vez: −25 de awareness y sin amenazas, a
-   cambio de 6 meses de red dispersa) y Dreams of R'lyeh (cada sacrificio adelanta el rito). El
-   bot gana con cada uno. Detalle en
-   [Experiencia y loops](../02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-6--2026-11-22).
-2. **D18 — Los remates de 0.7.0 salen del juego.** Los seis nodos medios ya los ocupan nodos
-   obligatorios, así que ninguno de los remates viejos puede bajar de nivel. El efecto de A faith
-   among faiths pasa a Open worship, solo para las células públicas, porque sin él el culto
-   público dejaba de ser viable. Bought press y Offerings to the deep salen.
-3. **D19 — Cada talento dice lo que rindió.** Es una línea por talento tomado, en la unidad del
-   talento. Responde a «Martyrs no dio nada» sin cambiar Martyrs: primero se mide si el jugador
-   lo nota.
-4. **D20 — Normal más exigente sin castigar un error.** Enterrar sube 35 por uso, cada tirada
-   de amenaza pesa +0,05 desde el mes 100 y la caza de sitios sube a +0,6. Easy pasa a la
-   presión de Normal y una amenaza oculta le quita 5 meses. Ninguna regla nueva convierte un
-   error en derrota: las tres suman amenazas que se pueden responder.
+1. **D18 (`0.8.0`) — Remates nuevos y retiro de los de 0.7.0.** Salen *A faith among faiths*,
+   *Bought press* y *Offerings to the deep* (el efecto del primero pasa a *Open worship* solo
+   para células públicas). Entran *The Great Procession* (rito de 8 meses con 5 regiones
+   públicas), *The world forgets* (invocable una vez: −25 awareness y cancela amenazas a cambio
+   de dispersar toda la red 6 meses) y *Dreams of R'lyeh* (sacrificios adelantan el rito).
+2. **D19 (`0.8.0`) — Rendimiento visible por talento.** Cada talento tomado muestra una línea
+   con lo que rindió en la partida.
+3. **D20 (`0.8.0`) — Normal más exigente y Easy ajustado.** En Normal: `bury` sube +35 por uso,
+   presión +0,05 desde el mes 100 y caza de sitios +0,6. En Easy: presión ×1,0 y amenaza oculta
+   quita 5 meses.
+4. **D21 (`0.9.0`) — Madness como recurso regional con precio.** `manifest` suma +20 y
+   `sacrifice` +10; baja 1/mes. Rinde `Madness/20` Dread/mes y acelera sitios en `Madness/100`
+   meses extra/mes; cuesta presión (`Madness/400`) y, desde 50, atrae ocultistas y +0,05
+   awareness/mes.
+5. **D22 (`0.9.0`) — Dreams of R'lyeh activo antes del rito.** Duplica la Madness de
+   sacrificios, contagia +2/mes desde regiones con 30+ a vecinas con célula y adelanta el rito
+   2 meses (en vez de 1) si la región tiene 30+ Madness.
+6. **D23 (`0.9.0`) — Respiro de 5 meses tras responder.** Obstruir o silenciar deja la región
+   5 meses sin tiradas de amenaza; para compensar, Normal pasa a presión ×1,45 y Hard a ×1,15.
+7. **D24 (`0.9.0`) — Easy con sitios de 20 meses y talentos más baratos.** Easy: sitios de 20
+   meses y talentos `30 + 20n`. Normal y Hard: talentos `40 + 25n` (antes `+30n`).
 
-## Decisiones de diseño de `alignment-7` — 2026-11-23
+## Preguntas abiertas para las siguientes etapas
 
-Las tomó el agente de reglas de 0.9.0 dentro del plan de la build. Responden a dos partidas
-humanas con 0.8.0: «Tenemos Madness como variable pero no se usa en nada», amenazas encadenadas
-que solo dejaban dispersar y un Easy sin Influence para talentos. Dirección puede revisarlas.
-
-1. **D21 — Madness como recurso.** Manifestar deja +20 y sacrificar +10; baja 1 por mes. Rinde
-   Madness/20 de Dread por mes y acelera un sitio que avanza en Madness/100 meses por mes. Cuesta
-   presión de amenaza (Madness/400) y, desde 50, amenazas ocultistas y +0,05 de awareness por mes.
-   La aceleración es proporcional y no por umbral: con umbral, llegar a 50 pedía unos 120 seguidores
-   sacrificados en la región del sitio.
-2. **D22 — Dreams of R'lyeh antes del rito.** Los sacrificios dejan el doble de Madness y las regiones
-   con 30 o más la contagian a sus vecinas con célula. En el rito sigue adelantando un mes por
-   sacrificio, y dos donde la Madness llega a 30. No se exige Madness para adelantar: con esa condición,
-   Harbinger perdía la mayoría de sus victorias.
-3. **D23 — Respiro tras responder.** Obstruir o silenciar deja la región 5 meses sin tiradas de
-   amenaza. Para no volver trivial Normal, su presión pasa a ×1,45 y la de Hard a ×1,15, con lo que las
-   amenazas por partida vuelven al nivel de `alignment-6`. Hard queda con menos presión que Normal: se
-   compensa con su aviso más corto, menos reclutamiento y menos sellos.
-4. **D24 — Easy con margen y talentos más baratos.** Sitios de 20 meses y talentos de 30 + 20n. En
-   Normal y Hard cada talento cuesta 25 más que el anterior (antes 30). Detalle y medición en
-   [Experiencia y loops](../02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-7--2026-11-23).
-
-## Preguntas abiertas para las siguientes conversaciones
-
-- **Identidad del jugador y tono.** ¿Quién dirige el culto? ¿El nombre actual es
-  definitivo? El registro quedó en D04: voz lovecraftiana.
-- **Profundidad entre partidas.** Respondido en D05: el árbol vive dentro de cada
-  partida. Queda por decidir si hay escenarios o variantes entre partidas además de
-  semilla, inicio, dificultad y talentos.
-- **Presentación.** ¿El mapa y el arte procedural son la dirección final o una base
-  temporal? ¿Queremos música, ilustraciones o una representación del despertar?
-- **Público e idiomas.** ¿A quién queremos llegar primero y en qué idioma? Hoy los
-  textos están en inglés. Los dispositivos quedan respondidos en D12.
-- **Objetivo de entrega.** Respondido en D08 (gratuito, corto y completo) y D12 (Steam
-  como salida principal). Quedan equipo, disponibilidad y fechas.
+- **Diseño de alto nivel de Nyarlathotep y Shub-Niggurath (Camino 2):** documentado en
+  [Old_Gods.md](../02_Game_Design/Old_Gods.md) como futuras features; su diseño mecánico
+  detallado entra durante el ciclo financiado.
+- **Diseño de eventos escritos (D13) y epílogos:** estructura cerrada el 2026-11-25 en
+  [Mundo_y_narrativa.md](../04_Narrativa/Mundo_y_narrativa.md) (5–8 eventos/partida, 3–5
+  opciones con consecuencias visibles, pool compartido 1908–1926 + eventos por Old God);
+  implementación durante el ciclo financiado.
+- **Cierre de tienda e idiomas (D07):** aplazado hasta acercarse al final del desarrollo.
 
 ## Registro de respuestas
 
 | ID | Tema | Estado | Respuesta y fecha | Documentos afectados |
 | --- | --- | --- | --- | --- |
 | D01 | Relación con el prototipo | Confirmada | Documentar primero lo implementado — 2026-10-28 | Visión, loops y alcance |
-| D02 | Duración objetivo | Confirmada; falta medir | 15–30 minutos por partida — 2026-10-28. El rango incluye la pausa y la planificación — 2026-11-21 | Mapa y ritmo, balance y playtesting |
+| D02 | Duración objetivo | Confirmada; en medición | 15–30 minutos por partida — 2026-10-28; incluye pausa y planificación — 2026-11-21 | Mapa y ritmo, balance y playtesting |
 | D03 | Experiencia buscada | Confirmada | Mezcla de estrategia, narrativa y horror — 2026-10-28 | Pilares, narrativa, arte y audio |
-| D04 | Identidad y tono | Confirmada | Se admiten sucesos escritos además de la crónica sistémica — 2026-11-12. Voz lovecraftiana; los sucesos son ficticios, con sabor de época, no históricos — 2026-11-21. Quién dirige el culto sigue abierto | Visión y narrativa |
-| D05 | Progresión entre partidas | Confirmada e implementada | Dirección quiere un árbol de talentos que dé opciones y estrategias distintas, con puntos que el jugador gasta — 2026-11-12. El árbol vive dentro de cada partida, sin poder que persista entre partidas — 2026-11-21. Implementado en `alignment-5` (juego 0.7.0): 12 nodos en tres ramas, sellos por tiempo según la dificultad, reemplaza la doctrina — 2026-11-21. Remates nuevos en `alignment-6` (juego 0.8.0), véase D18 — 2026-11-22 | Game Design, balance y alcance |
-| D06 | Presentación final | Pendiente | — | Arte, audio y producción |
-| D07 | Público, idiomas y dispositivos | Parcial | Dispositivos resueltos en D12: escritorio para Steam y web para la beta — 2026-11-17. Público e idiomas siguen pendientes | Público, UX y plataforma |
-| D08 | Entrega y recursos | Confirmada | Juego gratuito, corto y completo; no una demo ni un producto de pago — 2026-11-12. Plataformas en D12; fechas por definir | Producción y negocio |
-| D09 | Época y estética de interfaz | Confirmada | Archivo del culto en un escritorio de noche, 1908–1926, con calendario real; tono de época solo en el marco, sin renombrar mecánicas — 2026-10-30 | Arte, UI/UX y narrativa |
-| D10 | Decisiones económicas y registro de versiones | Confirmada | Mejorar las decisiones sin tocar los pilares: mantenimiento de sitios, ocultamiento según awareness y caza de sitios (`alignment-2`, juego 0.3.0). Todo cambio se refleja en el sistema de playtest y en el [registro de versiones](../../playtests/versiones.md) — 2026-11-02 | Game Design, balance y playtesting |
-| D11 | Reestructura del minuto a minuto | Confirmada | Se pueden reestructurar verbos y agregar mecánicas para mejorar el game feel, sin automatizar acciones del jugador: se descartan las posturas por célula y reclutar sigue siendo manual. La primera partida no tiene que poder ganarse; el juego debe oponer resistencia. Primer paso: `alignment-3` (juego 0.4.0) — 2026-11-12 | Game Design, balance, UI/UX y playtesting |
-| D12 | Motor y plataformas | Confirmada | El juego pasa de Godot a Unity 6.3 LTS (solo versiones LTS, nada experimental) para salir principalmente en **Steam** con un ejecutable de escritorio. La build web de itch.io queda para pruebas y para compartir la beta de forma sencilla y controlada con GTC Playtest Lab — 2026-11-17, confirmada el 2026-11-18. Juego 0.5.0 | Visión, base técnica, producción, público y UI/UX |
-| D13 | Eventos escritos y tiempo | Confirmada | Los eventos escritos pausan el juego; llegan en 0.8.0 — 2026-11-21 | Narrativa, UI/UX y ritmo |
-| D14 | Cierre voluntario | Confirmada | El jugador puede cerrar la partida, como derrota, cuando el rito ya no cabe — 2026-11-21. `alignment-4`, juego 0.6.0 | Game Design, rituales, UI/UX y playtesting |
-| D15 | Mysticism | Confirmada e implementada | Tendrá efecto; se diseña con el árbol en 0.7.0 — 2026-11-21. En `alignment-5` (juego 0.7.0) cambia la awareness y las conversiones de manifestar: `8 × (1 − (m − 50)/100)` de awareness y `(m − 50)` % más o menos de conversiones — 2026-11-21 | Población, regiones, balance y Game Design |
-| D16 | Dificultad Easy | Confirmada | Easy no tiene que ganarse en la primera partida, pero no debe abrumar — 2026-11-21 | Balance y playtesting |
-| D17 | Definición de «completo» | Confirmada | Árbol probado, gente externa jugando, balance sentido, varios caminos para ganar y varias formas de perder — 2026-11-21 | Producción, alcance y playtesting |
-| D18 | Remates de 0.7.0 | Tomada en `alignment-6`; falta revisión de dirección | Salen A faith among faiths, Bought press y Offerings to the deep; el efecto de A faith among faiths pasa a Open worship para las células públicas — 2026-11-22 | Game Design y balance |
-| D19 | Rendimiento por talento | Tomada en `alignment-6`; falta revisión de dirección | Cada talento tomado dice en una línea lo que rindió en la partida — 2026-11-22 | Game Design, UI/UX y playtesting |
-| D20 | Exigencia de Normal y Easy | Tomada en `alignment-6`; falta revisión de dirección | Normal: enterrar +35, presión +0,05 desde el mes 100, caza +0,6. Easy: presión ×1,0 y amenaza oculta de 5 meses. Bot: Normal 80/144, Easy 135, Hard 17 — 2026-11-22 | Balance y playtesting |
-| D21 | Madness como recurso | Tomada en `alignment-7`; falta revisión de dirección | Dread pasivo, sitios más rápidos y precio en amenazas ocultistas y awareness — 2026-11-23 | Game Design, población, oposición y balance |
-| D22 | Dreams of R'lyeh antes del rito | Tomada en `alignment-7`; falta revisión de dirección | Doble Madness por sacrificio y contagio; dos meses de rito donde la Madness llega a 30 — 2026-11-23 | Game Design y balance |
-| D23 | Respiro tras responder | Tomada en `alignment-7`; falta revisión de dirección | 5 meses sin amenazas tras obstruir o silenciar; presión de Normal ×1,45 y Hard ×1,15 — 2026-11-23 | Oposición, balance y playtesting |
-| D24 | Easy y precio de talentos | Tomada en `alignment-7`; falta revisión de dirección | Easy: sitios de 20 meses y talentos de 30 + 20n. Normal y Hard: +25 por talento. Bot: Normal 83/144, Easy 142, Hard 47 — 2026-11-23 | Balance, rituales y playtesting |
+| D04 | Identidad y tono | Confirmada | Voz lovecraftiana y sucesos ficticios 1908–1926 — 2026-11-21. El jugador juega como el **Old God** (decide sobre cultistas, apariciones y control) — 2026-11-25 | Visión y narrativa |
+| D05 | Árbol de talentos | Confirmada e implementada | Vive dentro de cada partida, sin metaprogresión; 12 nodos en 3 ramas — 2026-11-21 (`alignment-5`) y remates en `alignment-6` | Game Design, balance y alcance |
+| D06 | Presentación final (arte/audio) | Confirmada | Arte procedural es temporal; contratar artistas (UI y juego) y músico/sonidista para calidad final y feedback visual/auditivo — 2026-11-25 | Arte, audio y producción |
+| D07 | Público, idiomas y dispositivos | Parcial (aplazado cierre) | Beta pública en itch.io desde 2026-11-24; trabajo de tienda Steam, Windows, mando, lector de pantalla e idiomas se deja para el tramo final — 2026-11-25 | Público, UX y base técnica |
+| D08 | Entrega y modelo | Actualizada por D26 | Gratuito en Camino 1 (itch.io); comercial/Steam en Camino 2 con Unity Grant $50k — 2026-11-25 | Producción y negocio |
+| D09 | Época y estética | Confirmada | Archivo del culto en escritorio de noche, 1908–1926, calendario real; sin renombrar mecánicas — 2026-10-30 | Arte, UI/UX y narrativa |
+| D10 | Economía y registro de versiones | Confirmada | Mantenimiento de sitios, ocultar según awareness y caza de sitios (`alignment-2`); registro en `versiones.md` — 2026-11-02 | Game Design, balance y playtesting |
+| D11 | Minuto a minuto | Confirmada | Sin automatizar acciones del jugador; reclutar manual; el juego opone resistencia (`alignment-3`) — 2026-11-12 | Game Design, balance y UI/UX |
+| D12 | Motor y plataformas | Confirmada | Unity 6.3 LTS; beta pública web en itch.io; Steam como salida de escritorio en Camino 2 — 2026-11-18 / 2026-11-25 | Visión, base técnica y público |
+| D13 | Eventos escritos y pausa | Confirmada (futura feature) | Los eventos escritos pausan el juego; quedan como futura feature a diseñar e implementar — 2026-11-21 / 2026-11-25 | Narrativa, UI/UX y alcance |
+| D14 | Cierre voluntario | Confirmada e implementada | Cerrar como derrota (`conceded`) cuando el rito ya no cabe (`alignment-4`, 0.6.0) — 2026-11-21 | Game Design, rituales y UI/UX |
+| D15 | Mysticism | Confirmada e implementada | Cambia awareness y conversiones de `manifest` según región (`alignment-5`, 0.7.0) — 2026-11-21 | Población, regiones y balance |
+| D16 | Dificultad Easy | Confirmada | No debe ganarse a la primera necesariamente, pero no debe abrumar — 2026-11-21 | Balance y playtesting |
+| D17 | Definición de «completo» | Confirmada | Árbol probado, beta con externos, sensación de opciones/balance, varios caminos para ganar y perder — 2026-11-21 | Producción y alcance |
+| D18 | Remates de `alignment-6` | Implementada y ratificada | Procesión, The world forgets y Dreams of R'lyeh reemplazan a los remates de 0.7.0 — 2026-11-22 / 2026-11-25 | Game Design y balance |
+| D19 | Rendimiento por talento | Implementada y ratificada | Cada talento tomado muestra en una línea lo que rindió — 2026-11-22 / 2026-11-25 | Game Design y UI/UX |
+| D20 | Exigencia de Normal y Easy (`0.8.0`) | Implementada y ratificada | Normal: `bury` +35, presión +0,05 desde mes 100, caza +0,6; Easy: presión ×1,0 y pérdida oculta 5 meses — 2026-11-22 / 2026-11-25 | Balance |
+| D21 | Madness como recurso (`0.9.0`) | Implementada y ratificada | Dread pasivo, aceleración de sitios y precio en ocultistas/awareness — 2026-11-23 / 2026-11-25 | Población, economía y oposición |
+| D22 | Dreams of R'lyeh antes del rito (`0.9.0`) | Implementada y ratificada | Doble Madness en sacrificios, contagio entre vecinas y +2 meses de rito con 30+ Madness — 2026-11-23 / 2026-11-25 | Game Design y rituales |
+| D23 | Respiro tras responder (`0.9.0`) | Implementada y ratificada | 5 meses sin amenazas tras obstruir/silenciar; presión Normal ×1,45 y Hard ×1,15 — 2026-11-23 / 2026-11-25 | Oposición y balance |
+| D24 | Easy y precio de talentos (`0.9.0`) | Implementada y ratificada | Easy: sitios de 20 meses y talentos `30 + 20n`; Normal/Hard: paso +25 — 2026-11-23 / 2026-11-25 | Balance y rituales |
+| D25 | Filosofía de balance | Confirmada | Balance fino en fase tardía; en single-player importa que se sienta bien, dé opciones y haga sentir inteligente al jugador — 2026-11-25 | Game Design, balance y alcance |
+| D26 | Dos caminos de producción | Confirmada | Camino 1: solo Cthulhu, completo en itch.io (posible gratis). Camino 2: con Unity Grant $50k y equipo en Ecuador → arte/UI, audio/música, +1–2 Old Gods, eventos/redes, registro EC/US, LLC y Steam — 2026-11-25 | Visión, arte, audio, producción y negocio |
 
-No convertir preguntas pendientes en funcionalidades comprometidas. Los problemas
-observados del prototipo siguen en [Open problems](../09-open-problems.md).
+Los problemas observados y los ítems diferidos siguen en [09 — Open problems](../09-open-problems.md).
 
 [Volver al índice](../README.md)

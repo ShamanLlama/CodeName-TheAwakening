@@ -1,105 +1,99 @@
-# 03 — Population
+# 03. Población, Mysticism y Madness
 
-> **`alignment-5` (2026-11-21, juego 0.7.0):** Mysticism tiene efecto (D15). Manifestar en una región de Mysticism m suma `8 × (1 − (m − 50)/100)` de awareness y convierte `65 × (1 + (m − 50)/100)` negadores y `50 × (1 + (m − 50)/100)` desprevenidos, redondeando cada cifra. Las regiones místicas (África, América Latina, Asia del Sur y Asia Occidental) manifiestan con menos awareness y convierten más; Oceanía (55) solo convierte algo más; las escépticas (Europa, América del Norte y Asia Oriental), al revés. `Derived.MysticismNote` da la línea del panel. Véase [Experiencia y loops](02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-5--2026-11-21).
+**Estado:** `alignment-7` (Unity `0.9.0` / `0.9.1`). Código en `Balance.cs`, `GameData.cs`, `Derived.cs` y `GameEngine.cs`.
 
-Every region holds five population buckets (`Population`, `src/game/types.ts`):
+## Los cinco grupos poblacionales
 
-| Bucket | Meaning |
+Cada región divide su población en cinco cubetas (`Population` en `GameState.cs`):
+
+| Grupo | Significado |
 | --- | --- |
-| `unaware` | Ordinary people who have never heard the dream. Recruitable. |
-| `deniers` | People who have heard and refused. **Not recruitable** by ordinary means. |
-| `believers` | People who accept the impossible but have not joined. Recruitable, and preferentially. |
-| `followers` | Your cult. Generates income, supports rituals, is what you lose. |
-| `losses` | The dead and the taken. A permanent sink. |
+| `Unaware` | Personas ajenas a lo sobrenatural. Reclutables. |
+| `Deniers` | Personas que rechazan lo sobrenatural. Solo se reclutan tras convertirlas con una manifestación. |
+| `Believers` | Personas que aceptan lo imposible pero aún no entran al culto. Se reclutan antes que `Unaware` y suben la presión de amenazas. |
+| `Followers` | Tu culto en la región. Genera Influence, sostiene sitios y sufre bajas. |
+| `Losses` | Bajas permanentes por sacrificios u oposición. Nunca vuelven. |
 
-## The conservation invariant
+## Invariante de conservación
 
-**The five buckets always sum to the region's original capacity.** Nothing in the game
-creates or destroys people; it only moves them between buckets.
+La suma de los cinco grupos equivale siempre a la capacidad fija de la región:
 
 ```
-capacity(r) = unaware + deniers + believers + followers + losses   // derived.ts:10
+Derived.Capacity(r) = Unaware + Deniers + Believers + Followers + Losses = PopulationWeight × 100
 ```
 
-Capacity is `populationWeight × BALANCE.populationScale`, fixed at world creation. The
-eight weights sum to 100, so the world holds `worldPopulation` people
-(`src/game/derived.ts:14`).
+Los ocho pesos suman 100, así que el mundo tiene 10.000 personas (`GameData.WorldPopulation`).
+Como el apoyo requerido por un sitio depende de `Capacity(r)`, el código y las pruebas siempre
+mueven gente entre grupos (`Derived.Recruit`, `Derived.LoseFollowers`) y nunca asignan
+`Followers` de forma directa.
 
-This invariant is load-bearing, not decorative. **Ritual site support is derived from
-`capacity`**, which is only meaningful because the sum is stable. A regression test asserts
-conservation across sacrifice and destruction (`src/game/engine.test.ts`, "destroys a site
-when its last followers are lost and does not recreate population").
+## Composición inicial y rasgos regionales
 
-> **If you write code or fixtures that touch population, transfer between buckets — never
-> assign `followers` directly.** Assigning inflates `capacity`, which silently raises that
-> region's site requirement. This bug was hit while writing test fixtures and is easy to
-> reintroduce; see `setFollowers` in `src/tests/endgame-finale.playtest.test.ts` for the
-> correct pattern.
+Al iniciar la partida (`GameEngine.CreateGameState`), cada región reparte su población entre
+`Deniers` (según `Skepticism`) y `Unaware`. Al fundar la primera célula (`PlaceStartingFoothold`)
+reclutas `Balance.StartingFollowers` (100) seguidores.
 
-## Starting composition
+Cada región tiene tres rasgos fijos en `GameData.Regions`:
+- `Skepticism`: fija el muro inicial de negadores.
+- `InstitutionalResistance`: multiplica la presión de amenazas ([05](05-opposition.md)).
+- `Mysticism`: cambia cuánto cuesta y cuánto rinde manifestar lo imposible.
 
-At world creation (`createGameState`, `src/game/engine.ts:14`), a region's deniers are
-seeded from its `skepticism` and the rest begin unaware. A sceptical region therefore
-starts with a larger unrecruitable block; a mystical one starts more open. Skepticism does
-not change afterwards — it sets the initial wall, and only manifestations move it.
+## Reclutamiento
 
-The starting foothold recruits `BALANCE.startingFollowers` into one chosen region and sets
-a little exposure (`placeStartingFoothold`, `src/game/engine.ts:31`).
+La reserva reclutable es `Unaware + Believers` (`Derived.Recruitable`), consumiendo primero
+`Believers`.
 
-## Recruitment
+El reclutamiento automático mensual (`Derived.RecruitmentPerMonth`) se detiene si la célula está
+dispersa o vacía. Cuando está activa parte de `0,6 + Followers × 0,0075` y se multiplica por:
 
-The recruitable pool is `unaware + believers` (`recruitable`, `src/game/derived.ts:8`).
-Deniers are excluded. **Believers are consumed first** (`recruit`,
-`src/game/derived.ts:42`) — converting disbelief into belief and then harvesting it is a
-real strategy, not an accident.
+- Culto público: `×2,0` (o `×2,5` con *Open worship*).
+- Talento *Swelling flock*: `+35 %`.
+- Backlash: `×0,55` tras hacer pública la célula o revelar una figura.
+- Madness: bono pequeño `1 + Madness / 500`.
+- Dificultad: `×1,2` en Easy, `×1,0` en Normal y `×0,85` en Hard.
+- Lastre por awareness (`AwarenessDrag`): aplica a todas las células salvo las públicas cuando
+  tienes *Open worship*.
 
-Automatic monthly recruitment per region (`recruitmentPerMonth`, `src/game/derived.ts:24`)
-is a base rate plus a proportion of existing followers, multiplied by:
+La acción `recruit` suma un bloque inmediato de hasta 35 seguidores (18 Influence, 12 meses de
+cooldown regional). Sirve sobre todo para arrancar células o reponer bajas tras un golpe.
 
-- **Public worship** — a flat multiplier, the main reason to accept exposure.
-- **Talents** — Swelling flock (Congregation root) multiplies it; Open worship multiplies public cells.
-- **Backlash** — a penalty for a window after revealing, so going public is not free.
-- **Madness** — a small bonus (Madness/500) from recent manifestations and sacrifices.
-- **Difficulty**.
-- **Awareness drag** — the same global multiplier that throttles income.
+## Manifestaciones y Mysticism
 
-The result is capped by the recruitable pool, so a region that has run out of open minds
-stops growing no matter how large the cult is.
+`manifest` gasta Dread (20, o 15 con *Red altars*; 18 meses de cooldown) para convertir
+`Deniers` y `Unaware` en `Believers` y dejar +20 de Madness regional. Es la única forma de
+romper el muro de negadores.
 
-`recruit` (the action) is an instant top-up of a flat amount with a long regional cooldown.
-It is the tool for repairing a raided cell; the automatic rate is what compounds.
+En una región de Mysticism `m` (pivote `Balance.MysticismPivot = 50`):
+- Awareness generada (`Derived.ManifestAwareness`): `round(8 × (1 − (m − 50)/100))`, desde 6
+  en África (`m=70`) hasta 10 en Europa (`m=30`).
+- Conversiones (`ManifestDeniers`, `ManifestUnaware`): `round(65 × (1 + (m − 50)/100))`
+  negadores y `round(50 × (1 + (m − 50)/100))` desprevenidos (de 78/60 en África a 52/40 en
+  Europa).
 
-## Manifestations
+El panel regional resume este rasgo en una línea mediante `Derived.MysticismNote`.
 
-`manifest` spends Dread to move a block of **deniers and unaware people into believers**.
-It is the only way through the denier wall.
+## Madness (locura regional)
 
-The costs are deliberate: exposure, world awareness, and `madness`. Crucially, **believers also raise the
-region's threat pressure** ([05](05-opposition.md)) — a population that accepts the
-impossible is a population that starts looking for you. Manifesting is buying growth with
-attention.
+`Madness` va de 0 a 100 por región. Sube +20 al manifestar y +10 al sacrificar (+20 con
+*Dreams of R'lyeh*), y baja 1 por mes (`Balance.MadnessDecay`). Con *Dreams of R'lyeh*, cada
+región con 30 o más contagia +2 al mes a cada vecina con célula (+1 neto tras el decaimiento).
 
-## Madness (`alignment-7`)
+Mientras la región tiene célula activa, la Madness produce beneficios y riesgos al mismo tiempo:
 
-Madness is regional, 0–100. A manifestation leaves +20 and a sacrifice +10 (twice that with
-Dreams of R'lyeh); it fades 1 a month. While the region has a cell, Madness:
+| Efecto | Regla vigente (`alignment-7`) | Referencia en código |
+| --- | --- | --- |
+| Dread pasivo | `+Madness / 20` de Dread por mes (hasta `DreadCap`) | `GameEngine.MadnessDread` |
+| Aceleración de sitio | Un sitio financiado, activo y con apoyo gana `+Madness / 100` meses extra de preparación al mes (fracción en `Site.Quickening`) | `GameEngine.MadnessQuickens` / `MadnessHaste` |
+| Reclutamiento | Bono pequeño `1 + Madness / 500` | `Derived.RecruitmentPerMonth` |
+| Presión de amenazas | Suma `+Madness / 400` a la presión regional | `Director.ThreatPressure` |
+| Umbral alto (`≥ 50`) | Una célula oculta sin sitio atrae sociedades ocultistas en lugar de investigadores y la región suma `+0,05` de awareness mundial al mes | `GameEngine.MadnessHigh`, `Director.ScheduleThreat` |
 
-- **yields Dread** — Madness/20 a month, within the Dread cap (`GameEngine.MadnessDread`);
-- **quickens a preparing site** — Madness/100 extra preparation months a month, one every two
-  months at 50 ([06](06-ritual-sites.md));
-- **draws opposition** — threat pressure +Madness/400 ([05](05-opposition.md)); from 50 a
-  hidden cell without a site draws an occult society, and the region adds +0.05 world
-  awareness a month;
-- still raises recruitment slightly.
+`GameEngine.MadnessText` resume en vivo qué produce la Madness en esa región.
 
-Keeping it high is a choice paid for again and again: the manifestations and sacrifices that
-feed it cost Dread, awareness, exposure and followers. `GameEngine.MadnessText` states what a
-region's Madness does in one line. Values and their tuning are in
-[Experiencia y loops](02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-7--2026-11-23).
+## Pérdida de seguidores y colapso de célula
 
-## Losing followers
+`Derived.LoseFollowers` traslada seguidores a `Losses`. Si una región cae a 0 seguidores, la
+célula colapsa: termina el culto público, se cancela la dispersión y cualquier sitio ritual en
+esa región se destruye por completo, incluida su inversión.
 
-`loseFollowers` (`src/game/derived.ts:49`) moves followers into `losses`. If a region hits
-zero followers the cell collapses: public worship ends and **any ritual site there is
-destroyed outright**, funding included. Losing a region is not a setback to repair, it is a
-site to rebuild from nothing.
+[Volver al índice](README.md)

@@ -1,144 +1,96 @@
-# 05 — Opposition
+# 05 — Oposición, amenazas y oportunidades
 
-> **`alignment-6` (2026-11-22, juego 0.8.0):** desde el mes 100, cada tirada de amenaza suma +0,05 de presión, y la caza de sitios desde el mes 200 sube de +0,3 a +0,6 (`Director.ThreatPressure` expone la fórmula). En Easy la presión pasa de ×0,75 a ×1,0 y una amenaza oculta ignorada quita 5 meses (antes 4). **The world forgets** cancela todas las amenazas activas a cambio de dispersar todas las células 6 meses. Sale Offerings to the deep, así que un sacrificio ya no termina una amenaza. Véase [Experiencia y loops](02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-6--2026-11-22).
+**Estado:** consolidado sobre `alignment-7` (Unity `0.9.0` / `0.9.1`). Fuente de verdad en código: `Director.cs`, `Threats.cs`, `GameEngine.cs` y `Balance.cs`.
 
-> **`alignment-5` (2026-11-21, juego 0.7.0):** `Threats.Options` dice al aparecer cada amenaza si se puede obstruir, dispersar y silenciar, por qué no (en espera N meses, falta Influence o Dread) y cuánto cuesta; `Threats.Cornered` marca la amenaza que no se puede obstruir ni silenciar. Nodos del árbol que cambian las respuestas: Quiet friends (2 meses más de aviso, obstruir ⅔), Sleeper cells (dispersar 5 meses), Red altars y Mute witnesses (silenciar más barato y con menos awareness), Martyrs y Scapegoats (aceptar el golpe da Dread o baja la awareness) y Offerings to the deep (un sacrificio termina la amenaza). Una amenaza oculta ignorada quita 4 meses en Easy y 6 en Normal y Hard, y esos meses se pueden restaurar. Véase [Experiencia y loops](02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-5--2026-11-21).
->
-> **`alignment-3` (2026-11-12):** una amenaza tiene tres respuestas. `counter` no cambia. `scatter` es gratis: la célula pasa 8 meses oculta, sin reclutar ni ingresar, su sitio no cuenta y no atrae amenazas nuevas (24 meses de cooldown). `silence` cuesta 20 de Dread y +3 de awareness por severidad (12 meses de cooldown). Véase [Experiencia y loops](02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-3--2026-11-12). El resto de este capítulo describe `alignment-1`.
+El mundo no es una IA rival independiente, sino un sistema de presión determinista
+(`Director.Tick`) que reacciona a lo visible y arriesgado que se vuelve tu culto.
 
-The world is not an AI opponent. It is a scheduled pressure system in
-`src/game/director.ts` that reacts to what you have made visible.
+## Cadencias del Director
 
-## The director
+Corre al cierre de cada mes con dos ritmos independientes:
 
-Runs at the end of every month (`tickDirector`). Two independent cadences:
+- **Tiradas de amenaza:** cada **4 meses** (`Balance.ThreatRollMonths`), cada región con
+  seguidores, sin amenaza pendiente, sin estar dispersa y fuera de respiro tira contra su
+  presión regional (`Director.ThreatPressure`).
+- **Oportunidades:** cada **12 meses**, una región con célula y sin oportunidad activa recibe
+  un presagio o figura con vigencia de 8 meses.
 
-- **Threat rolls** — on a fixed month interval, every region that has followers and no
-  pending threat rolls once against its pressure value.
-- **Opportunity spawns** — on a longer interval, one eligible region receives a single
-  opportunity.
+En el mes 176 (`PreparationMonths − 24`), el director emite un aviso anunciando que al abrirse
+la alineación (mes 200) se intensificará la caza contra los sitios rituales.
 
-Both cadences are calendar constants and were scaled with the calendar, so the number of
-rolls per run is stable regardless of run length. If you change `preparationMonths`, change
-these too or you silently change difficulty. See [08 — Rationale](08-rationale.md).
-
-## Threat pressure
-
-Per region, per roll (`tickDirector`, `src/game/director.ts`):
+## Presión regional de amenazas (`Director.ThreatPressure`)
 
 ```
-pressure = (base
-          + exposure/500
-          + 0.10 if public
-          + 0.12 if a ritual site is funded
-          + awareness/1500
-          + believerShare × 0.15
-          + madness/400                      (alignment-7; /2000 before)
-          + 0.05 from month 100              (alignment-6)
-          + 0.6 at a funded site from month 200)
-          × difficulty.pressure
-          × (0.6 + institutionalResistance/150)
+presión = ( 0,02
+          + Exposure / 500
+          + 0,10 si es pública
+          + 0,12 si tiene sitio financiado
+          + 0,60 extra en sitio financiado desde el mes 200 (caza de sitios)
+          + Awareness / 1500
+          + (Believers / poblaciónViva) × 0,15
+          + Madness / 400
+          + 0,05 desde el mes 100 )
+          × dificultad.Pressure
+          × (0,6 + InstitutionalResistance / 150)
 ```
 
-Reading that formula as design intent:
+Multiplicadores de `dificultad.Pressure`: **Easy ×1,0**, **Normal ×1,45**, **Hard ×1,15**
+(Hard compensa su multiplicador más bajo con avisos más cortos, menos reclutamiento, menos
+sellos y descansos más largos).
 
-- **A funded ritual site is the single largest self-inflicted term.** Sites attract attention
-  permanently, which is why site regions need defending rather than hiding.
-- **Believers raise pressure.** Manifesting to break the denier wall makes that region hotter.
-- **Institutional resistance is regional character.** East Asia and Europe react hard; Africa
-  and Oceania react softly. It multiplies everything, so a conspicuous cult in a strong
-  state is far more dangerous than the same cult in a weak one.
-- **Awareness feeds back.** Global attention makes every region more reactive.
+## Tipos de amenaza y severidad
 
-## Threat kinds
+Determinados al programarse (`Director.ScheduleThreat`):
 
-Chosen by what the region visibly is (`scheduleThreat`, `src/game/director.ts:14`):
-
-| Kind | When | Extra consequence |
+| Tipo (`Kind`) | Cuándo aparece | Consecuencia adicional si golpea |
 | --- | --- | --- |
-| `investigation` | Underground cell | — |
-| `occult` | Underground cell without a site at 50+ Madness (`alignment-7`) | Same losses as an investigation |
-| `raid` | Public worship | Higher proportional losses |
-| `occult` | A funded ritual site | **Strips preparation months from the site** |
+| `investigation` | Célula clandestina sin sitio y `Madness < 50` | Bajas estándar (`8 %` × severidad, mín. `6 × sev.`) |
+| `raid` | Célula con culto público (sin sitio) | Bajas mayores (`12 %` × severidad, mín. `8 × sev.`) |
+| `occult` | Región con **sitio financiado**, o célula clandestina sin sitio con **`Madness ≥ 50`** | Si hay sitio, **quita meses de preparación** (`5` en Easy, `6` en Normal/Hard) |
 
-Funding a site schedules an occult threat immediately — the act of building draws a
-response, it is not left to the dice.
+Financiar un sitio dispara inmediatamente una amenaza `occult` en esa región.
 
-## Grace after an answer (`alignment-7`)
+- **Ventana de aviso:** base **5 meses** (`+2` Easy, `−1` Hard, `+2` con *Quiet friends*, `+2`
+  con político secreto).
+- **Severidad (`1–3`):** `clamp(1 + floor((Exposure + Awareness) / 60), 1, 3)`. Escala tanto el
+  daño del golpe como el coste de obstruir o silenciar.
 
-Obstructing or silencing a threat leaves the region out of the threat rolls for
-`Balance.ThreatGraceMonths` (5) months (`RegionState.ThreatGraceUntil`,
-`GameEngine.ThreatGraceLeft`). Before it, a second threat could arrive while both answers were
-still on their 12-month cooldowns, leaving only a scatter that stalled a site for 8 months.
-Scattering gives no grace: the cell is already out of the rolls while it hides. Because the
-grace takes rolls away, Normal's pressure rose to ×1.45 and Hard's is ×1.15, which keeps the
-threats per run at the `alignment-6` level. Rolls come every 4 months, so the grace changes
-difficulty in steps; re-measure the pressure before changing it.
+## Las tres respuestas y el respiro
 
-## Warning and severity
+Cada amenaza admite tres respuestas garantizadas (`Threats.Responses`), pagadas en monedas
+distintas:
 
-A threat is scheduled with a **due month**, giving you a window to respond. The window is
-extended by Quiet friends (the Hidden hand root talent) and by a secretly converted politician.
-
-**Severity** (1–3) is set at scheduling time from `exposure + awareness`. It scales the
-losses *and* the price of obstructing the threat. This is the mechanism that turns
-carelessness into compounding cost: a region you let grow conspicuous produces threats that
-are both worse and more expensive to stop.
-
-## Consequences
-
-Resolved by `threatConsequences` (`src/game/threats.ts`) and applied in `resolveWorld`.
-The same function feeds the on-screen forecast, so **the projection the player reads is
-exactly the calculation that will run**.
-
-Follower losses are **proportional to the cell**, with a small flat minimum:
-
-```
-lost = min(followers, max(severity × flatFloor, followers × severity × share))
-```
-
-Proportional losses mean a large cell is not automatically safe — the thing that made the
-old build trivial. The flat floor is deliberately small so that it only bites tiny cells;
-if it is raised, small regions are punished twice for being small and cheap ritual sites
-become a trap. That was a real bug — see [08 — Rationale](08-rationale.md).
-
-Other effects: exposure rises, occult threats strip preparation months from a funded site,
-and if losses take a region to zero followers the cell and its site are destroyed entirely.
-
-## Obstruction is scarce
-
-`counter` removes a pending threat outright. It always succeeds. Its scarcity is the entire
-tactical layer:
-
-- **Cost scales with severity** — the threat you allowed to grow is the expensive one.
-- **It has a long per-region cooldown.** Obstructing in a region burns your connections
-  there; you cannot answer consecutive threats in the same place.
-
-The cooldown is the load-bearing part. With it, you must decide *which* region eats a hit,
-and the answer depends on which sites you can afford to have interrupted. Without it,
-`counter` is an always-affordable tax that deletes the opposition system — which is exactly
-what the pre-change build measured.
-
-A consequence worth knowing: **spending a counter early is no longer strictly better.**
-Countering a threat the month it appears leaves the region undefended if another arrives
-before the cooldown expires. The endgame probe records this and deliberately does not rank
-early versus late response (`src/tests/endgame-finale.playtest.test.ts`).
-
-## Opportunities
-
-A region can hold one opportunity at a time, expiring after a window.
-
-| Opportunity | Used by | Effect |
+| Respuesta | Precio y coste secundario | Cooldown / respiro |
 | --- | --- | --- |
-| Shared nightmare | `exploit` | A block of Dread, once |
-| Lightless eclipse | `exploit` | Advances an unfinished ritual site by several months |
-| Celebrated artist | `convert` → `reveal_figure` | Extra regional income while secret |
-| Studious minister | `convert` → `reveal_figure` | Longer threat warnings while secret |
+| **Obstruir (`counter`)** | `30 × severidad` Influence (`×⅔` con *Quiet friends*) | 12 meses regional · deja **5 meses de respiro** |
+| **Dispersar (`scatter`)** | Gratis en monedas; la célula queda oculta **8 meses** (**5** con *Sleeper cells*): no recluta, no ingresa, deja de ser pública, **detiene su sitio y el rito si lo sostiene**, baja −10 exposición y no atrae amenazas mientras dura | 24 meses regional · sin respiro extra al volver |
+| **Silenciar (`silence`)** | `20 × severidad` Dread (`13` con *Red altars*), `+3 × severidad` awareness (`+2` con *Mute witnesses*) y `+6` exposición | 12 meses regional · deja **5 meses de respiro** |
 
-Converting a figure keeps them secret and useful. `reveal_figure` cashes them in for a
-block of recruits and site progress, at the cost of heavy exposure, awareness, and a long
-backlash — and the secret benefit ends.
+- **Respiro (`Balance.ThreatGraceMonths` = 5):** tras obstruir o silenciar, la región queda
+  exenta de nuevas tiradas de amenaza durante 5 meses (`GameEngine.ThreatGraceLeft`) para
+  evitar cadenas de golpes imposibles sobre un mismo sitio.
+- **Amenaza acorralada (`Threats.Cornered`):** al aparecer una amenaza, `Threats.Options`
+  evalúa las tres respuestas; si no puedes obstruir ni silenciar en ese momento, la UI marca la
+  amenaza como acorralada (solo queda dispersar o soportar el golpe).
+- **Soportar el golpe (`Director.ResolveWorld`):** aplica `Threats.Consequences` (la misma
+  función que muestra el pronóstico), suma +5 exposición, registra en `Site.Recoverable` los
+  meses perdidos por una amenaza ocultista (para `restore`), y activa *Martyrs* (+Dread por
+  bajas) o *Scapegoats* (−awareness por severidad) si están tomados.
+- **Disolución global:** invocar *The world forgets* cancela todas las amenazas activas del mapa
+  a cambio de dispersar toda la red 6 meses.
 
-**These are currently dead content.** Across every recorded playtest the three
-opportunity verbs have been used zero times and every spawned opportunity expired unused.
-See [09 — Open problems](09-open-problems.md).
+## Oportunidades
+
+Cada región puede tener una oportunidad activa durante 8 meses:
+
+| Oportunidad | Acción | Efecto |
+| --- | --- | --- |
+| `nightmare` (Pesadilla compartida) | `exploit` (10 Inf) | Entrega un bloque inmediato de Dread |
+| `eclipse` (Eclipse sin luz) | `exploit` (10 Inf) | Adelanta varios meses la preparación de un sitio incompleto |
+| `celebrity` (Artista célebre) | `convert` (45 Inf) → `reveal_figure` | Secreta: `+0,6` Influence/mes. Al revelarse: hasta 60 reclutas y `+8` meses de sitio (+8 awareness, exposición y backlash) |
+| `politician` (Ministro estudioso) | `convert` (45 Inf) → `reveal_figure` | Secreto: `+2` meses de aviso ante amenazas. Al revelarse: mismo efecto que artista y termina el bono secreto |
+
+Su nivel real de uso frente a las amenazas queda como observación activa para la beta pública
+([09 — Open problems](09-open-problems.md)).
+
+[Volver al índice](README.md)

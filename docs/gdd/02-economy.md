@@ -1,109 +1,99 @@
-# 02 — Economy
+# 02 — Economía
 
-> **`alignment-6` (2026-11-22, juego 0.8.0):** en Normal enterrar el registro sube 35 por cada uso anterior (antes 25). Sale Bought press, así que nada abarata enterrar. The world forgets se invoca una vez sin costo de Influence: su precio son 6 meses sin ingreso ni reclutamiento en toda la red. Cada talento acumula lo que rindió (`GameState.TalentYield`): Quiet friends, por ejemplo, cuenta la Influence que ahorró al obstruir. Véase [Experiencia y loops](02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-6--2026-11-22).
+**Estado:** consolidado sobre `alignment-7` (Unity `0.9.0` / `0.9.1`). Fuente de verdad en código: `Balance.cs`, `GameData.cs`, `Derived.cs` y `GameEngine.cs`.
 
-> **`alignment-5` (2026-11-21, juego 0.7.0):** la Influence tiene tres destinos nuevos. El árbol de talentos reemplaza la doctrina: cada nodo cuesta 30 más que el anterior, desde 40 (500 por los 5 sellos de Normal). Enterrar el registro (`bury`) cuesta 50 + 25 por uso anterior (15 en Easy, 40 en Hard; la mitad con Bought press). Restaurar un sitio (`restore`) cuesta 30 por mes recuperado. Los efectos de las doctrinas pasan a las raíces del árbol: Red altars da 35 de Dread por sacrificio, Quiet friends abarata obstruir. Martyrs da 1 de Dread por cada 3 seguidores perdidos ante una amenaza. Véase [Experiencia y loops](02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-5--2026-11-21).
->
-> **`alignment-4` (2026-11-21):** `conceal` cuesta 20 + la mitad de la awareness solo cuando también baja la awareness mundial, lo que puede hacer una vez cada 6 meses en todo el mundo. El resto del tiempo cuesta 20 de Influence y solo limpia la exposición local. Véase [Experiencia y loops](02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-4--2026-11-21).
->
-> **`alignment-3` (2026-11-12):** Silenciar una amenaza cuesta 20 de Dread por severidad (13 con Harbinger); dispersar es gratis pero la célula no recluta ni ingresa durante 8 meses. Véase [Experiencia y loops](02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-3--2026-11-12).
->
-> **`alignment-2` (2026-11-02):** Cada sitio financiado cuesta 1 Influence al mes; `conceal` cuesta 20 + la mitad de la awareness. Véase [Experiencia y loops](02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-2--2026-11-02). El resto de este capítulo describe `alignment-1`.
-
-Three quantities matter: **Influence**, **Dread**, and **followers**. Only the first two
-are spendable currencies. Followers are both a resource and a liability, which is the
-point — see [04 — Visibility and awareness](04-visibility.md).
+Tres magnitudes sostienen la economía: **Influence**, **Dread** y **Followers**. Solo las dos
+primeras se gastan como moneda; los seguidores son a la vez motor económico, apoyo ritual y
+riesgo de visibilidad ([04 — Visibilidad y awareness](04-visibility.md)).
 
 ## Influence
 
-The operational currency: reach, favours, bribes, silence. Global, not per-region.
+Es la moneda operativa global (sobornos, redes, reclutamiento, talentos y defensa).
 
-**Income** is the sum of every region's contribution, multiplied by the awareness drag
-(`influencePerMonth`, `src/game/derived.ts:23`):
+**Ingreso mensual (`Derived.InfluencePerMonth` y `Derived.NetInfluencePerMonth`):**
 
 ```
-income = Σ regionIncome(r) × awarenessDrag(state)
-regionIncome(r) = followers × influencePerFollower  + 0.6 if a secret celebrity is converted here
+ingresoBruto = Σ ingresoRegional(r) × AwarenessDrag(state)
+ingresoRegional(r) = 0 si la célula está dispersa o sin seguidores;
+                     si no, Followers × InfluencePerFollower + 0,6 (si hay celebridad secreta)
+ingresoNeto = ingresoBruto − (sitiosFinanciados × SiteUpkeep)
 ```
 
-A region with no followers contributes nothing. The awareness multiplier is the important
-term: **as the world notices you, your income falls**, so a large exposed cult earns less
-per follower than a small quiet one.
+- **Lastre por awareness (`Derived.AwarenessDrag`):** cuanto más sabe el mundo del culto, menos
+  rinde cada seguidor. Un culto grande y expuesto gana menos por cabeza que uno discreto.
+- **Mantenimiento de sitios (`Balance.SiteUpkeep` = 1/mes por sitio):** se descuenta cada mes.
+  Si no alcanza la Influence para pagarlo, el sitio queda **inactivo (`Dormant`)** ese mes: no
+  avanza su preparación ni cuenta para el rito final.
+- **Tope (`Balance.InfluenceCap` = 4000):** límite técnico de validación, no objetivo de juego.
 
-Income is clamped by `BALANCE.influenceCap`. That cap is deliberately set far above normal
-play; it exists as a sanity bound for save validation (`src/game/persistence.ts:24`), not
-as a balancing device. If a run is sitting at the cap, that is a balance signal worth
-investigating, not intended play.
-
-**Influence buys:** recruitment drives, new cells, concealment, obstructing threats,
-funding ritual sites, converting prominent figures, and the one-off doctrine choice.
+**En qué se gasta Influence:** reclutamiento inmediato (`recruit`), expansión (`expand`),
+ocultar evidencia (`conceal`), enterrar el registro (`bury`), obstruir amenazas (`counter`),
+restaurar sitios dañados (`restore`), financiar sitios (`prepare`), aprovechar presagios o
+convertir figuras (`exploit`, `convert`) y comprar nodos del **árbol de talentos**
+(`GameEngine.TalentCost`: `40 + 25n` en Normal/Hard; `30 + 20n` en Easy).
 
 ## Dread
 
-The ritual currency. It is not earned by waiting — **there is no passive Dread income**,
-and a test enforces that (`src/game/engine.test.ts`, "does not generate Dread by waiting").
+Es la moneda ritual y de terror. Tope real: `Balance.DreadCap` (400), lo bastante bajo como
+para impedir acumularlo sin límite antes de los sitios caros.
 
-**Sources:**
+**Fuentes de Dread:**
 
-- **Sacrifice** — consumes `BALANCE.sacrificeFollowers` local followers for
-  `BALANCE.sacrificeDread` Dread (more under the Harbinger doctrine). Six-month regional
-  cooldown. Adds exposure.
-- **Shared nightmare** — an opportunity that can be exploited once for a flat amount.
+1. **Sacrificio (`sacrifice`):** consume 40 seguidores locales a cambio de **25 Dread** (35 con
+   *Red altars*) y deja **+10 de Madness** local (+20 con *Dreams of R'lyeh*). Cooldown regional
+   de 6 meses y suma exposición.
+2. **Madness regional (`GameEngine.MadnessDreadTotal`):** cada región con célula rinde
+   **`Madness / 20` de Dread por mes**, hasta `DreadCap`. Mantener alta la Madness implica
+   seguir manifestando o sacrificando (baja 1/mes) y pagar su riesgo en amenazas y awareness.
+3. **Pesadilla compartida (`nightmare` + `exploit`):** oportunidad puntual que entrega un
+   bloque de Dread.
+4. **Talento *Martyrs*:** cada amenaza que golpea otorga 1 Dread por cada 3 seguidores perdidos.
 
-Dread is clamped by `BALANCE.dreadCap`. Unlike the Influence cap this one is reachable and
-is a real constraint: you cannot stockpile indefinitely ahead of the escalating site costs.
+**En qué se gasta Dread:** manifestaciones (`manifest`: 20, o 15 con *Red altars*), silenciar
+amenazas (`silence`: 20 por severidad, o 13 con *Red altars*), financiar sitios con precio
+creciente (`Balance.SiteDreadCosts`: **60, 100, 160**) e iniciar el rito final
+(`Balance.FinalDread`: **100**).
 
-**Dread buys:** manifestations, ritual sites (at an escalating price), and the final rite.
+### El sacrificio como intercambio central
 
-### Sacrifice is the game's central trade
+Sacrificar hace cuatro cosas a la vez:
 
-Sacrifice converts followers into Dread, and it does three things at once:
+1. Entrega Dread inmediato y **Madness** regional (que seguirá rindiendo Dread y acelerando
+   sitios).
+2. Mueve seguidores de forma permanente a `Losses` ([03 — Población](03-population.md)).
+3. Reduce tus ingresos y frena el **crecimiento futuro** de `Awareness` (no borra la awareness
+   ya acumulada).
+4. Con *Dreams of R'lyeh* durante el rito final, adelanta el rito 1 mes (o 2 meses si la región
+   tiene 30+ Madness) siempre que queden tres sitios con apoyo, a cambio de +2 awareness.
 
-1. Gains Dread you cannot get any other way in bulk.
-2. **Permanently** destroys followers — they move to the `losses` bucket and never return
-   ([03 — Population](03-population.md)).
-3. Lowers your income and the cult-size contribution to **future awareness growth**.
-   Sacrifice does not subtract awareness that has already accumulated.
+## Followers (Seguidores)
 
-That third effect means sacrifice is not purely a cost. When awareness is the thing
-killing you, burning followers is a defensive move as well as an economic one. The tension
-is that ritual sites need local followers to stay supported, so sacrificing at a site
-region can starve the very ritual you are funding.
+Viven por región, nunca en una reserva global. 500 seguidores repartidos en cinco regiones no
+equivalen a 500 en una sola, porque el apoyo ritual, las amenazas y los sacrificios son
+regionales.
 
-## Followers
+## Costes variables principales
 
-Held per region, as part of the regional population model. They:
+Los precios base están en `GameData.Actions`. Los costes calculados dinámicamente son:
 
-- generate Influence,
-- support ritual sites (a share of the region's population — [06](06-ritual-sites.md)),
-- are what threats destroy,
-- are the fuel for Dread,
-- and drive world awareness upward every month.
-
-There is no global follower pool. 500 followers spread across five regions is not
-interchangeable with 500 in one region, because site support is regional and threats are
-regional.
-
-## Action costs
-
-Costs live in `src/data/abilities.ts`. Most are flat. Two are computed, and both exist to
-make a previously free decision expensive:
-
-| Action | Cost | Notes |
+| Acción / sistema | Fórmula en código | Notas |
 | --- | --- | --- |
-| `counter` | `counterSeverityCost × severity`, ×⅔ under Hidden Hand | `counterCost`, `src/game/engine.ts:39`. Plus a regional cooldown — see [05](05-opposition.md). |
-| `prepare` | Flat Influence + escalating Dread by sites already funded | `siteDreadCost`, `src/game/engine.ts:44`. |
+| `counter` (Obstruir) | `30 × severidad` (×⅔ con *Quiet friends*) | `GameEngine.CounterCost`; 12 meses de cooldown regional |
+| `silence` (Silenciar) | `20 × severidad` Dread (`13` con *Red altars*) + `3 × severidad` awareness (`2` con *Mute witnesses*) | `GameEngine.SilenceCost`; 12 meses de cooldown regional |
+| `conceal` (Ocultar) | `20 + awareness/2` si el efecto mundial está listo; `20` si solo limpia exposición local | `GameEngine.ConcealCost`; efecto mundial descansa 6 meses (9 en Hard) |
+| `bury` (Enterrar) | `50 + BuryStep × usosPrevios` (`+15` Easy, `+35` Normal, `+40` Hard) | `GameEngine.BuryCost`; quita 5 de awareness y suma +8 exposición |
+| `restore` (Restaurar) | `30 × mesesRecuperados` | `GameEngine.RestoreCost`; recupera mitad (o todos con *Contingency*) |
+| `prepare` (Sitio) | `40` Influence + `60 / 100 / 160` Dread según sitios financiados | `GameEngine.SiteDreadCost` + `1` Influence/mes de mantenimiento |
+| Talentos | `40 + 25 × tomados` (`30 + 20 × tomados` en Easy) | `GameEngine.TalentCost`; limitado además por sellos abiertos |
 
-Every other action is a flat price with a per-region cooldown. Cooldowns are stored as the
-month the action becomes available again (`RegionState.cooldowns`), so they survive saves
-without extra bookkeeping.
+*The world forgets* (remate de *Hidden hand*) no cuesta Influence ni Dread al invocarse una vez
+por partida: su precio son 6 meses con todas las células dispersas (sin ingreso ni avance).
 
-## Previewing
+## Previsualización y validación
 
-`previewAction` (`src/game/engine.ts:49`) is the single authority on whether an action is
-legal, what it costs, and what it will do. The UI, the tests, and the AI playtest harnesses
-all go through it, so a thing the UI offers is a thing the engine will accept. It returns a
-refusal `reason` string that is shown directly to the player.
+`GameEngine.PreviewAction` es la autoridad única sobre si una acción es legal, cuánto cuesta
+(incluyendo la `Awareness` que suma), qué produce y qué riesgos conlleva (por ejemplo, si
+detendría el rito activo). La interfaz, las pruebas y el bot pasan por ella; `PerformAction`
+revalida la vista previa antes de cobrar nada.
 
-`performAction` re-runs the preview and refuses if it fails, so there is no path that
-charges a player for an illegal action.
+[Volver al índice](README.md)

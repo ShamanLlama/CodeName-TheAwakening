@@ -1,90 +1,87 @@
-# 01 — Overview
+# 01. Resumen de reglas y flujo de partida
 
-## Premise
+**Estado:** `alignment-7` (Unity `0.9.0` / `0.9.1`). Código en `unity/Assets/Awakening/Core/Rules/`.
 
-You are the hidden will behind a global Cthulhu cult. Humanity is the resource, secrecy
-is the constraint, and the stars come right exactly once. Build congregations across eight
-world regions, convert their belief into Dread, raise three ritual sites, and complete the
-final rite inside the alignment window — before the world works out what you are.
+## Premisa mecánica
 
-## Design pillars
+Juegas como un Old God (Dios Antiguo). Hoy encarnas a Cthulhu entre enero de 1908 y septiembre
+de 1926, y decides qué hacer con tus cultistas, cuándo manifestarte y a quién controlar. La
+humanidad es tu recurso, el secreto es tu límite y las estrellas solo se alinean una vez.
+Construyes células en ocho regiones, eliges talentos dentro de la partida, conviertes
+seguidores y locura en Dread, preparas tres sitios rituales y sostienes el rito final dentro
+de la ventana de alineación antes de que el mundo te descubra o venza el plazo.
 
-1. **Growth is a liability, not just a reward.** A cult large enough to matter is a cult
-   large enough to be noticed. Every follower you hold pushes world awareness up.
-2. **You cannot defend everywhere.** Obstructing a threat burns a region's connections for
-   a year. Triage is the core tactical decision.
-   *`alignment-3` (2026-11-12):* each threat has three answers, each paid in a different
-   currency: obstruct (Influence and a year of cooldown), scatter (eight months of a silent
-   cell) or silence (Dread and world awareness). See [Experiencia y loops](02_Game_Design/Experiencia_y_loops.md#cambios-de-alignment-3--2026-11-12).
-3. **Placement is strategy.** A ritual site must be carried by a share of its region's
-   population, so populous regions recruit well and host rituals badly.
-4. **Every clock is visible.** The alignment date, awareness, site preparation, and threat
-   deadlines are all on screen. Losing should feel like a decision you made, not a dice roll.
+## Pilares de diseño
 
-## The shape of a run
+1. **Crecer tiene consecuencias.** Un culto grande genera Influence y sostiene sitios, pero
+   cada seguidor sube el conocimiento global (`Awareness`).
+2. **Defender exige elegir.** Toda amenaza tiene tres respuestas garantizadas en monedas
+   distintas: Influence y 12 meses de espera (`counter`), meses con la célula oculta
+   (`scatter`), o Dread y awareness (`silence`).
+3. **La ubicación cambia el plan.** El apoyo de un sitio depende de la población total de su
+   región. Además, el escepticismo, la resistencia institucional y el `Mysticism` cambian lo
+   que cuesta reclutar, manifestar y defender.
+4. **Todos los plazos están a la vista.** La alineación, la awareness, el margen del rito, la
+   preparación de cada sitio y las amenazas se muestran en pantalla. Perder se siente como el
+   resultado de tus decisiones previas, no de una tirada oculta.
 
-| Phase | `GameStatus` | What is happening |
+## Fases de una partida
+
+| Fase | `GameState.Status` | Qué ocurre |
 | --- | --- | --- |
-| Placing | `placing` | Choose a starting region. No time passes. |
-| Preparation | `playing` | The long game: expand, recruit, manage visibility, fund and prepare three ritual sites. |
-| Alignment | `alignment` | The stars come right and time pauses. The final rite becomes available. |
-| Final rite | `awakening` | Hold three supported sites for the required months while the world attacks them. |
-| Resolved | `won` / `lost` | The run is over and immutable. |
+| Colocación | `placing` | Eliges región inicial (`GameEngine.PlaceStartingFoothold`). El tiempo está detenido. |
+| Preparación | `playing` | Meses 0 a 199 (ene. 1908 a ago. 1924): expandes la red, tomas talentos al abrirse sellos, gestionas visibilidad y `Madness`, y preparas 3 sitios. |
+| Alineación | `alignment` | Mes 200 (sept. 1924): el reloj pausa y se abre la ventana de 24 meses (`Balance.AlignmentMonths`) para iniciar el rito. |
+| Rito final | `awakening` | Sostienes 3 sitios listos durante 12 meses acumulados (u 8 con *The Great Procession*) mientras el mundo caza tus sitios. |
+| Resuelta | `won` / `lost` | La partida termina con su código en `GameState.ResultCode`. |
 
-Time advances in months. The preparation phase runs to `BALANCE.preparationMonths`, then
-the alignment window opens for `BALANCE.alignmentMonths` more. The hard deadline is
-`deadline` (`src/game/derived.ts:18`), the sum of the two. At 1× speed a month is
-`BALANCE.secondsPerMonth`, putting a full run in the region of seven minutes of
-unpaused play.
+El calendario dura `Balance.PreparationMonths` (200) + `Balance.AlignmentMonths` (24) = 224
+meses (`Balance.Deadline`). A velocidad 1× cada mes dura `Balance.SecondsPerMonth` (2 segundos),
+unos 7,5 minutos sin pausas. El rito solo puede empezar durante la alineación
+(`GameEngine.AwakeningReason`): no puedes ganar antes, pero sí quedarte sin margen.
 
-**The rite can only be started during the alignment window** (`awakeningReason`,
-`src/game/engine.ts:161`). You cannot finish early; you can very much finish late, which
-is to say not at all.
+## Ciclo mensual
 
-## The monthly loop
+Cada mes simulado corre en `GameEngine.AdvanceSimulation` en este orden:
 
-Each simulated month, in this order (`advanceSimulation`, `src/game/engine.ts:173`):
+1. Avanza el calendario (`ElapsedMonths`), regresan las células dispersas cumplidas y se
+   procesa el decaimiento o contagio de `Madness`.
+2. Se resuelve el mundo (`Director.ResolveWorld`): vencen las oportunidades caducadas y golpean
+   las amenazas cuyo plazo llegó a cero.
+3. Entra el ingreso neto de Influence (`Derived.InfluencePerMonth` menos el mantenimiento de
+   sitios; los sitios sin pago pasan a `Dormant`). Se suma el Dread pasivo por `Madness`
+   (`GameEngine.MadnessDreadTotal`).
+4. Por región: reclutamiento automático, deriva de exposición, avance de preparación de sitios
+   (más aceleración por `Madness`) y awareness mensual por sitios, células públicas o `Madness`
+   alta.
+5. Sube la `Awareness` global según la fracción de la humanidad que sigue al culto
+   (`Derived.CultShare`, sin contar células públicas si tienes *Open worship*).
+6. Si el rito está activo y hay 3 sitios listos y apoyados, avanza 1 mes (`FinalProgress`).
+7. Se comprueban en orden: victoria, derrota por awareness (100) y derrota por calendario
+   (mes 224).
+8. Corre el director (`Director.Tick`): tiradas de amenazas cada 4 meses y oportunidades cada
+   12 meses.
 
-1. Advance the calendar.
-2. Resolve the world: expire opportunities, land any threat that has come due.
-3. Collect Influence income, throttled by awareness.
-4. Per region: automatic recruitment, exposure drift, madness decay, ritual site progress.
-5. Raise awareness by the share of humanity that follows you.
-6. Advance the final rite if three sites are supported.
-7. Check victory, then the awareness loss, then the calendar deadline.
-8. Run the director: roll for new threats and opportunities.
+Las acciones del jugador no consumen meses; las limitan la Influence, el Dread, los seguidores,
+los sellos de talentos y los cooldowns. Pausar para pensar y actuar es parte normal del juego.
 
-Player actions are **free of time cost** — they are gated by Influence, Dread, followers,
-and per-region cooldowns, not by the clock. Acting while paused is legitimate and expected.
+## Victoria y derrotas
 
-## Victory
+- **Victoria (`awakened`):** inicias el rito dentro de la ventana (con 3 sitios listos y
+  `Balance.FinalDread` = 100 Dread) y acumulas los meses requeridos antes del mes 224. El
+  progreso es acumulativo: perder apoyo pausa el conteo sin reiniciarlo.
+- **Derrota por conocimiento global (`world_awareness`):** `Awareness` llega a 100 y la partida
+  termina al instante ese mes.
+- **Derrota por calendario (`deadline`):** llega el mes 224 sin completar el rito.
+- **Cierre voluntario (`conceded`):** si el rito aún no empezó y `Forecast.Margin` confirma que
+  ya no cabe antes del mes 224, `GameEngine.CanConcede` permite cerrar la partida como derrota
+  (`GameEngine.Concede`) sin esperar meses vacíos.
 
-All of the following (`awakeningReason` and `advanceSimulation`):
+## Determinismo
 
-- Three ritual sites that are funded, fully prepared, and currently supported.
-- `BALANCE.finalDread` Dread in reserve, spent to begin the rite.
-- The rite begun during the alignment window.
-- Three sites held supported for `BALANCE.finalMonths` cumulative months before the deadline.
+Cada partida queda determinada por su semilla (`Seed`), la dificultad y la secuencia de
+acciones. El RNG (`Rng.Next`) vive en `GameState.RngState` y solo avanza en el director.
+Previsualizar una acción (`GameEngine.PreviewAction`) nunca consume azar ni cambia el estado,
+lo que permite correr las trazas grabadas y el bot de medición en `core-tests/`.
 
-Rite progress is **cumulative, not consecutive**. Losing support pauses the count; it does
-not reset it. This is what makes a damaged finale recoverable.
-
-## Defeat
-
-Two ways to lose:
-
-- **The world knows.** Awareness reaches 100. Checked every month; ends the run immediately.
-- **The alignment passes.** The deadline arrives with the rite unfinished.
-
-The first is the pressure against playing greedily, the second against playing slowly.
-Most runs are a negotiation between them. See [04 — Visibility and
-awareness](04-visibility.md).
-
-## Determinism
-
-A run is fully determined by its seed and the player's commands. The RNG is a seeded
-integer stream carried in `GameState.rngState` (`src/game/random.ts`) and advanced only
-by the director. Previewing an action never consumes randomness, and every command
-returns a new state rather than mutating the old one (`performAction`,
-`src/game/engine.ts:99`). This is what makes the playtest harnesses in `src/tests/`
-reproducible.
+[Volver al índice](README.md)

@@ -1,35 +1,35 @@
 # Dirección de audio
 
-**Versión:** 0.2 · **Fecha:** 2026-11-18 · **Estado:** efectos implementados; dirección sonora final abierta.
+**Versión:** 0.3 · **Fecha:** 2026-11-25 · **Estado:** SFX procedurales temporales implementados; banda sonora y diseño sonoro contratados en Camino 2 (D06, D26).
 
-## Base actual
+## Base temporal actual
 
-El juego sintetiza efectos al iniciar: clic, acción, rechazo, amenaza, presagio, sitio y
-final. Desde 0.5.0 lo hace Unity con los mismos sonidos que la versión Godot. El sonido usa tonos y envolventes generados por código; no depende de archivos
-de audio externos. El menú permite silenciar y ajustar volumen.
+El juego sintetiza efectos de sonido al iniciar en
+[Sfx.cs](../../../unity/Assets/Awakening/UI/Audio/Sfx.cs): clic, acción, rechazo, amenaza,
+presagio, sitio y final, sobre cuatro reproductores simultáneos. El menú permite silenciar y
+ajustar volumen. No hay música, ambientes ni voces en el prototipo actual.
 
-La implementación de [Sfx](../../../unity/Assets/Awakening/UI/Audio/Sfx.cs) define esos
-sonidos y mantiene cuatro reproductores. Esto limita cuántos efectos pueden sonar a la vez. No hay
-música ni voz en ese catálogo; no se asumen como entregables comprometidos.
+## Plan de audio final (D06 y D26 — futuro)
 
-## Función propuesta
+- **En Camino 2 (Unity Fellowship de 50.000 USD):** contratar **1 ingeniero de audio**
+  (equipo en Ecuador: **$3.000 USD · 2 meses**) para banda sonora y efectos de sonido con
+  paquete acotado de entregas:
+  - **Banda sonora original (3–4 pistas adaptativas en bucle):** menú/inicio, preparación,
+    tensión alta (`Awareness`/`Madness`) y alineación/rito final, acorde al tono lovecraftiano
+    de 1908–1926 y pensada para no fatigar en sesiones de 15–30 minutos.
+  - **Banco de SFX y capas ambientales (25–35 efectos con feedback progresivo de horror):**
+    archivo/papel, sellos del árbol de talentos, amenazas, sacrificios, susurros/ambiente de
+    `Madness` y `Awareness` crecientes, eventos escritos y desenlaces de los 3 Old Gods.
+- **En Camino 1 (sin grant):** conservar y afinar el sistema ligero actual para no bloquear
+  el cierre de la versión base de Cthulhu.
 
-Confirmar acciones y rechazos, llamar la atención sobre amenazas y marcar hitos
-rituales. El audio debe apoyar la lectura del mapa y los plazos. Probar que las
-señales críticas sigan disponibles en texto y gráficos con el juego silenciado.
+## Función sonora y comprobación
 
-**Jerarquía propuesta para evaluar:** advertencias de pérdida o plazo, hitos de fase,
-confirmaciones y sonidos ambientales. La prioridad final depende del tono y de si
-se incorpora una capa musical.
-
-## Decisiones y comprobación
-
-Definir identidad sonora, necesidad de música o ambientes, tratamiento de voces y
-cantidad de variación. No abrir un pipeline de doblaje o middleware sin esa decisión.
-
-Revisar una secuencia con varias amenazas simultáneas, otra con acciones repetidas y
-el inicio/final del rito. Observar si se pierden alertas, si hay fatiga y si el
-volumen distrae. Repetir el flujo sin sonido para detectar información dependiente
-de una sola modalidad. Esta revisión documental no realizó pruebas auditivas.
+1. **Jerarquía de lectura:** advertencias de plazo o amenaza > hitos de fase (alineación,
+   rito detenido/completado, sello de talento) > confirmaciones de acción > ambiente/música.
+2. **Sin dependencia exclusiva del audio:** toda señal crítica debe seguir siendo legible en
+   texto y gráficos con el juego silenciado.
+3. **Pruebas futuras:** verificar varias amenazas simultáneas, repetición de acciones y
+   transición al rito para evitar fatiga auditiva o pérdida de alertas.
 
 [Volver al índice](../README.md)
