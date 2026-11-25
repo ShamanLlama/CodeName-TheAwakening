@@ -16,8 +16,8 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
 
 | Versión | Fecha | Commit | Ruleset | Adaptador | Ronda GTC | Estado |
 | --- | --- | --- | --- | --- | --- | --- |
-| 0.9.1 | 2026-11-25 | Pendiente | `alignment-7` | `awakening-6` | Pendiente | En desarrollo |
-| 0.9.0 | 2026-11-23 | `c66ca8e`; exportada desde `73c0599` | `alignment-7` | `awakening-6` | «0.9.0 playtest por invitación · Madness como recurso», abierta del 2026-11-23 al 2026-12-07 (UTC) | En itch.io (Restricted con contraseña) |
+| 0.9.1 | 2026-11-25 | `54760ea` | `alignment-7` | `awakening-6` | «0.9.1 demo público · South America», abierta hasta 2026-12-07 (UTC) | En itch.io (demo público) |
+| 0.9.0 | 2026-11-23 | `c66ca8e`; exportada desde `73c0599` | `alignment-7` | `awakening-6` | «0.9.0 playtest por invitación · Madness como recurso», abierta del 2026-11-23 al 2026-12-07 (UTC) | Reemplazada por 0.9.1; demo público desde 2026-11-24 |
 | 0.8.0 | 2026-11-22 | `a72528e`; exportada desde `ee5509c` | `alignment-6` | `awakening-5` | «0.8.0 playtest por invitación · remates que cambian la partida», cerrada el 2026-11-23 (UTC) con 2 partidas | Reemplazada por 0.9.0 |
 | 0.7.0 | 2026-11-22 | `9a3055e`; exportada desde `f253981` | `alignment-5` | `awakening-4` | «0.7.0 playtest por invitación · árbol de talentos y awareness gestionable», cerrada el 2026-11-22 (UTC) con 1 partida | Reemplazada por 0.8.0 |
 | 0.6.0 | 2026-11-21 | `675e2a7`; exportada desde `68b0249` | `alignment-4` | `awakening-3` | «0.6.0 playtest por invitación · ocultar con plazo y margen del rito», cerrada el 2026-11-22 (UTC) con 1 partida | Reemplazada por 0.7.0 |
@@ -36,9 +36,13 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
 
 ### 0.9.1 — Nombre de South America
 
-- **Commit:** pendiente.
+- **Commit:** `54760ea`.
 - **Cambio y motivo:** a pedido del usuario, la región aparece como «South America» en el mapa y el resto de la interfaz de Unity. Conserva la clave interna `latin_america`, las reglas y el adaptador de playtest.
 - **Verificación:** `dotnet test core-tests/Tests --no-restore`: 310/310 pruebas aprobadas. Las trazas actuales solo actualizan el nombre visible; la comparación con el oráculo histórico de Godot adapta ese texto sin modificarlo. Se actualizó la comprobación de UI que esperaba el nombre anterior; no se ejecutó el player de Unity.
+
+- **Publicación (2026-11-25):** export WebGL de Unity 6000.3.25f1 completado desde una copia de `54760ea`, con configuración de producción de la ronda nueva. Upload `20819226`, `the-awakening-0.9.1-web.zip` (8.556.082 bytes), seleccionado como único archivo jugable en el navegador. La 0.9.0 queda oculta y respaldada para restauración; no se borró.
+- **GTC:** build «The Awakening 0.9.1 · alignment-7 · Unity» y ronda «0.9.1 demo público · South America», con cierre el 2026-12-07. Se preparó en pausa y se habilitó tras comprobar la publicación. Conserva el origen `https://html-classic.itch.zone`, las reglas y el contrato; usa identificadores nuevos para separar las versiones.
+- **Comprobación del host:** página pública sin sesión con cabecera v0.9.1 y nota del nombre corregido; guardado de itch.io confirmado. Hashes SHA-256 del loader y de los datos, framework y WASM descomprimidos coinciden con el export. El HTML incluye la versión y la inyección habitual de itch.io. La revisión visual interactiva quedó limitada porque el navegador de automatización no produjo cuadros; no se repitió un playtest completo.
 
 ### 0.9.0 — Madness como recurso, respiro tras responder y Easy con margen
 
@@ -114,6 +118,8 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
   - Upload `20767533` en itch.io, único archivo jugable: `the-awakening-0.9.0-pilot.zip`, 9,0 MB, exportado desde un checkout limpio de `73c0599`.
   - Los archivos alojados son idénticos al export. La build arranca sin errores y no envía nada antes de que el jugador responda.
   - La página pasa a «Novedad de 0.9.0 / New in 0.9.0».
+
+- **Apertura pública (2026-11-24):** por solicitud del usuario, itch.io pasa de Restricted con contraseña a Public. La descripción y el texto corto quedan solo en inglés, identifican la build como demo gratuito y conservan el aviso de participación opcional. Se mantiene el upload `20767533`, sin nueva build ni cambios de reglas o consentimiento. Acceso y texto verificados en sesión de incógnito, sin contraseña; no se repitió una prueba completa de gameplay. La ronda GTC existente conserva su nombre histórico de playtest por invitación; distinguir sus partidas anteriores y posteriores a la apertura pública. Texto en [itch-page.md](itch-page.md).
 
 ### 0.8.0 — remates que cambian la partida, rito detenido visible y Normal más exigente
 

@@ -1,63 +1,43 @@
-# Página de itch.io y mensaje para invitar
+# Página pública de itch.io
 
-Texto publicado el 2026-11-02 (0.3.0; desde 0.4.0 la página explica las tres respuestas a cada amenaza y, desde 0.5.0 (2026-11-18), suma un párrafo «Novedad de 0.5.0 / New in 0.5.0»: mismo juego y reglas en otro motor (Unity), con partida, ajustes y respuesta del playtest conservados en el mismo navegador; desde 0.5.1 (2026-11-18) ese párrafo pasa a «Novedad de 0.5.1 / New in 0.5.1»: mismas reglas, interfaz más legible, y pide avisar si algo se ve tapado, cortado o difícil de leer; desde 0.5.2 es «Novedad de 0.5.2 / New in 0.5.2» y suma que los botones ya no se vuelven grises al tocarlos; actualizado para 0.3.1 y 0.3.2 el mismo día, para 0.3.3 y 0.3.4 el 2026-11-03, y para 0.3.5 y 0.3.6 el 2026-11-06) en <https://shamanllamagames.itch.io/the-awakening-of-cthulhu> para el playtest por invitación de `alignment-2`. La página está en modo **Restricted** con contraseña: no aparece en búsquedas de itch.io y solo entra quien tiene enlace y contraseña. La contraseña se comparte con las invitaciones y no se guarda en este repositorio. Debe coincidir con el aviso de participación del juego (`unity/Assets/Awakening/UI/Screens/PlaytestPanel.cs`; hasta 0.4.0, `godot/ui/playtest_panel.gd`). Si cambia lo que se recoge, actualizar ambos.
+Publicada como **demo gratuito** el 2026-11-24 en <https://shamanllamagames.itch.io/the-awakening-of-cthulhu>. Visibilidad **Public**: acceso sin sesión ni contraseña. La descripción corta y la página están solo en inglés.
+
+Desde el 2026-11-25 se juega la build 0.9.1, upload `20819226` (`the-awakening-0.9.1-web.zip`). Corrige el nombre visible de la región a South America; conserva las reglas y la compatibilidad con partidas 0.9.0. El upload 0.9.0 queda oculto para restauración. Antes de la apertura pública del 2026-11-24, la página era **Restricted** con contraseña para pruebas por invitación.
+
+La 0.9.1 usa una build y una ronda GTC nuevas, con `alignment-7` y `awakening-6`. Para la ronda histórica 0.9.0, distinguir las partidas anteriores y posteriores a la apertura pública; no asumir que todas proceden de personas invitadas.
+
+Verificado en itch.io: guardado confirmado; en una sesión de incógnito la descripción publicada coincide con el texto enviado, aparece el botón **Run game**, no hay campo de contraseña y la descripción corta identifica el demo. Esta comprobación verifica el acceso y el texto; no es una nueva prueba completa de gameplay.
+
+El aviso de participación debe coincidir con `unity/Assets/Awakening/UI/Screens/PlaytestPanel.cs`. Si cambia lo que se recoge, actualizar ambos.
 
 ## Descripción corta
 
-Build hidden cults, prepare forbidden rites and awaken Cthulhu before the world finds out. Browser playtest 0.3.6.
+Build hidden cults, prepare forbidden rites and awaken Cthulhu before the world finds out. Free browser demo.
 
 ## Descripción de la página
 
-**Playtest 0.3.6 · navegador · 15–20 minutos**
-
-Dirige un culto secreto de Cthulhu entre 1908 y 1926. Gana seguidores en ocho regiones del mundo, conviértelos en Influence y Dread, prepara tres sitios rituales y completa el rito final cuando las estrellas se alineen, antes de que el mundo descubra lo que haces.
-
-Es una versión de prueba de Lucid Labworks Studio. El juego está en inglés.
-
-**Cómo jugar**
-
-1. Elige dificultad y región inicial. La semilla del mundo es opcional.
-2. Haz clic en una región para reclutar, expandirte, ocultar evidencia, obstruir amenazas o preparar un sitio ritual.
-3. Pausa con la barra espaciadora o los controles de arriba. Puedes actuar en pausa.
-4. En el mes 200 se alinean las estrellas: paga 100 Dread y sostén tres sitios durante 12 meses.
-
-Cada seguidor da Influence, pero también aumenta lo que el mundo sabe de ti. Si la awareness llega a 100 %, pierdes. Cada sitio cuesta Influence todos los meses, y al final el mundo caza tus sitios: guarda reservas.
-
-**Qué queremos aprender**
-
-Si sientes que tienes que elegir en qué gastar la Influence, si las amenazas y el final se anuncian a tiempo y qué te confundió. Si participas, puedes dejar un comentario al terminar la partida; cualquiera puede comentar en esta página.
-
-**Participación en el playtest (opcional)**
-
-Al pulsar **Begin**, el juego te pregunta si quieres participar. Si eliges «Join the playtest & play», envía a GTC Playtest Lab tus elecciones (incluidas la dificultad y la semilla del mundo), el gasto de recursos, el progreso y los tiempos de sesión. Se usa un ID aleatorio por ronda, sin nombre ni correo, y los registros detallados se conservan seis meses. No escribas datos personales en la semilla. Si eliges «Play without sharing», juegas igual y no se envía nada. Tu respuesta se recuerda en ese dispositivo y puedes cambiarla en Menu → GTC Playtest Lab.
-
-**Recomendaciones**
-
-Mejor en un navegador de computadora (Chrome, Edge o Firefox). En el teléfono, juega en horizontal y en pantalla completa, y elige un tamaño de interfaz de 160 % o 200 % en la pantalla de inicio (también está en el menú). Toca un poder para leer qué hace y por qué no está disponible, y usa el botón que aparece debajo para activarlo. Pellizca el mapa para acercarlo y arrástralo para moverlo.
-
----
-
-**Playtest 0.3.6 · browser · 15–20 minutes**
+## Free browser demo · v0.9.1 · 15–30 minutes
 
 Lead a secret cult of Cthulhu from 1908 to 1926. Grow followers across eight world regions, turn them into Influence and Dread, prepare three ritual sites and complete the final rite when the stars align, before the world finds out what you are.
 
-This is a test build by Lucid Labworks Studio.
+This is a free demo of a strategy game in development by Lucid Labworks Studio.
 
-**How to play:** choose a difficulty and a starting region (the world seed is optional). Click a region to recruit, expand, conceal evidence, obstruct threats or prepare a ritual site. Pause with Space or the controls at the top; you can act while paused. At month 200 the stars align: pay 100 Dread and hold three sites for 12 months. Every follower earns Influence but raises world awareness; at 100% you lose. Sites cost Influence every month, and the world hunts them at the end, so keep a reserve.
+**New in 0.9.1:** The map region is now named South America. Existing 0.9.0 saves remain compatible; gameplay and balance are unchanged.
 
-**Optional playtest participation:** when you press **Begin**, the game asks whether you want to join. If you choose "Join the playtest & play", it sends GTC Playtest Lab your choices (including difficulty and world seed), resource spending, progress and session times, under a random per-round ID with no name or email. Detailed records are kept for six months. Keep personal details out of the seed. If you choose "Play without sharing", you play normally and nothing is sent. Your answer is remembered on that device; change it any time from Menu → GTC Playtest Lab.
+**New in 0.9.0:** **Madness** is now a resource. Manifestations and sacrifices raise it in their region; every month it yields Dread and speeds up that region's ritual site, but it draws occultists and, from 50%, the world notices. **Dreams of R'lyeh** spreads it to neighbouring regions and, during the rite, each sacrifice where Madness runs high carries it two months forward. After you obstruct or silence a threat, the region stays quiet for 5 months. Talents cost less, and on Easy sites take 20 months instead of 24. Capstones, the talent tree, burying the record and restoring sites remain. Unfinished runs from versions before 0.9.0 do not continue.
+
+**How to play:** choose a difficulty and a starting region (the world seed is optional). Click a region to recruit, expand, conceal evidence or prepare a ritual site. Concealing lowers world awareness only once every 6 months; burying the record lowers it more, at a rising price. Open **Talents** (T key) when a seal is unbroken. Every threat has three answers: obstruct it with Influence, scatter the cell (it stops recruiting and its site stalls for 8 months) or silence the witnesses with Dread at the cost of more awareness. Pause with Space or the controls at the top; you can act while paused. At month 200 the stars align: pay 100 Dread and hold three sites for 12 months. Every follower earns Influence but raises world awareness; at 100% you lose. Actions that add awareness show it in red under their price. Sites cost Influence every month, and the world hunts them at the end, so keep a reserve.
+
+**Optional playtest participation:** when you press **Begin**, the game asks whether you want to join. If you choose "Join the playtest & play", it sends GTC Playtest Lab your choices (including difficulty and world seed), resource spending, threats and how you answered them, the talents you chose, a yearly snapshot of your resources, progress and session times, under a random per-round ID with no name or email. Detailed records are kept for six months. Keep personal details out of the seed. If you choose "Play without sharing", you play normally and nothing is sent. Your answer is remembered on that device; change it any time from Menu → GTC Playtest Lab.
 
 **Phone:** play sideways in full screen and pick an interface size of 160% or 200% on the start screen (also in the menu). Tap a power to read what it does and why it is unavailable, then use the button below it to perform it. Pinch the map to zoom and drag to move it.
 
-**Feedback:** did you have to choose where to spend Influence? Were threats and the finale announced in time? What confused you? If you participate, you can leave a comment at the end of a run; anyone can comment below.
+**Feedback:** did you raise Madness on purpose? Did your three sites make it in time? Did Easy feel easy? Did your branch's last talent change your plan? Which branch did you take, and what did you give up? What confused you? If you participate, you can leave a comment at the end of a run; anyone can comment below.
 
 ## Mensaje para compartir
 
-> Estamos probando **The Awakening of Cthulhu**, un juego de estrategia en el navegador de Lucid Labworks Studio: diriges un culto secreto y tienes que despertar a Cthulhu antes de que el mundo te descubra. Una partida dura 15–20 minutos y funciona mejor en computadora. El juego está en inglés.
+> **The Awakening of Cthulhu** is a free browser strategy demo by Lucid Labworks Studio. Lead a hidden cult, prepare forbidden rites and awaken Cthulhu before the world discovers you.
 >
-> Al empezar, el juego te pregunta si quieres participar en el playtest. Si aceptas, nos envía tus decisiones y tiempos, sin tu nombre ni correo. Es opcional.
+> Play in English: https://shamanllamagames.itch.io/the-awakening-of-cthulhu
 >
-> Enlace: https://shamanllamagames.itch.io/the-awakening-of-cthulhu
-> Contraseña: <contraseña>
->
-> Nos interesa saber si sentiste que tenías que elegir en qué gastar y qué te confundió. Puedes comentar en la página o, si participas, al final de la partida.
+> Allow 15–30 minutes. Playtest participation is optional; you can play without sharing data.
