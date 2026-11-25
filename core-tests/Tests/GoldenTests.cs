@@ -127,6 +127,13 @@ namespace Awakening.Core.Tests
             }
             plain["ruleset"] = "alignment-3";
             var godot = new Dictionary<string, object>(expected);
+            // The Godot oracle retains the region's historical display name.
+            godot["newLog"] = ((List<object>)expected["newLog"]).Cast<Dictionary<string, object>>().Select(entry =>
+            {
+                var renamed = new Dictionary<string, object>(entry);
+                renamed["message"] = ((string)entry["message"]).Replace("Latin America", "South America");
+                return (object)renamed;
+            }).ToList();
             if (state.Difficulty == "easy")
             {
                 // alignment-7: Easy's forecast counts 20-month sites from the first month.

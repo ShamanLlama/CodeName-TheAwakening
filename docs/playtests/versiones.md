@@ -16,6 +16,7 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
 
 | Versión | Fecha | Commit | Ruleset | Adaptador | Ronda GTC | Estado |
 | --- | --- | --- | --- | --- | --- | --- |
+| 0.9.1 | 2026-11-25 | Pendiente | `alignment-7` | `awakening-6` | Pendiente | En desarrollo |
 | 0.9.0 | 2026-11-23 | `c66ca8e`; exportada desde `73c0599` | `alignment-7` | `awakening-6` | «0.9.0 playtest por invitación · Madness como recurso», abierta del 2026-11-23 al 2026-12-07 (UTC) | En itch.io (Restricted con contraseña) |
 | 0.8.0 | 2026-11-22 | `a72528e`; exportada desde `ee5509c` | `alignment-6` | `awakening-5` | «0.8.0 playtest por invitación · remates que cambian la partida», cerrada el 2026-11-23 (UTC) con 2 partidas | Reemplazada por 0.9.0 |
 | 0.7.0 | 2026-11-22 | `9a3055e`; exportada desde `f253981` | `alignment-5` | `awakening-4` | «0.7.0 playtest por invitación · árbol de talentos y awareness gestionable», cerrada el 2026-11-22 (UTC) con 1 partida | Reemplazada por 0.8.0 |
@@ -32,6 +33,12 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
 | 0.3.1 | 2026-11-02 | `2256c6c` | `alignment-2` | `awakening-1` | «0.3.1 playtest por invitación · decisiones económicas», cerrada el 2026-11-03 con 2 partidas | Reemplazada por 0.3.2 |
 | 0.3.0 | 2026-11-02 | `85f5905`; exportada desde `dbfb07f` | `alignment-2` | `awakening-1` | «0.3.0 playtest por invitación · decisiones económicas», cerrada el mismo día sin partidas | Reemplazada por 0.3.1 |
 | 0.2.0 | 2026-10-30 / 2026-10-31 | `ae38ec0`; adaptador E4–E6 en `6aa2419` | `alignment-1` | `awakening-1` | QA técnica E7 y «E7 piloto interno de gameplay» (abierta hasta 2026-11-09) | Reemplazada en itch.io por 0.3.0 el 2026-11-02 |
+
+### 0.9.1 — Nombre de South America
+
+- **Commit:** pendiente.
+- **Cambio y motivo:** a pedido del usuario, la región aparece como «South America» en el mapa y el resto de la interfaz de Unity. Conserva la clave interna `latin_america`, las reglas y el adaptador de playtest.
+- **Verificación:** `dotnet test core-tests/Tests --no-restore`: 310/310 pruebas aprobadas. Las trazas actuales solo actualizan el nombre visible; la comparación con el oráculo histórico de Godot adapta ese texto sin modificarlo. Se actualizó la comprobación de UI que esperaba el nombre anterior; no se ejecutó el player de Unity.
 
 ### 0.9.0 — Madness como recurso, respiro tras responder y Easy con margen
 

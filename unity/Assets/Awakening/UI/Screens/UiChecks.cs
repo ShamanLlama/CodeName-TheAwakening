@@ -477,7 +477,7 @@ namespace Awakening.UI
             var haltedBox = screen.Q("rite-halted-box");
             Check(haltedBox != null && Kit.IsVisible(haltedBox), "rite band displays RITE HALTED box when Forecast.Rite is not advancing");
             string haltedText = screen.Q<Label>("rite-halted-reasons")?.text ?? "";
-            Check(haltedText.Contains("RITE HALTED") && haltedText.Contains("Latin America: scattered") && haltedText.Contains("West Asia: unsupported") && haltedText.Contains("Oceania: dormant"), "rite halted box names all blocking regions and reasons: " + haltedText);
+            Check(haltedText.Contains("RITE HALTED") && haltedText.Contains("South America: scattered") && haltedText.Contains("West Asia: unsupported") && haltedText.Contains("Oceania: dormant"), "rite halted box names all blocking regions and reasons: " + haltedText);
             Check(screen.Query<Label>().ToList().Any(l => l.text.Contains("RITE HALTED  3 / 12")), "ledger sites caption shows RITE HALTED Progress/Required");
             Debug.Log("UI_CHECK: rite halted, scatter/sacrifice halt warnings, and Dreams of R'lyeh");
 

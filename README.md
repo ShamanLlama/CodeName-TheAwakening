@@ -6,7 +6,7 @@ The game is set in a lamp-lit cult archive from 1908 to 1926: the map is an old 
 
 ## Status
 
-- **Version 0.9.0**, in development. Rules `alignment-7`. Changes per build are in the [version log](docs/playtests/versiones.md).
+- **Version 0.9.1**, in development. Rules `alignment-7`. Changes per build are in the [version log](docs/playtests/versiones.md).
 - **Engine:** Unity 6.3 LTS (6000.3.25f1) since 0.5.0. Versions 0.2.0–0.4.0 were made in Godot 4.7. They stay in `godot/` and on the `godot` branch until that version is retired.
 - **Release:** a free, short, complete game, released mainly on **Steam** as a desktop build (Linux now, Windows later).
 - **Beta:** the web build is on itch.io by invitation. Each build gets its own round in GTC Playtest Lab, and data is recorded only with the player's consent. The itch.io page is for testing, not the release.
