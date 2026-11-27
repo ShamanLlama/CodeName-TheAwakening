@@ -16,6 +16,7 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
 
 | Versión | Fecha | Commit | Ruleset | Adaptador | Ronda GTC | Estado |
 | --- | --- | --- | --- | --- | --- | --- |
+| 0.9.2 | 2026-11-27 | `6a6c718`, `20496c8` | `alignment-7` | `awakening-6` | Pendiente: build y ronda nuevas al publicar | En rama `t3/ui-text-legibility`, sin publicar |
 | 0.9.1 | 2026-11-25 | `54760ea` | `alignment-7` | `awakening-6` | «0.9.1 demo público · South America», abierta hasta 2026-12-07 (UTC) | En itch.io (demo público) |
 | 0.9.0 | 2026-11-23 | `c66ca8e`; exportada desde `73c0599` | `alignment-7` | `awakening-6` | «0.9.0 playtest por invitación · Madness como recurso», abierta del 2026-11-23 al 2026-12-07 (UTC) | Reemplazada por 0.9.1; demo público desde 2026-11-24 |
 | 0.8.0 | 2026-11-22 | `a72528e`; exportada desde `ee5509c` | `alignment-6` | `awakening-5` | «0.8.0 playtest por invitación · remates que cambian la partida», cerrada el 2026-11-23 (UTC) con 2 partidas | Reemplazada por 0.9.0 |
@@ -33,6 +34,25 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
 | 0.3.1 | 2026-11-02 | `2256c6c` | `alignment-2` | `awakening-1` | «0.3.1 playtest por invitación · decisiones económicas», cerrada el 2026-11-03 con 2 partidas | Reemplazada por 0.3.2 |
 | 0.3.0 | 2026-11-02 | `85f5905`; exportada desde `dbfb07f` | `alignment-2` | `awakening-1` | «0.3.0 playtest por invitación · decisiones económicas», cerrada el mismo día sin partidas | Reemplazada por 0.3.1 |
 | 0.2.0 | 2026-10-30 / 2026-10-31 | `ae38ec0`; adaptador E4–E6 en `6aa2419` | `alignment-1` | `awakening-1` | QA técnica E7 y «E7 piloto interno de gameplay» (abierta hasta 2026-11-09) | Reemplazada en itch.io por 0.3.0 el 2026-11-02 |
+
+### 0.9.2 — Contraste y tamaño del texto
+
+- **Commits:** `6a6c718` (pase de legibilidad, Gemini 4 Neon) y `20496c8` (corrección de etiquetas del mapa y versión, Claude Opus 5.5), en la rama `t3/ui-text-legibility`.
+- **Motivo:** jugadores reportaron que el texto de la interfaz es muy difícil de leer. Medición previa sobre 0.9.1 (contraste WCAG de colores planos, sin contar el grano del papel): sobre papel sombreado, `Muted` 4,2:1, `Faint` 3,8:1 y los acentos de culto, peligro y advertencia entre 4,0 y 4,4:1, bajo el mínimo AA de 4,5:1. El texto atenuado (estampas deshabilitadas, botones del menú, crédito de inicio) bajaba a 2–3:1. Unas 55 etiquetas medían 9–13 px, casi todas en Courier Prime Regular o en la cursiva de Old Standard.
+- **Cambios (solo interfaz; reglas, adaptador y textos sin cambios):**
+  - Tintas sobre papel más oscuras con el mismo tono: `Text` `#19120a`, `Muted` `#423322`, `Faint` `#4a3b26`, `Cult` `#24421e`, `Danger` `#7a140d`, `Warn` `#5c3704`, `Omen` `#432864`. Todas superan 5:1 sobre papel sombreado; el texto principal, 9:1.
+  - Tintas sobre fondo oscuro más claras: `LampDim` `#b8a78c`, `Brass` `#c9a55d`, `DangerBright` `#f06859` (de 4,1–4,6:1 a 5,7–6,4:1), `OmenBright` `#b69ce0`.
+  - Lo no disponible o bloqueado se marca con cursiva, borde y sello; ya no se desvanece la tinta por debajo de 4,5:1.
+  - Ningún texto bajo 12 px. Las etiquetas pequeñas de máquina de escribir pasan a Courier Prime Bold; las cursivas de detalle (amenazas, expediente, talentos) suben a 14 px (12 en pantallas compactas).
+  - Mapa: los nombres de región van sobre una tira de papel, a tinta plena; los contadores de seguidores y los plazos de amenaza («5 MO») llevan una etiqueta de papel con borde de color; N, R'lyeh y sus coordenadas usan tintas claras con halo oscuro sobre el océano.
+  - Grano del papel algo más suave detrás del texto (amplitud 0,08 → 0,055; manchas 0,12 → 0,09). Se conservan fuentes, marcos, versalitas y paleta de época.
+- **Verificación:**
+  - `dotnet test core-tests/Tests`: 310/310 pruebas aprobadas.
+  - `unity/shots.sh … "start --check-ui 1"`: `UI_CHECKS_PASSED`.
+  - `unity/layout-check.sh`: 60/60 combinaciones aprobadas tras la corrección de etiquetas.
+  - Capturas a 1600×900 y 844×390 táctil comparadas con las de 0.9.1. El primer pase hacía desaparecer «North America» junto a las amenazas apiladas; `20496c8` lo corrige.
+  - No hubo partida humana con esta build.
+- **Medición pendiente:** confirmar con jugadores que el texto se lee bien sin pérdida de la identidad visual de 1908–1926.
 
 ### 0.9.1 — Nombre de South America
 
