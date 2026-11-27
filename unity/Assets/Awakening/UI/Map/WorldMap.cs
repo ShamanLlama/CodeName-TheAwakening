@@ -970,7 +970,7 @@ namespace Awakening.UI.Map
                 float subW = countW + (countW > 0 && madW > 0 ? 4 : 0) + madW;
                 float subH = Mathf.Max(countW > 0 ? countSize.y + 2 : 0, madW > 0 ? madSize.y + 2 : 0);
                 float height = titleSize.y + subH + 10;
-                float width = Mathf.Max(titleW, subW) + 2;
+                float width = Mathf.Max(titleW, subW);
                 Vector2 at = ToScreen(Geo.Anchor(id));
                 // A zoomed-out-of-view region has no label in this viewport.
                 if (!contentRect.Contains(at) || !TryLabelRect(new Rect(at.x - width * .5f, at.y - titleSize.y, width, height), obstacles, placed, out Rect rect))
