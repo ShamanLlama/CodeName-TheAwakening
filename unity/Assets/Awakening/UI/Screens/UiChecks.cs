@@ -41,11 +41,11 @@ namespace Awakening.UI
         {
             var probes = new (Button button, Color hover, Color down)[]
             {
-                (Kit.Button("Probe"), new Color32(182, 165, 129, 255), new Color(51 / 255f, 84 / 255f, 43 / 255f, .14f)),
-                (Kit.Primary("Probe"), new Color32(77, 106, 70, 255), new Color32(42, 68, 35, 255)),
-                (Kit.Stamp("Probe", null, Accent.Danger), new Color(142 / 255f, 29 / 255f, 20 / 255f, .16f), new Color(142 / 255f, 29 / 255f, 20 / 255f, .28f)),
+                (Kit.Button("Probe"), new Color32(182, 165, 129, 255), new Color(36 / 255f, 66 / 255f, 30 / 255f, .14f)),
+                (Kit.Primary("Probe"), new Color32(53, 86, 46, 255), new Color32(28, 51, 23, 255)),
+                (Kit.Stamp("Probe", null, Accent.Danger), new Color(122 / 255f, 20 / 255f, 13 / 255f, .16f), new Color(122 / 255f, 20 / 255f, 13 / 255f, .28f)),
                 (Kit.Link("Probe", null), Color.clear, Color.clear),
-                (Classed("aw-row"), new Color(33 / 255f, 24 / 255f, 14 / 255f, .07f), new Color(33 / 255f, 24 / 255f, 14 / 255f, .07f)),
+                (Classed("aw-row"), new Color(25 / 255f, 18 / 255f, 10 / 255f, .07f), new Color(25 / 255f, 18 / 255f, 10 / 255f, .07f)),
                 (Classed("aw-tab"), new Color32(198, 179, 140, 255), new Color32(198, 179, 140, 255)),
             };
             foreach (var probe in probes)

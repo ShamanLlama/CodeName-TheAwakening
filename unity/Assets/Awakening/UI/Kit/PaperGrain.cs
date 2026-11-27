@@ -12,7 +12,7 @@ namespace Awakening.UI
     public static class PaperGrain
     {
         public const int Size = 512;
-        const float Grain = 0.08f;
+        const float Grain = 0.055f;
         static readonly Dictionary<float, Texture2D> Cache = new Dictionary<float, Texture2D>();
         static readonly Dictionary<float, Color32[]> PixelCache = new Dictionary<float, Color32[]>();
         static Texture2D _lamp;
@@ -47,7 +47,7 @@ namespace Awakening.UI
                     // Grain: white lifts, black sinks, by the shader's multiplier offset.
                     Color layer = shift >= 0 ? new Color(1, 1, 1, shift * 1.2f) : new Color(0, 0, 0, -shift * 1.6f);
                     // Foxing browns the paper rather than greying it.
-                    float fox = Mathf.Clamp01(stain * foxing) * 0.12f;
+                    float fox = Mathf.Clamp01(stain * foxing) * 0.09f;
                     float alpha = fox + layer.a * (1 - fox);
                     Color rgb = alpha <= 0 ? Color.clear : (brown * fox + layer * layer.a * (1 - fox)) / alpha;
                     pixels[y * Size + x] = new Color(rgb.r, rgb.g, rgb.b, alpha);

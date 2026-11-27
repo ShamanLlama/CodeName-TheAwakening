@@ -26,7 +26,7 @@ namespace Awakening.UI
                 Draw2D.Rect(context.painter2D, new Rect(inset, inset, r.width - inset * 2, r.height - inset * 2), choice.enabledInHierarchy ? Palette.Cult : Palette.Faint);
             };
             choice.SetEnabled(!game.Blocked && game.Lab.Configured() && !game.Lab.Corrupt);
-            var status = SheetUI.Body(game.PlaytestStatus(), small ? 13 : 15, Palette.Muted);
+            var status = SheetUI.Body(game.PlaytestStatus(), small ? 14 : 15, Palette.Muted);
             choice.RegisterValueChangedCallback(e =>
             {
                 checkmark.MarkDirtyRepaint();

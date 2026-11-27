@@ -136,7 +136,7 @@ namespace Awakening.UI
             schedule.Execute(FocusForm);
             if (!Kit.Compact)
             {
-                var credit = SheetUI.Label("Map: Natural Earth, public domain  ·  v" + Application.version, 12, Palette.Alpha(Palette.LampDim, .6f), Fonts.Type);
+                var credit = SheetUI.Label("Map: Natural Earth, public domain  ·  v" + Application.version, 12, Palette.Alpha(Palette.LampDim, .78f), Fonts.TypeBold);
                 credit.style.position = Position.Absolute;
                 credit.style.left = 96;
                 credit.style.bottom = 20;

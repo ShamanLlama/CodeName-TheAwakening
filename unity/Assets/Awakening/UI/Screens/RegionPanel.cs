@@ -145,7 +145,7 @@ namespace Awakening.UI
             Tap(guideOk, DismissTabGuide);
             guideHead.Add(guideOk);
             _tabGuide.Add(guideHead);
-            _tabGuide.Add(Kit.Body(Notes.TabsHintText, 13, Palette.Text));
+            _tabGuide.Add(Kit.Body(Notes.TabsHintText, 14, Palette.Text));
             Kit.SetVisible(_tabGuide, false);
             _actions = Kit.VBox(0);
             _detail = Kit.VBox(6);
@@ -312,7 +312,7 @@ namespace Awakening.UI
                 cost.style.unityTextAlign = TextAnchor.MiddleRight;
                 Label aware = Kit.Label("", 12, Palette.Danger, Fonts.TypeBold);
                 aware.style.unityTextAlign = TextAnchor.MiddleRight;
-                Label note = Kit.Label("", 11, Palette.Omen, Fonts.TypeBold);
+                Label note = Kit.Label("", 12, Palette.Omen, Fonts.TypeBold);
                 note.style.unityTextAlign = TextAnchor.MiddleRight;
                 price.Add(cost);
                 price.Add(aware);
@@ -444,7 +444,7 @@ namespace Awakening.UI
                     : "";
                 row.aware.text = subText;
                 row.aware.style.color = showAware ? Palette.Danger : (showBuryGain || restoreHighlight) ? Palette.Cult : Palette.Warn;
-                row.aware.style.fontSize = !showAware && concealStamp != "" ? (Kit.Compact ? 12 : 11) : (Kit.Compact ? 14 : 12);
+                row.aware.style.fontSize = !showAware && concealStamp != "" ? (Kit.Compact ? 13 : 12) : (Kit.Compact ? 14 : 12);
                 Kit.SetVisible(row.aware, subText != "");
                 string madNote = preview.Ok && id == "manifest" ? $"+{Js.Num(Balance.ManifestMadness)} MADNESS"
                     : preview.Ok && id == "sacrifice" ? $"+{Js.Num(GameEngine.SacrificeMadness(s))} MADNESS"
@@ -455,7 +455,7 @@ namespace Awakening.UI
                     : madNote;
                 row.note.text = noteText;
                 row.note.style.color = haltsRite ? Palette.Danger : (dreamAdvances || madNote != "") ? Palette.Omen : Palette.Warn;
-                row.note.style.fontSize = Kit.Compact ? 12 : 11;
+                row.note.style.fontSize = Kit.Compact ? 13 : 12;
                 Kit.SetVisible(row.note, noteText != "");
                 bool threeLines = subText != "" && noteText != "";
                 row.button.style.height = threeLines ? (Kit.Touch ? 62 : 52) : StyleKeyword.Null;
@@ -510,7 +510,7 @@ namespace Awakening.UI
                 madBox.style.paddingLeft = madBox.style.paddingRight = 8;
                 madBox.style.paddingTop = madBox.style.paddingBottom = 4;
                 madBox.tooltip = hints["Madness"];
-                Label madLine = Kit.Body("Madness · " + madnessText, Kit.Compact ? 12 : 13, high ? Palette.Omen : Palette.Text, Fonts.Italic);
+                Label madLine = Kit.Body("Madness · " + madnessText, Kit.Compact ? 12 : 14, high ? Palette.Omen : Palette.Text, Fonts.Italic);
                 madLine.name = "madness-text";
                 madBox.Add(madLine);
                 _stats.Add(madBox);
@@ -527,7 +527,7 @@ namespace Awakening.UI
                 swatch.style.width = swatch.style.height = 8;
                 swatch.style.backgroundColor = PopulationBar.Colors[key];
                 item.Add(swatch);
-                item.Add(Kit.Label(Capitalize(key.ToUpperInvariant()) + " " + Format.Count(PopulationBar.Value(r.Population, key)), 12, Palette.Muted, Fonts.Body));
+                item.Add(Kit.Label(Capitalize(key.ToUpperInvariant()) + " " + Format.Count(PopulationBar.Value(r.Population, key)), 13, Palette.Muted, Fonts.Body));
                 _legend.Add(item);
             }
         }
@@ -677,7 +677,7 @@ namespace Awakening.UI
                 string detail = opt.Response == "silence"
                     ? opt.Cost + " · +" + Js.Num(Balance.SilenceExposure) + " Exposure · quiet " + Balance.ThreatGraceMonths + " mo"
                     : opt.Cost + " · " + Notes.ResponseNote(r, preview, opt.Response);
-                column.Add(Kit.Body(detail, 13, opt.Response == "silence" ? Palette.Danger : Palette.Muted, Fonts.Italic));
+                column.Add(Kit.Body(detail, Kit.Compact ? 12 : 14, opt.Response == "silence" ? Palette.Danger : Palette.Muted, Fonts.Italic));
                 if (Notes.RiskHaltsRite(preview))
                 {
                     var (_, halt) = Notes.SplitRiteHaltRisk(preview.Risk);
@@ -688,7 +688,7 @@ namespace Awakening.UI
                     warn.style.borderLeftColor = Palette.Danger;
                     warn.style.paddingLeft = warn.style.paddingRight = 7;
                     warn.style.paddingTop = warn.style.paddingBottom = 3;
-                    warn.Add(Kit.Body(halt, 13, Palette.Danger, Fonts.BodyBold));
+                    warn.Add(Kit.Body(halt, Kit.Compact ? 12 : 14, Palette.Danger, Fonts.BodyBold));
                     column.Add(warn);
                 }
             }
@@ -717,7 +717,7 @@ namespace Awakening.UI
             val.style.unityTextAlign = TextAnchor.MiddleRight;
             row.Add(val);
             _mysticism.Add(row);
-            Label note = Kit.Body(Derived.MysticismNote(Region), 13, Palette.Muted, Fonts.Italic);
+            Label note = Kit.Body(Derived.MysticismNote(Region), Kit.Compact ? 12 : 14, Palette.Muted, Fonts.Italic);
             note.name = "mysticism-note";
             _mysticism.Add(note);
         }

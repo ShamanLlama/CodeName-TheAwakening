@@ -27,6 +27,7 @@ namespace Awakening.UI
 
         public static Label Label(string text, int size = 16, Color? color = null, string weight = Fonts.Body)
         {
+            if (size < 12) size = 12;
             // The compact layout runs on few, small pixels; small reading type grows by two units.
             if (Compact && size < 17) size += 2;
             var node = new Label(text) { pickingMode = PickingMode.Ignore };

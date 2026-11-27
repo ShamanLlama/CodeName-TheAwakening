@@ -15,6 +15,7 @@ namespace Awakening.UI
 
         public static Label Label(string text, int size = 16, Color? color = null, string weight = Fonts.Body)
         {
+            if (size < 12) size = 12;
             int actual = Kit.Compact && size < 17 ? size + 2 : size;
             var label = Kit.Label(text, size, color, weight);
             label.enableRichText = false;
@@ -28,6 +29,7 @@ namespace Awakening.UI
 
         public static Label Body(string text, int size = 15, Color? color = null, string weight = Fonts.Body)
         {
+            if (size < 12) size = 12;
             int actual = Kit.Compact && size < 17 ? size + 2 : size;
             var label = Kit.Body("", size, color, weight);
             label.userData = actual;

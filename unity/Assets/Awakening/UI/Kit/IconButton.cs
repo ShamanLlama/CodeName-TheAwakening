@@ -52,7 +52,7 @@ namespace Awakening.UI
             Rect r = contentRect;
             Color color;
             if (OnPaper) color = !enabledSelf ? Palette.Faint : _hovered ? Palette.Text : Palette.Muted;
-            else color = _active ? Palette.Brass : !enabledSelf ? Palette.Alpha(Palette.LampDim, 0.35f) : _hovered ? Palette.Lamp : Palette.LampDim;
+            else color = _active ? Palette.Brass : !enabledSelf ? Palette.Alpha(Palette.LampDim, 0.74f) : _hovered ? Palette.Lamp : Palette.LampDim;
             if (_active)
             {
                 Draw2D.Rect(p, new Rect(0, 0, r.width, r.height), Palette.Alpha(Palette.Brass, 0.1f));

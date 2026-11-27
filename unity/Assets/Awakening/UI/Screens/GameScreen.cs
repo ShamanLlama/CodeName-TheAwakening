@@ -250,7 +250,7 @@ namespace Awakening.UI
             box.tooltip = hint;
             box.Add(Kit.Caption(caption));
             Label value = Kit.Label("0", Kit.Compact ? 26 : 31, color, Fonts.BodyBold);
-            Label sub = Kit.Label("", 12, Palette.Muted, Fonts.Type);
+            Label sub = Kit.Label("", 12, Palette.Muted, Fonts.TypeBold);
             sub.style.height = Kit.Compact ? 20 : 16;
             box.Add(value);
             box.Add(sub);
@@ -310,7 +310,7 @@ namespace Awakening.UI
             _capstoneInvoke.style.paddingLeft = _capstoneInvoke.style.paddingRight = Kit.Compact ? 6 : 10;
             _capstoneInvoke.style.minHeight = Kit.Touch ? 34 : 28;
             _capstoneBox.Add(_capstoneInvoke);
-            _capstoneSub = Kit.Label(Kit.Compact ? "FORGETS" : "WORLD FORGETS", 10, Palette.Omen, Fonts.TypeBold);
+            _capstoneSub = Kit.Label(Kit.Compact ? "FORGETS" : "WORLD FORGETS", 12, Palette.Omen, Fonts.TypeBold);
             _capstoneBox.Add(_capstoneSub);
             Kit.SetVisible(_capstoneBox, false);
             row.Add(_capstoneBox);
@@ -446,7 +446,7 @@ namespace Awakening.UI
             _riteHaltedBox.style.borderLeftColor = Palette.Danger;
             _riteHaltedBox.style.paddingLeft = _riteHaltedBox.style.paddingRight = 8;
             _riteHaltedBox.style.paddingTop = _riteHaltedBox.style.paddingBottom = Kit.Compact ? 2 : 4;
-            _riteHaltedText = Kit.Body("", Kit.Compact ? 11 : 13, Palette.Danger, Fonts.BodyBold);
+            _riteHaltedText = Kit.Body("", Kit.Compact ? 12 : 13, Palette.Danger, Fonts.BodyBold);
             _riteHaltedText.name = "rite-halted-reasons";
             _riteHaltedBox.Add(_riteHaltedText);
             Kit.SetVisible(_riteHaltedBox, false);
@@ -457,7 +457,7 @@ namespace Awakening.UI
             _banner.Add(_bannerCause);
             _marginBox = Kit.VBox(Kit.Compact ? 2 : 4);
             _marginBox.name = "rite-margin";
-            _marginLine = Kit.Body("", Kit.Compact ? 11 : 13, Palette.Text, Fonts.TypeBold);
+            _marginLine = Kit.Body("", Kit.Compact ? 12 : 13, Palette.Text, Fonts.TypeBold);
             _marginLine.name = "rite-margin-line";
             _marginChips = new Flow(Kit.Compact ? 4 : 6, Kit.Compact ? 2 : 4);
             _marginChips.name = "rite-margin-sites";
@@ -469,7 +469,7 @@ namespace Awakening.UI
             _marginBox.Add(_marginChips);
             _marginBox.Add(_siteDetail);
             _banner.Add(_marginBox);
-            _bannerText = Kit.Body("", Kit.Compact ? 11 : 13, Palette.Muted);
+            _bannerText = Kit.Body("", Kit.Compact ? 12 : 13, Palette.Muted);
             _bannerText.name = "rite-forecast-text";
             Kit.SetVisible(_bannerText, !Kit.Compact);
             _banner.Add(_bannerText);
@@ -960,7 +960,7 @@ namespace Awakening.UI
                 if (_selectedSiteSlot < margin.Sites.Count)
                 {
                     SiteMargin site = margin.Sites[_selectedSiteSlot];
-                    Label detail = Kit.Body(Notes.SiteMarginDetail(s, site), 13, Palette.Text, Fonts.Italic);
+                    Label detail = Kit.Body(Notes.SiteMarginDetail(s, site), Kit.Compact ? 12 : 14, Palette.Text, Fonts.Italic);
                     detail.style.flexGrow = 1;
                     detail.style.flexShrink = 1;
                     _siteDetail.Add(detail);
@@ -974,7 +974,7 @@ namespace Awakening.UI
                 }
                 else
                 {
-                    Label detail = Kit.Body(Notes.UnfundedSiteDetail(_selectedSiteSlot + 1, s), 13, Palette.Muted, Fonts.Italic);
+                    Label detail = Kit.Body(Notes.UnfundedSiteDetail(_selectedSiteSlot + 1, s), Kit.Compact ? 12 : 14, Palette.Muted, Fonts.Italic);
                     detail.style.flexGrow = 1;
                     detail.style.flexShrink = 1;
                     _siteDetail.Add(detail);
@@ -1207,7 +1207,7 @@ namespace Awakening.UI
             }
             if (cornered)
             {
-                Label badge = Kit.Body(Notes.ThreatCorneredLabel(s, id, Kit.Compact), 11, Palette.Danger, Fonts.TypeBold);
+                Label badge = Kit.Body(Notes.ThreatCorneredLabel(s, id, Kit.Compact), 12, Palette.Danger, Fonts.TypeBold);
                 badge.name = "threat-cornered-" + id;
                 badge.style.backgroundColor = Palette.Alpha(Palette.Danger, 0.10f);
                 badge.style.borderTopWidth = badge.style.borderBottomWidth = badge.style.borderLeftWidth = badge.style.borderRightWidth = 1;
@@ -1241,7 +1241,8 @@ namespace Awakening.UI
                     : Notes.ThreatOptionReason(opt);
                 Color detailColor = !opt.Ok ? Palette.Warn : haltsRite || chosen == "silence" ? Palette.Danger : Palette.Muted;
                 string detailWeight = !opt.Ok || haltsRite ? Fonts.TypeBold : Fonts.Italic;
-                Label info = Kit.Body(detail, Kit.Compact ? 11 : 12, detailColor, detailWeight);
+                int detailSize = detailWeight == Fonts.Italic ? (Kit.Compact ? 12 : 14) : 12;
+                Label info = Kit.Body(detail, detailSize, detailColor, detailWeight);
                 if (haltsRite) info.name = "threat-scatter-halts-" + id;
                 if (Kit.Compact)
                 {
@@ -1424,7 +1425,7 @@ namespace Awakening.UI
             head.Add(hide);
             _goals.Add(head);
             _goals.Add(Kit.Body(active.Title, Kit.Compact ? 14 : 16, Palette.Text, Fonts.BodyBold));
-            _goals.Add(Kit.Body(active.Detail, 13, active.Overdue ? Palette.Warn : Palette.Muted, Fonts.Italic));
+            _goals.Add(Kit.Body(active.Detail, Kit.Compact ? 12 : 14, active.Overdue ? Palette.Warn : Palette.Muted, Fonts.Italic));
             _goals.tooltip = string.Join("\n", all.Select(g => (g.Done ? "◆ " : "○ ") + g.Title)) + "\nHide anytime here or in Menu.";
         }
     }

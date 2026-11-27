@@ -316,7 +316,7 @@ namespace Awakening.UI
                 {
                     for (int c = 0; c < 2; c++)
                     {
-                        var label = SheetUI.Label(keys[row * 3 + pair, c], 13, c == 0 ? Palette.Text : Palette.Muted, c == 0 ? Fonts.TypeBold : Fonts.Type);
+                        var label = SheetUI.Label(keys[row * 3 + pair, c], 13, c == 0 ? Palette.Text : Palette.Muted, Fonts.TypeBold);
                         label.style.minWidth = widths[pair * 2 + c];
                         line.Add(label);
                     }
@@ -472,7 +472,7 @@ namespace Awakening.UI
             head.Add(nameLabel);
             head.Add(Kit.Label($"{branchTaken} / 3", 12, branchTaken > 0 ? Palette.Cult : Palette.Muted, Fonts.TypeBold));
             panel.Add(head);
-            panel.Add(Kit.Body(branch.Description, 13, Palette.Muted, Fonts.Italic));
+            panel.Add(Kit.Body(branch.Description, Kit.Compact ? 12 : 14, Palette.Muted, Fonts.Italic));
 
             panel.Add(BuildTalentNode(s, root, cost));
 
@@ -480,7 +480,7 @@ namespace Awakening.UI
             forkRow.style.alignItems = Align.Center;
             forkRow.Add(new TreeConnector(fork: true, wide: wide, rootTaken, aTaken, bTaken));
             string forkCaption = aTaken || bTaken ? "TIER II · ONE CHOSEN, THE OTHER CLOSED" : "TIER II · CHOOSE ONE (CLOSES THE OTHER)";
-            var forkLabel = Kit.Body(forkCaption, 10, aTaken || bTaken ? Palette.Muted : Palette.Warn, Fonts.TypeBold);
+            var forkLabel = Kit.Body(forkCaption, 12, aTaken || bTaken ? Palette.Muted : Palette.Warn, Fonts.TypeBold);
             forkLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
             forkRow.Add(forkLabel);
             panel.Add(forkRow);
@@ -504,7 +504,7 @@ namespace Awakening.UI
                 pair.style.borderLeftColor = Palette.Alpha(rootTaken ? Palette.Cult : Palette.PaperEdge, 0.55f);
                 pair.style.paddingLeft = 6;
                 pair.Add(BuildTalentNode(s, midA, cost));
-                var orLabel = Kit.Label("— OR —", 10, Palette.Faint, Fonts.TypeBold);
+                var orLabel = Kit.Label("— OR —", 12, Palette.Faint, Fonts.TypeBold);
                 orLabel.style.unityTextAlign = TextAnchor.MiddleCenter;
                 pair.Add(orLabel);
                 pair.Add(BuildTalentNode(s, midB, cost));
@@ -576,7 +576,7 @@ namespace Awakening.UI
             var head = Kit.HBox(6);
             string tierName = capstone ? "★ TIER III · CAPSTONE" : t.Tier == 1 ? "TIER I · ROOT" : "TIER II · FORK";
             Color tierColor = capstone ? (spent ? Palette.Muted : taken || available ? Palette.Cult : Palette.Omen) : Palette.Faint;
-            var tierLabel = Kit.Label(tierName, 10, tierColor, Fonts.TypeBold);
+            var tierLabel = Kit.Label(tierName, 12, tierColor, Fonts.TypeBold);
             tierLabel.style.flexGrow = 1;
             tierLabel.style.flexShrink = 1;
             head.Add(tierLabel);
@@ -595,7 +595,7 @@ namespace Awakening.UI
                 : excluded ? Palette.Danger
                 : shortInf ? Palette.Warn
                 : Palette.Muted;
-            var badge = Kit.Label(badgeText, 10, badgeColor, Fonts.TypeBold);
+            var badge = Kit.Label(badgeText, 12, badgeColor, Fonts.TypeBold);
             badge.name = "talent-state-" + t.Id;
             badge.style.flexShrink = 0;
             head.Add(badge);
@@ -606,7 +606,7 @@ namespace Awakening.UI
                 excluded || spent ? Fonts.Italic : Fonts.DisplaySc);
             card.Add(title);
 
-            var desc = Kit.Body(t.Description, 13, excluded || spent ? Palette.Faint : Palette.Muted);
+            var desc = Kit.Body(t.Description, 14, excluded || spent ? Palette.Muted : Palette.Text);
             desc.style.flexGrow = 1;
             card.Add(desc);
 
@@ -616,6 +616,7 @@ namespace Awakening.UI
                 if (cond != "")
                 {
                     Color accent = spent ? Palette.PaperEdge : taken ? Palette.Cult : Palette.Omen;
+                    Color tagColor = spent ? Palette.Muted : accent;
                     var facts = Kit.VBox(2);
                     facts.name = "capstone-rules-" + t.Id;
                     facts.style.backgroundColor = Palette.Alpha(accent, 0.08f);
@@ -627,10 +628,10 @@ namespace Awakening.UI
                     {
                         var r = Kit.HBox(6);
                         r.style.alignItems = Align.FlexStart;
-                        var k = Kit.Label(tag, 10, accent, Fonts.TypeBold);
-                        k.style.minWidth = 44;
+                        var k = Kit.Label(tag, 12, tagColor, Fonts.TypeBold);
+                        k.style.minWidth = 52;
                         k.style.flexShrink = 0;
-                        var v = Kit.Body(text, 12, valueColor);
+                        var v = Kit.Body(text, 13, valueColor);
                         v.style.flexGrow = 1;
                         v.style.flexShrink = 1;
                         r.Add(k);
@@ -654,7 +655,7 @@ namespace Awakening.UI
                         : met
                             ? $"◆ CONDITION MET NOW · {pub}/{req} PUBLIC ({Balance.ProcessionRiteMonths}-MO RITE)"
                             : $"PUBLIC NOW: {pub} / {req} REGIONS (NEEDS {req - pub} MORE)";
-                    var procStatus = Kit.Body(statusText, 11, met ? Palette.Cult : taken ? Palette.Warn : Palette.Muted, Fonts.TypeBold);
+                    var procStatus = Kit.Body(statusText, 12, met ? Palette.Cult : taken ? Palette.Warn : Palette.Muted, Fonts.TypeBold);
                     procStatus.name = "procession-status";
                     card.Add(procStatus);
                 }
@@ -671,7 +672,7 @@ namespace Awakening.UI
                     yieldBox.style.borderLeftColor = spent ? Palette.Muted : Palette.Cult;
                     yieldBox.style.paddingLeft = yieldBox.style.paddingRight = 7;
                     yieldBox.style.paddingTop = yieldBox.style.paddingBottom = 3;
-                    var yieldLabel = Kit.Body(yieldText, 11, spent ? Palette.Muted : Palette.Cult, Fonts.TypeBold);
+                    var yieldLabel = Kit.Body(yieldText, 12, spent ? Palette.Muted : Palette.Cult, Fonts.TypeBold);
                     yieldLabel.name = "talent-yield-" + t.Id;
                     yieldBox.Add(yieldLabel);
                     card.Add(yieldBox);
@@ -696,7 +697,7 @@ namespace Awakening.UI
             {
                 if (spent)
                 {
-                    var spentNote = Kit.Body("Spent — already invoked this run.", 12, Palette.Muted, Fonts.Italic);
+                    var spentNote = Kit.Body("Spent — already invoked this run.", Kit.Compact ? 12 : 14, Palette.Muted, Fonts.Italic);
                     spentNote.name = "talent-spent-" + t.Id;
                     card.Add(spentNote);
                 }
@@ -715,7 +716,7 @@ namespace Awakening.UI
                     card.Add(invokeBtn);
                     if (!canInvoke && !string.IsNullOrEmpty(invokeReason))
                     {
-                        var why = Kit.Body(invokeReason, 12, Palette.Warn, Fonts.Italic);
+                        var why = Kit.Body(invokeReason, Kit.Compact ? 12 : 14, Palette.Warn, Fonts.Italic);
                         why.name = "invoke-reason-" + t.Id;
                         card.Add(why);
                     }
@@ -723,7 +724,7 @@ namespace Awakening.UI
             }
             else if (!taken)
             {
-                var why = Kit.Body(reason, 12, excluded ? Palette.Danger : shortInf ? Palette.Warn : Palette.Muted, excluded ? Fonts.BodyBold : Fonts.Italic);
+                var why = Kit.Body(reason, Kit.Compact ? 12 : 14, excluded ? Palette.Danger : shortInf ? Palette.Warn : Palette.Muted, excluded ? Fonts.BodyBold : Fonts.Italic);
                 why.name = "talent-reason-" + t.Id;
                 card.Add(why);
             }

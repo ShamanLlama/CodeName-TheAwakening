@@ -23,7 +23,7 @@ namespace Awakening.UI.Map
         public const float MaxViewScale = 4f;
         /// <summary>A press that moves further than this, in pixels, pans instead of picking.</summary>
         const float DragThreshold = 8f;
-        static readonly Color CultInk = Palette.Hex("1f3519");
+        static readonly Color CultInk = Palette.Hex("162b12");
 
         public event Action<string> RegionPressed;
         public event Action<string> RegionHovered;
@@ -103,10 +103,15 @@ namespace Awakening.UI.Map
             hierarchy.Add(_labels);
             foreach (string id in GameData.RegionIds)
             {
-                Label title = MapLabel(Fonts.BodyBold, Palette.Text);
-                Label count = MapLabel(Fonts.TypeBold, CultInk);
+                Label title = MapLabel(Fonts.BodyBold, Palette.Text, 18, 0f);
+                title.style.backgroundColor = Palette.Alpha(Palette.PaperLight, 0.88f);
+                title.style.paddingLeft = title.style.paddingRight = 3;
+                title.style.paddingBottom = 1;
+                Label count = MapLabel(Fonts.TypeBold, CultInk, 18, 0f);
                 count.style.backgroundColor = Palette.PaperLight;
-                count.style.paddingLeft = count.style.paddingRight = 3;
+                count.style.paddingLeft = count.style.paddingRight = 4;
+                count.style.borderTopWidth = count.style.borderBottomWidth = count.style.borderLeftWidth = count.style.borderRightWidth = 1;
+                count.style.borderTopColor = count.style.borderBottomColor = count.style.borderLeftColor = count.style.borderRightColor = Palette.Alpha(Palette.Cult, 0.65f);
                 Label madness = MapLabel(Fonts.TypeBold, Palette.Omen, 13, 0f);
                 madness.name = "map-madness-" + id;
                 madness.style.backgroundColor = Palette.PaperLight;
@@ -114,11 +119,11 @@ namespace Awakening.UI.Map
                 madness.style.borderTopWidth = madness.style.borderBottomWidth = madness.style.borderLeftWidth = madness.style.borderRightWidth = 1;
                 _regionLabels[id] = (title, count, madness);
             }
-            _north = MapLabel(Fonts.Display, Palette.Muted, 16);
+            _north = MapLabel(Fonts.Display, Palette.Brass, 16, 2f, Palette.Ocean);
             _north.text = "N";
-            _rlyehName = MapLabel(Fonts.DisplayItalic, Palette.Omen, 15);
+            _rlyehName = MapLabel(Fonts.DisplayItalic, Palette.OmenBright, 16, 2f, Palette.Ocean);
             _rlyehName.text = "R'lyeh";
-            _rlyehCoords = MapLabel(Fonts.Type, Palette.Omen, 11);
+            _rlyehCoords = MapLabel(Fonts.TypeBold, Palette.OmenBright, 12, 2f, Palette.Ocean);
             _rlyehCoords.text = "47°9′S 126°43′W";
 
             RegisterCallback<GeometryChangedEvent>(_ => { Layout(); UpdateLabels(); });
@@ -140,7 +145,7 @@ namespace Awakening.UI.Map
             return layer;
         }
 
-        Label MapLabel(string font, Color color, int size = 18, float halo = 3f)
+        Label MapLabel(string font, Color color, int size = 18, float halo = 3f, Color? haloColor = null)
         {
             Label label = Kit.Label("", size, color, font);
             label.style.position = Position.Absolute;
@@ -150,14 +155,15 @@ namespace Awakening.UI.Map
             label.style.marginLeft = label.style.marginRight = label.style.marginTop = label.style.marginBottom = 0;
             if (halo > 0)
             {
-                // Only the paper copy has an SDF outline; the foreground ink keeps its full glyph.
-                Label back = Kit.Label("", size, Palette.PaperLight, font);
+                Color outline = haloColor ?? Palette.PaperLight;
+                // Only the halo copy has an SDF outline; the foreground ink keeps its full glyph.
+                Label back = Kit.Label("", size, outline, font);
                 back.style.position = Position.Absolute;
                 back.style.left = back.style.top = 0;
                 back.style.paddingLeft = back.style.paddingRight = back.style.paddingTop = back.style.paddingBottom = 0;
                 back.style.marginLeft = back.style.marginRight = back.style.marginTop = back.style.marginBottom = 0;
                 back.style.unityTextOutlineWidth = halo;
-                back.style.unityTextOutlineColor = Palette.PaperLight;
+                back.style.unityTextOutlineColor = outline;
                 _labels.Add(back);
                 _halos.Add(label, back);
             }
@@ -212,10 +218,10 @@ namespace Awakening.UI.Map
             float radius = Mathf.Clamp(FitZoom() * 26f, 22f, 40f);
             Place(_north, compass + new Vector2(0, -radius - 5), 0.5f, 1f);
             Vector2 rlyeh = ToScreen(Geo.Project(Rlyeh));
-            _rlyehName.style.color = Palette.Omen;
-            _rlyehCoords.style.color = Palette.Omen;
+            _rlyehName.style.color = Palette.OmenBright;
+            _rlyehCoords.style.color = Palette.OmenBright;
             Place(_rlyehName, rlyeh + new Vector2(11, 4), 0f, 0.8f);
-            Place(_rlyehCoords, rlyeh + new Vector2(11, 17), 0f, 0.8f);
+            Place(_rlyehCoords, rlyeh + new Vector2(11, 20), 0f, 0.8f);
             int threatLabel = 0;
             var blocked = OverlayRects();
             var markers = State == null ? new List<Rect>() : MarkerRects();
@@ -225,13 +231,23 @@ namespace Awakening.UI.Map
                 {
                     Threat threat = State.Regions[id].Threat;
                     if (threat == null) continue;
-                    while (_threatLabels.Count <= threatLabel) _threatLabels.Add(MapLabel(Fonts.TypeBold, Palette.Danger, 16));
+                    while (_threatLabels.Count <= threatLabel)
+                    {
+                        Label tag = MapLabel(Fonts.TypeBold, Palette.Danger, 15, 0f);
+                        tag.style.backgroundColor = Palette.PaperLight;
+                        tag.style.paddingLeft = tag.style.paddingRight = 3;
+                        tag.style.paddingTop = tag.style.paddingBottom = 1;
+                        tag.style.borderTopWidth = tag.style.borderBottomWidth = tag.style.borderLeftWidth = tag.style.borderRightWidth = 1;
+                        tag.style.borderTopColor = tag.style.borderBottomColor = tag.style.borderLeftColor = tag.style.borderRightColor = Palette.Danger;
+                        _threatLabels.Add(tag);
+                    }
                     Label text = _threatLabels[threatLabel++];
                     text.text = (threat.DueMonth - State.ElapsedMonths) + " MO";
                     Vector2 at = ToScreen(Geo.ThreatPosition(State.Seed, id, threat));
                     Vector2 size = text.MeasureTextSize(text.text, 0, MeasureMode.Undefined, 0, MeasureMode.Undefined);
+                    float w = size.x + 8, h = size.y + 4;
                     // Clear the marker's pulse as well as its resting circle.
-                    if (contentRect.Contains(at) && TryLabelRect(new Rect(at.x - size.x * .5f, at.y - 30 - size.y, size.x, size.y), blocked, markers, out Rect rect, 60))
+                    if (contentRect.Contains(at) && TryLabelRect(new Rect(at.x - w * .5f, at.y - 30 - h, w, h), blocked, markers, out Rect rect, 72))
                     {
                         Place(text, rect.position, 0, 0);
                         blocked.Add(Draw2D.Grow(rect, 3));
@@ -926,7 +942,7 @@ namespace Awakening.UI.Map
             float grow = Mathf.Clamp(Mathf.Sqrt(_viewScale), 1f, 1.5f);
             int sizeTitle = Mathf.RoundToInt((FitZoom() < 1f ? 18 : 20) * grow);
             int sizeCount = Mathf.RoundToInt((FitZoom() < 1f ? 15 : 17) * grow);
-            int sizeMad = Mathf.RoundToInt((FitZoom() < 1f ? 11 : 12) * grow);
+            int sizeMad = Mathf.RoundToInt((FitZoom() < 1f ? 12 : 13) * grow);
             var order = new List<string>(GameData.RegionIds);
             order.Sort((a, b) => LabelRank(b).CompareTo(LabelRank(a)));
             var obstacles = OverlayRects();
@@ -948,12 +964,13 @@ namespace Awakening.UI.Map
                 Vector2 titleSize = title.MeasureTextSize(title.text, 0, MeasureMode.Undefined, 0, MeasureMode.Undefined);
                 Vector2 countSize = count.text.Length > 0 ? count.MeasureTextSize(count.text, 0, MeasureMode.Undefined, 0, MeasureMode.Undefined) : Vector2.zero;
                 Vector2 madSize = madness.text.Length > 0 ? madness.MeasureTextSize(madness.text, 0, MeasureMode.Undefined, 0, MeasureMode.Undefined) : Vector2.zero;
-                float countW = count.text.Length > 0 ? countSize.x + 6 : 0;
+                float titleW = titleSize.x + 6;
+                float countW = count.text.Length > 0 ? countSize.x + 10 : 0;
                 float madW = madness.text.Length > 0 ? madSize.x + 8 : 0;
                 float subW = countW + (countW > 0 && madW > 0 ? 4 : 0) + madW;
-                float subH = Mathf.Max(countSize.y, madSize.y + (madW > 0 ? 2 : 0));
+                float subH = Mathf.Max(countW > 0 ? countSize.y + 2 : 0, madW > 0 ? madSize.y + 2 : 0);
                 float height = titleSize.y + subH + 10;
-                float width = Mathf.Max(titleSize.x, subW) + 6;
+                float width = Mathf.Max(titleW, subW) + 2;
                 Vector2 at = ToScreen(Geo.Anchor(id));
                 // A zoomed-out-of-view region has no label in this viewport.
                 if (!contentRect.Contains(at) || !TryLabelRect(new Rect(at.x - width * .5f, at.y - titleSize.y, width, height), obstacles, placed, out Rect rect))
@@ -963,8 +980,8 @@ namespace Awakening.UI.Map
                 }
                 placed.Add(Draw2D.Grow(rect, 3));
                 bool emphasized = id == Selected || id == Hovered;
-                title.style.color = Palette.Alpha(Palette.Text, emphasized ? 1f : .86f);
-                title.style.borderBottomWidth = emphasized ? 1 : 0;
+                title.style.color = Palette.Text;
+                title.style.borderBottomWidth = emphasized ? 2 : 0;
                 title.style.borderBottomColor = Palette.Text;
                 Place(title, new Vector2(rect.center.x, rect.y + 3), .5f, 0);
                 float rowX = rect.center.x - subW * 0.5f;
@@ -974,10 +991,10 @@ namespace Awakening.UI.Map
                 if (madness.text.Length > 0)
                 {
                     bool high = GameEngine.MadnessHigh(r);
-                    Color edge = high ? Palette.Omen : Palette.Alpha(Palette.Omen, 0.5f);
+                    Color edge = high ? Palette.Omen : Palette.Alpha(Palette.Omen, 0.65f);
                     madness.style.backgroundColor = high ? Color.Lerp(Palette.PaperLight, Palette.Omen, 0.14f) : Palette.PaperLight;
                     madness.style.borderTopColor = madness.style.borderBottomColor = madness.style.borderLeftColor = madness.style.borderRightColor = edge;
-                    Place(madness, new Vector2(rowX + (countW > 0 ? countW + 4 : 0), rowY + Mathf.Max(0f, (countSize.y - (madSize.y + 2)) * 0.5f)), 0f, 0f);
+                    Place(madness, new Vector2(rowX + (countW > 0 ? countW + 4 : 0), rowY + Mathf.Max(0f, (countSize.y - madSize.y) * 0.5f)), 0f, 0f);
                 }
                 else madness.style.display = DisplayStyle.None;
             }
