@@ -16,8 +16,8 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
 
 | Versión | Fecha | Commit | Ruleset | Adaptador | Ronda GTC | Estado |
 | --- | --- | --- | --- | --- | --- | --- |
-| 0.9.2 | 2026-11-27 | `6a6c718`, `20496c8` | `alignment-7` | `awakening-6` | Pendiente: build y ronda nuevas al publicar | En rama `t3/ui-text-legibility`, sin publicar |
-| 0.9.1 | 2026-11-25 | `54760ea` | `alignment-7` | `awakening-6` | «0.9.1 demo público · South America», abierta hasta 2026-12-07 (UTC) | En itch.io (demo público) |
+| 0.9.2 | 2026-11-27 | `6a6c718`, `20496c8`; exportada desde `2908275` | `alignment-7` | `awakening-6` | «0.9.2 demo público · texto legible», abierta hasta 2026-12-12 (UTC) | En itch.io (demo público) |
+| 0.9.1 | 2026-11-25 | `54760ea` | `alignment-7` | `awakening-6` | «0.9.1 demo público · South America», cerrada el 2026-11-28 (UTC) con 2 partidas | Reemplazada por 0.9.2 |
 | 0.9.0 | 2026-11-23 | `c66ca8e`; exportada desde `73c0599` | `alignment-7` | `awakening-6` | «0.9.0 playtest por invitación · Madness como recurso», abierta del 2026-11-23 al 2026-12-07 (UTC) | Reemplazada por 0.9.1; demo público desde 2026-11-24 |
 | 0.8.0 | 2026-11-22 | `a72528e`; exportada desde `ee5509c` | `alignment-6` | `awakening-5` | «0.8.0 playtest por invitación · remates que cambian la partida», cerrada el 2026-11-23 (UTC) con 2 partidas | Reemplazada por 0.9.0 |
 | 0.7.0 | 2026-11-22 | `9a3055e`; exportada desde `f253981` | `alignment-5` | `awakening-4` | «0.7.0 playtest por invitación · árbol de talentos y awareness gestionable», cerrada el 2026-11-22 (UTC) con 1 partida | Reemplazada por 0.8.0 |
@@ -37,7 +37,7 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
 
 ### 0.9.2 — Contraste y tamaño del texto
 
-- **Commits:** `6a6c718` (pase de legibilidad, Gemini 4 Neon) y `20496c8` (corrección de etiquetas del mapa y versión, Claude Opus 5.5), en la rama `t3/ui-text-legibility`.
+- **Commits:** `6a6c718` (pase de legibilidad, Gemini 4 Neon) y `20496c8` (corrección de etiquetas del mapa y versión, Claude Opus 5.5), integrados en `main`; export desde `2908275`.
 - **Motivo:** jugadores reportaron que el texto de la interfaz es muy difícil de leer. Medición previa sobre 0.9.1 (contraste WCAG de colores planos, sin contar el grano del papel): sobre papel sombreado, `Muted` 4,2:1, `Faint` 3,8:1 y los acentos de culto, peligro y advertencia entre 4,0 y 4,4:1, bajo el mínimo AA de 4,5:1. El texto atenuado (estampas deshabilitadas, botones del menú, crédito de inicio) bajaba a 2–3:1. Unas 55 etiquetas medían 9–13 px, casi todas en Courier Prime Regular o en la cursiva de Old Standard.
 - **Cambios (solo interfaz; reglas, adaptador y textos sin cambios):**
   - Tintas sobre papel más oscuras con el mismo tono: `Text` `#19120a`, `Muted` `#423322`, `Faint` `#4a3b26`, `Cult` `#24421e`, `Danger` `#7a140d`, `Warn` `#5c3704`, `Omen` `#432864`. Todas superan 5:1 sobre papel sombreado; el texto principal, 9:1.
@@ -53,6 +53,9 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
   - Capturas a 1600×900 y 844×390 táctil comparadas con las de 0.9.1. El primer pase hacía desaparecer «North America» junto a las amenazas apiladas; `20496c8` lo corrige.
   - No hubo partida humana con esta build.
 - **Medición pendiente:** confirmar con jugadores que el texto se lee bien sin pérdida de la identidad visual de 1908–1926.
+- **Publicación (2026-11-27, 2026-11-28 UTC):** export WebGL de Unity 6000.3.25f1 desde una copia limpia de `2908275`, con la configuración de la ronda nueva. Upload `20885069`, `the-awakening-0.9.2-pilot.zip` (8.974.519 bytes), seleccionado como único archivo jugable en el navegador; la 0.9.1 (`20819226`) queda oculta como respaldo. La descripción de itch.io pasa a v0.9.2 con la nota «New in 0.9.2».
+- **GTC:** build «The Awakening 0.9.2 · alignment-7 · Unity» y ronda «0.9.2 demo público · texto legible», con cierre el 2026-12-12. Se abrió en pausa y se habilitó tras el smoke alojado; al habilitarla se cerró la ronda 0.9.1 con 2 partidas. Mismas reglas y contrato que 0.9.1, así que los datos son comparables salvo por la interfaz.
+- **Comprobaciones:** smoke local del ZIP (IDs de la ronda en los datos, almacenamiento escribible, ningún envío antes del consentimiento) y smoke alojado desde el iframe del CDN de itch.io (los seis archivos coinciden con el export, cero envíos antes del consentimiento, sin errores de consola). La página pública muestra v0.9.2. No se probó en un teléfono físico.
 
 ### 0.9.1 — Nombre de South America
 
