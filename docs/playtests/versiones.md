@@ -16,6 +16,7 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
 
 | Versión | Fecha | Commit | Ruleset | Adaptador | Ronda GTC | Estado |
 | --- | --- | --- | --- | --- | --- | --- |
+| 0.9.3 | 2026-11-27 | pendiente | `alignment-7` | `awakening-6` | Sin ronda todavía | En desarrollo |
 | 0.9.2 | 2026-11-27 | `6a6c718`, `20496c8`; exportada desde `2908275` | `alignment-7` | `awakening-6` | «0.9.2 demo público · texto legible», abierta hasta 2026-12-12 (UTC) | En itch.io (demo público) |
 | 0.9.1 | 2026-11-25 | `54760ea` | `alignment-7` | `awakening-6` | «0.9.1 demo público · South America», cerrada el 2026-11-28 (UTC) con 2 partidas | Reemplazada por 0.9.2 |
 | 0.9.0 | 2026-11-23 | `c66ca8e`; exportada desde `73c0599` | `alignment-7` | `awakening-6` | «0.9.0 playtest por invitación · Madness como recurso», abierta del 2026-11-23 al 2026-12-07 (UTC) | Reemplazada por 0.9.1; demo público desde 2026-11-24 |
@@ -34,6 +35,21 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
 | 0.3.1 | 2026-11-02 | `2256c6c` | `alignment-2` | `awakening-1` | «0.3.1 playtest por invitación · decisiones económicas», cerrada el 2026-11-03 con 2 partidas | Reemplazada por 0.3.2 |
 | 0.3.0 | 2026-11-02 | `85f5905`; exportada desde `dbfb07f` | `alignment-2` | `awakening-1` | «0.3.0 playtest por invitación · decisiones económicas», cerrada el mismo día sin partidas | Reemplazada por 0.3.1 |
 | 0.2.0 | 2026-10-30 / 2026-10-31 | `ae38ec0`; adaptador E4–E6 en `6aa2419` | `alignment-1` | `awakening-1` | QA técnica E7 y «E7 piloto interno de gameplay» (abierta hasta 2026-11-09) | Reemplazada en itch.io por 0.3.0 el 2026-11-02 |
+
+### 0.9.3 — Recortes de amenazas sin parpadeo
+
+- **Commit:** pendiente.
+- **Motivo:** el usuario reportó parpadeo en los avisos de la izquierda. Los recortes de amenazas se reconstruían en cada refresco de la pantalla (cada mes del reloj, cada guardado) y las tarjetas nuevas nacían ocultas hasta el siguiente pase de layout, así que desaparecían al menos un cuadro por mes.
+- **Cambios (solo interfaz; reglas, adaptador y textos sin cambios):**
+  - `GameScreen.RebuildThreats` arma las tarjetas, compara una firma de lo que muestran (texto, tooltips, sellos habilitados, colores de acento) con la anterior y solo reemplaza las de pantalla si cambió algo. Un mes sin cambios en las amenazas ya no toca los recortes, y el sello bajo el puntero conserva su estado.
+  - Cuando sí cambian, la alternativa que estaba en pantalla nace visible en vez de oculta; el pase de layout la confirma o cambia por otra.
+- **Verificación:**
+  - `UiChecks` suma dos comprobaciones en el bloque de amenaza acorralada: un refresco sin cambios conserva la misma tarjeta, y un refresco con plazo nuevo muestra la tarjeta reconstruida visible antes del pase de layout. El código anterior falla la primera, porque reemplazaba la tarjeta en cada refresco.
+  - `dotnet test core-tests/Tests`: 310/310 pruebas aprobadas.
+  - `unity/shots.sh … "start --check-ui 1"`: `UI_CHECKS_PASSED`, sin excepciones.
+  - `unity/layout-check.sh`: 60/60 combinaciones aprobadas.
+  - No se observó el reloj en marcha en pantalla ni hubo partida humana con esta build.
+- **Medición pendiente:** confirmar en partida humana que los recortes ya no parpadean con el reloj en marcha, a velocidad 1 y 2.
 
 ### 0.9.2 — Contraste y tamaño del texto
 

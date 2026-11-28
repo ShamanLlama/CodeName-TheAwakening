@@ -549,6 +549,16 @@ namespace Awakening.UI
             Check(clipping != null && clipping.Q("threat-cornered-africa") != null, "threat clipping shows CORNERED mark");
             var clipTexts = clipping.Query<Label>().ToList().Select(l => l.text).ToList();
             Check(clipTexts.Any(t => t.Contains("counter rests 9 more months")) && clipTexts.Any(t => t.Contains("need 40 Dread")), "threat clipping shows Threats.Options reasons on appearance");
+            // A refresh that changes nothing on the clipping keeps the same cards on screen (no blink).
+            screen.Refresh();
+            Check(ReferenceEquals(screen.Q("threat-card-africa"), clipping), "unchanged refresh keeps the threat clipping");
+            // A refresh that does change it shows the new card at once, before the next layout pass.
+            corneredState.Regions["africa"].Threat.DueMonth = 86;
+            screen.Refresh();
+            var rebuilt = screen.LayoutThreatCards.Where(c => c.name == "threat-card-africa").ToList();
+            Check(!ReferenceEquals(screen.Q("threat-card-africa"), clipping)
+                && rebuilt.Any(c => c.parent.style.visibility.value == Visibility.Visible), "changed threat clipping stays visible while it is rebuilt");
+            yield return Layout();
             screen.Select("africa");
             yield return Layout();
             Check(screen.Panel.Q("panel-threat-cornered") != null, "case file threat card shows CORNERED mark");

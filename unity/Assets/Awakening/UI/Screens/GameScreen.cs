@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using Awakening.Core.Rules;
 using Awakening.Core.Session;
 using Awakening.UI.Map;
@@ -59,6 +60,7 @@ namespace Awakening.UI
         readonly List<Stack> _threatOptions = new List<Stack>();
         int _threatOption = -1;
         float _threatAreaHeight;
+        string _threatsShown = "";
         string _tickerMessage = "";
         const float TickerHeight = 42;
 
@@ -1116,12 +1118,17 @@ namespace Awakening.UI
 
         void RebuildThreats(GameState s)
         {
-            _threats.Clear();
-            _threatOptions.Clear();
-            if (GameEngine.IsOver(s)) return;
+            if (GameEngine.IsOver(s))
+            {
+                _threats.Clear();
+                _threatOptions.Clear();
+                _threatsShown = "";
+                return;
+            }
             var ids = GameData.RegionIds.Where(id => s.Regions[id].Threat != null).ToList();
             ids.Sort((a, b) => s.Regions[a].Threat.DueMonth.CompareTo(s.Regions[b].Threat.DueMonth));
             int start = ids.Count == 0 ? 0 : _threatOffset % ids.Count;
+            var built = new List<Stack>();
             for (int mode = 0; mode < 3; mode++)
             {
                 int limit = mode == 0 ? 2 : 1;
@@ -1129,7 +1136,9 @@ namespace Awakening.UI
                 option.style.position = Position.Absolute;
                 option.style.left = option.style.top = 0;
                 option.style.width = Length.Percent(100);
-                option.style.visibility = Visibility.Hidden;
+                // The option on screen stays on screen while the rebuilt one is laid out; hiding it
+                // until the next layout pass blinked the clippings on every monthly refresh.
+                option.style.visibility = mode == _threatOption ? Visibility.Visible : Visibility.Hidden;
                 foreach (string id in ids.Skip(start).Concat(ids.Take(start)).Take(limit)) option.Add(ThreatCard(s, id, mode == 2));
                 if (ids.Count > limit)
                 {
@@ -1145,11 +1154,36 @@ namespace Awakening.UI
                     more.tooltip = "Show the next threats, in deadline order. Select any clipping to inspect its case file.";
                     option.Add(more);
                 }
+                built.Add(option);
+            }
+            // Months tick far more often than the clippings change: keep the cards on screen (and
+            // the stamp under the pointer) unless what they say has changed.
+            var signature = new StringBuilder();
+            foreach (Stack option in built) Sign(option, signature);
+            string key = signature.ToString();
+            if (key == _threatsShown && _threatOptions.Count == built.Count) return;
+            _threatsShown = key;
+            _threats.Clear();
+            _threatOptions.Clear();
+            foreach (Stack option in built)
+            {
                 _threatOptions.Add(option);
                 // Stack.Add would add an 8-unit margin to each alternative.
                 _threats.hierarchy.Add(option);
                 option.RegisterCallback<GeometryChangedEvent>(_ => QueueLayout());
             }
+        }
+
+        /// <summary>What a clipping shows: its text, tooltips, enabled stamps and accent colours.</summary>
+        static void Sign(VisualElement element, StringBuilder into)
+        {
+            into.Append('<').Append(element.name).Append('|');
+            if (element is TextElement text) into.Append(text.text);
+            into.Append('|').Append(element.tooltip).Append('|').Append(element.enabledSelf ? '1' : '0');
+            into.Append('|').Append(element.style.color.value).Append('|').Append(element.style.borderLeftColor.value);
+            into.Append('|').Append(element.style.borderLeftWidth.value);
+            foreach (VisualElement child in element.hierarchy.Children()) Sign(child, into);
+            into.Append('>');
         }
 
         static readonly Dictionary<string, string> KindName = new Dictionary<string, string>
