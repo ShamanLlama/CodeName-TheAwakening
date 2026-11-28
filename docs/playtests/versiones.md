@@ -16,8 +16,8 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
 
 | Versión | Fecha | Commit | Ruleset | Adaptador | Ronda GTC | Estado |
 | --- | --- | --- | --- | --- | --- | --- |
-| 0.9.3 | 2026-11-27 | pendiente | `alignment-7` | `awakening-6` | Sin ronda todavía | En desarrollo |
-| 0.9.2 | 2026-11-27 | `6a6c718`, `20496c8`; exportada desde `2908275` | `alignment-7` | `awakening-6` | «0.9.2 demo público · texto legible», abierta hasta 2026-12-12 (UTC) | En itch.io (demo público) |
+| 0.9.3 | 2026-11-27 | `8db7d66` | `alignment-7` | `awakening-6` | «0.9.3 demo público · avisos sin parpadeo», abierta hasta 2026-12-12 (UTC) | En itch.io (demo público) |
+| 0.9.2 | 2026-11-27 | `6a6c718`, `20496c8`; exportada desde `2908275` | `alignment-7` | `awakening-6` | «0.9.2 demo público · texto legible», cerrada el 2026-11-28 (UTC) con 1 partida | Reemplazada por 0.9.3 |
 | 0.9.1 | 2026-11-25 | `54760ea` | `alignment-7` | `awakening-6` | «0.9.1 demo público · South America», cerrada el 2026-11-28 (UTC) con 2 partidas | Reemplazada por 0.9.2 |
 | 0.9.0 | 2026-11-23 | `c66ca8e`; exportada desde `73c0599` | `alignment-7` | `awakening-6` | «0.9.0 playtest por invitación · Madness como recurso», abierta del 2026-11-23 al 2026-12-07 (UTC) | Reemplazada por 0.9.1; demo público desde 2026-11-24 |
 | 0.8.0 | 2026-11-22 | `a72528e`; exportada desde `ee5509c` | `alignment-6` | `awakening-5` | «0.8.0 playtest por invitación · remates que cambian la partida», cerrada el 2026-11-23 (UTC) con 2 partidas | Reemplazada por 0.9.0 |
@@ -38,7 +38,7 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
 
 ### 0.9.3 — Recortes de amenazas sin parpadeo
 
-- **Commit:** pendiente.
+- **Commit:** `8db7d66` en `main`, exportada desde el mismo commit.
 - **Motivo:** el usuario reportó parpadeo en los avisos de la izquierda. Los recortes de amenazas se reconstruían en cada refresco de la pantalla (cada mes del reloj, cada guardado) y las tarjetas nuevas nacían ocultas hasta el siguiente pase de layout, así que desaparecían al menos un cuadro por mes.
 - **Cambios (solo interfaz; reglas, adaptador y textos sin cambios):**
   - `GameScreen.RebuildThreats` arma las tarjetas, compara una firma de lo que muestran (texto, tooltips, sellos habilitados, colores de acento) con la anterior y solo reemplaza las de pantalla si cambió algo. Un mes sin cambios en las amenazas ya no toca los recortes, y el sello bajo el puntero conserva su estado.
@@ -50,6 +50,9 @@ Todo cambio al juego se refleja en el sistema de playtest en el mismo cambio:
   - `unity/layout-check.sh`: 60/60 combinaciones aprobadas.
   - No se observó el reloj en marcha en pantalla ni hubo partida humana con esta build.
 - **Medición pendiente:** confirmar en partida humana que los recortes ya no parpadean con el reloj en marcha, a velocidad 1 y 2.
+- **Publicación (2026-11-27, 2026-11-28 UTC):** export WebGL de Unity 6000.3.25f1 desde una copia limpia de `8db7d66`, con la configuración de la ronda nueva. Upload `20885765`, `the-awakening-0.9.3-pilot.zip` (8.976.595 bytes), seleccionado como único archivo jugable en el navegador; la 0.9.2 (`20885069`) queda oculta como respaldo. La descripción de itch.io pasa a v0.9.3 con la nota «New in 0.9.3».
+- **GTC:** build «The Awakening 0.9.3 · alignment-7 · Unity» y ronda «0.9.3 demo público · avisos sin parpadeo», con cierre el 2026-12-12. Se abrió en pausa y se habilitó tras el smoke alojado; al habilitarla se cerró la ronda 0.9.2 con 1 partida. Mismas reglas y contrato que 0.9.2, así que los datos son comparables salvo por la interfaz.
+- **Comprobaciones:** smoke local del ZIP (IDs de la ronda en los datos, almacenamiento escribible, ningún envío antes del consentimiento) y smoke alojado desde el iframe del CDN de itch.io (los seis archivos coinciden con el export, cero envíos antes del consentimiento, sin errores de consola). La página pública muestra v0.9.3. No se probó en un teléfono físico.
 
 ### 0.9.2 — Contraste y tamaño del texto
 
